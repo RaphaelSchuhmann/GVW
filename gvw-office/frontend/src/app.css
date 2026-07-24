@@ -162,3 +162,28 @@ body.no-scroll {
 a[data-rich-link] {
     margin-right: 0.25rem;
 }
+
+.bars-loader {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    height: min-content;
+}
+
+.bar {
+    width: 10px;
+    height: 60px;
+    border-radius: 4px;
+    animation: bar-bounce 1s ease-in-out infinite;
+}
+
+.bar:nth-child(1) { background: var(--color-gv-primary); animation-delay: 0s; }
+.bar:nth-child(2) { background: var(--color-gv-secondary-text); animation-delay: 0.1s; }
+.bar:nth-child(3) { background: var(--color-gv-primary-hover); animation-delay: 0.2s; }
+.bar:nth-child(4) { background: var(--color-gv-border-bar); animation-delay: 0.3s; }
+.bar:nth-child(5) { background: var(--color-gv-dark-turquoise); animation-delay: 0.4s; }
+
+@keyframes bar-bounce {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1.5); }
+}

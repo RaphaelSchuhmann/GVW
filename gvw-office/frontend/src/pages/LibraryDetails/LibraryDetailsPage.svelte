@@ -12,6 +12,7 @@
     import { addToast } from "../../stores/toasts.svelte.js";
     import Spinner from "../../components/Spinner.svelte";
     import EventDetailsMobile from "../EventDetails/EventDetailsMobile.svelte";
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     let isGlobalLoading = $derived(user.name.length === 0);
 
@@ -71,9 +72,11 @@
     function updateIsEditing(val) { isEditing = val; }
 
     function updateIsDeleting(val) { isDeleting = val; }
+
+    let isLoading = $derived(!scoreData || !ready || !scoreId);
 </script>
 
-{#if scoreData}
+<GlobalLoader loading={isLoading}>
     {#key scoreData.rev}
         {#if viewport.width < 800}
             <LibraryDetailsMobile {scoreData} bind:isEditing bind:isDeleting onChangeIsEditing={updateIsEditing}
@@ -83,8 +86,4 @@
                                    onChangeIsDeleting={updateIsDeleting} />
         {/if}
     {/key}
-{:else}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..."/>
-    </div>
-{/if}
+</GlobalLoader>

@@ -10,8 +10,9 @@
     import { untrack } from "svelte";
     import Spinner from "../../components/Spinner.svelte";
     import { user } from "../../stores/user.svelte.js";
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isGlobalLoading = $derived(user.name.length === 0);
+    let isLoading = $derived(user.name.length === 0);
 
     let ready = false;
 
@@ -36,14 +37,10 @@
     });
 </script>
 
-{#if isGlobalLoading}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..."/>
-    </div>
-{:else}
+<GlobalLoader loading={isLoading}>
     {#if viewport.width < 870}
         <EventsMobile />
     {:else}
         <EventsDesktop />
     {/if}
-{/if}
+</GlobalLoader>

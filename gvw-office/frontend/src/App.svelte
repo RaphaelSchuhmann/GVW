@@ -25,6 +25,7 @@
     import { getValue } from "./services/store";
     import { ensureUserData } from "./services/userService.svelte";
     import { initSettingsSync } from "./services/appSettingsSyncService.svelte.js";
+    import { initFontLoader } from "./stores/appLoading.svelte.js";
 
     const routes = {
         "/": Login,
@@ -49,6 +50,7 @@
     $effect(() => {
         initSSE();
         initSettingsSync();
+        initFontLoader();
 
         if (!user.loaded && getValue("authToken")) {
             ensureUserData();

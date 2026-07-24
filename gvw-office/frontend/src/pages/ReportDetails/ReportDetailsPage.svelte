@@ -11,8 +11,9 @@
     import { getReport, reportExists } from "../../services/reportService.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
     import { editorMetadataStore } from "../../stores/textEditorStore.svelte.js";
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isGlobalLoading = $derived(user.name.length === 0);
+    let isLoading = $derived(user.name.length === 0);
 
     const hash = window.location.hash;
     const queryString = hash.split("?")[1];
@@ -84,10 +85,6 @@
     })
 </script>
 
-{#if isGlobalLoading}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..."/>
-    </div>
-{:else}
+<GlobalLoader loading={isLoading}>
     <ReportDetailsDesktop reportData={reportData} />
-{/if}
+</GlobalLoader>
