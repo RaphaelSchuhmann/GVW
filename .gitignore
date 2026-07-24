@@ -194,3 +194,5 @@ scripts/output.json
 db/
 api-data/
 api-logs/
+
+prod/
