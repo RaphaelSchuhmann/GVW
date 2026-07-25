@@ -13,6 +13,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Servlet filter responsible for logging incoming HTTP requests after completion.
+ *
+ * <p>The filter measures the total processing time of each request and logs:
+ * <ul>
+ *   <li>HTTP method</li>
+ *   <li>Request endpoint</li>
+ *   <li>Response status code</li>
+ *   <li>Total processing duration</li>
+ * </ul>
+ *
+ * <p>The logging happens inside a {@code finally} block to ensure that requests
+ * are logged even when an exception occurs during processing.
+ */
 @Component
 public class RequestLogging extends OncePerRequestFilter {
   private static final Logger log = LoggerFactory.getLogger(RequestLogging.class);

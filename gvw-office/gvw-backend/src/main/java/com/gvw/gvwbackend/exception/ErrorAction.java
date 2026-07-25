@@ -2,6 +2,11 @@ package com.gvw.gvwbackend.exception;
 
 import lombok.Getter;
 
+/**
+ * Defines the operation that caused an application error.
+ *
+ * <p>The action is encoded into the second section of the GVW error code.
+ */
 @Getter
 public enum ErrorAction {
   READ_ONE(1),
@@ -11,7 +16,7 @@ public enum ErrorAction {
   DELETE(5),
   CHECK(6),
   AUTH(7),
-  UTILITY(99); // all helper endpoints or stuff that just doesn't really fit into the other options.
+  UTILITY(99); // Used for helper endpoints or operations without a clear CRUD category
 
   private final int id;
 

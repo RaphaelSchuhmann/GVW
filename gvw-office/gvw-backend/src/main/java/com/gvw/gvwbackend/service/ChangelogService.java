@@ -28,6 +28,14 @@ public class ChangelogService {
     this.sseService = sseService;
   }
 
+  /**
+   * Retrieves all changelog entries from the database.
+   *
+   * <p>The entries are converted from CouchDB documents into {@link Changelog} objects,
+   * sorted by timestamp descending (newest first), and mapped into response DTOs.
+   *
+   * @return all available changelog entries sorted by creation date
+   */
   public ChangelogsResponseDTO getChangelogs() {
     List<Map<String, Object>> changelogsRaw = dbService.findAll("changelogs");
 
@@ -52,6 +60,14 @@ public class ChangelogService {
     return new ChangelogsResponseDTO(responseChangelogs);
   }
 
+  /**
+   * Creates a new changelog entry and stores it in the database.
+   *
+   * <p>After successfully inserting the changelog, connected clients are notified through SSE so
+   * they can refresh their changelog data.
+   *
+   * @param request data required to create the changelog entry
+   */
   public void addChangelog(AddChangelogRequestDTO request) {
     Changelog changelog = new Changelog();
     changelog.setVersion(request.version());
@@ -68,6 +84,14 @@ public class ChangelogService {
     }
   }
 
+  /**
+   * Removes a changelog entry permanently from the database.
+   *
+   * <p>The method validates that the changelog exists before deleting it and broadcasts an update
+   * event afterwards.
+   *
+   * @param id database identifier of the changelog entry
+   */
   public void deleteChangelog(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException("InvalidData");

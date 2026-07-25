@@ -22,6 +22,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Service responsible for managing the score library.
+ *
+ * <p>Handles score CRUD operations, file storage, ZIP streaming,
+ * duplicate detection, and synchronization notifications via SSE.
+ */
 @Service
 public class LibraryService {
   private final DbService dbService;
@@ -38,6 +44,14 @@ public class LibraryService {
     this.sseService = sseService;
   }
 
+  /**
+   * Retrieves all scores stored in the library.
+   *
+   * <p>Loads score documents from the database and converts them into
+   * response DTOs containing metadata and attachment names.
+   *
+   * @return response object containing all available scores
+   */
   public ScoresResponseDTO getAllScores() {
     List<Map<String, Object>> scoresRaw = dbService.findAll("library");
 
@@ -69,6 +83,16 @@ public class LibraryService {
     return new ScoresResponseDTO(responseScores);
   }
 
+  /**
+   * Checks whether a score exists.
+   *
+   * <p>This method is intended for validation before performing operations
+   * that require an existing score document.
+   *
+   * @param id identifier of the score to check
+   * @throws BadRequestException if the identifier is empty or null
+   * @throws NotFoundException if no score exists with the given identifier
+   */
   public void checkScore(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -82,6 +106,20 @@ public class LibraryService {
     }
   }
 
+  /**
+   * Creates a new score entry and stores all uploaded files.
+   *
+   * <p>The operation stores uploaded files first, creates the database entry,
+   * and broadcasts a library refresh event after successful creation.
+   *
+   * <p>If creation fails after files have been stored, all created files are
+   * removed to prevent orphaned assets.
+   *
+   * @param request metadata of the score to create
+   * @param files uploaded score files
+   * @throws ConflictException if a score with identical metadata already exists
+   * @throws RuntimeException if creation fails internally
+   */
   public void createScore(AddScoreRequestDTO request, List<MultipartFile> files) {
     if (existsInLibrary(request.scoreId(), request.title(), request.artist())) {
       throw new ConflictException(
@@ -123,6 +161,16 @@ public class LibraryService {
     }
   }
 
+  /**
+   * Deletes a score and all associated files.
+   *
+   * <p>Removes the database entry first and then deletes all physical files
+   * belonging to the score.
+   *
+   * @param id identifier of the score to delete
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if the score does not exist
+   */
   public void deleteScore(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -150,6 +198,16 @@ public class LibraryService {
     }
   }
 
+  /**
+   * Streams multiple score files as a ZIP archive.
+   *
+   * <p>Only files existing on disk are included. Missing files are skipped
+   * and logged.
+   *
+   * @param files metadata of files that should be included
+   * @param out output stream receiving the generated ZIP archive
+   * @throws RuntimeException if ZIP creation fails
+   */
   public void streamFilesAsZip(List<File> files, OutputStream out) {
     Path root = Paths.get(scoresDir);
 
@@ -183,6 +241,20 @@ public class LibraryService {
     }
   }
 
+  /**
+   * Updates an existing score entry.
+   *
+   * <p>Supports metadata changes, file additions, and file removals.
+   * Newly uploaded files are rolled back if the database update fails.
+   *
+   * @param request updated score information
+   * @param newFiles files to add to the score
+   * @param requestRemovedFiles names of files to remove
+   * @return new database revision identifier
+   *
+   * @throws NotFoundException if the score does not exist
+   * @throws RuntimeException if updating fails
+   */
   public String updateScore(
       UpdateScoreRequestDTO request,
       List<MultipartFile> newFiles,
@@ -257,6 +329,17 @@ public class LibraryService {
     }
   }
 
+  /**
+   * Stores uploaded files on disk and creates metadata objects.
+   *
+   * <p>Files are assigned generated UUID based names while preserving
+   * their original names as metadata.
+   *
+   * @param files files to store
+   * @param action error action used for exception generation
+   * @return metadata of successfully stored files
+   * @throws IOException if file operations fail
+   */
   private List<File> storeFiles(List<MultipartFile> files, ErrorAction action) throws IOException {
     if (files == null || files.isEmpty()) return List.of();
 
@@ -310,6 +393,13 @@ public class LibraryService {
     return storedFiles;
   }
 
+  /**
+   * Deletes a stored file from disk.
+   *
+   * @param fileName physical filename
+   * @param action error action used for generated exceptions
+   * @throws RuntimeException if deletion fails
+   */
   private void deleteFile(String fileName, ErrorAction action) {
     Path filePath = Paths.get(scoresDir, fileName);
 
@@ -325,6 +415,14 @@ public class LibraryService {
     }
   }
 
+  /**
+   * Checks whether a score with the given identifying metadata already exists.
+   *
+   * @param scoreId external score identifier
+   * @param title score title
+   * @param artist score artist
+   * @return true if an identical score already exists
+   */
   private boolean existsInLibrary(String scoreId, String title, String artist) {
     Map<String, Object> query =
         Map.of("selector", Map.of("scoreId", scoreId, "title", title, "artist", artist));

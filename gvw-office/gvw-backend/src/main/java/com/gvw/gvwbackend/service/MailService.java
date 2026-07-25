@@ -13,6 +13,13 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+/**
+ * Service responsible for sending application emails.
+ *
+ * <p>Uses Thymeleaf templates to generate HTML email content and
+ * {@link JavaMailSender} to deliver messages. Supports dynamic template
+ * variables and embedded resources such as images.
+ */
 @Service
 public class MailService {
   private final JavaMailSender mailSender;
@@ -22,11 +29,31 @@ public class MailService {
   @Value("${spring.mail.username}")
   private String fromEmail;
 
+  /**
+   * Creates a new mail service instance.
+   *
+   * @param mailSender mail sender used to deliver messages
+   * @param templateEngine engine used to render email templates
+   */
   public MailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
     this.mailSender = mailSender;
     this.templateEngine = templateEngine;
   }
 
+  /**
+   * Sends an HTML email using a Thymeleaf template.
+   *
+   * <p>The provided template is rendered with the given variables and sent to
+   * the specified recipient. The application logo is automatically embedded
+   * as an inline resource.
+   *
+   * @param to recipient email address
+   * @param subject email subject
+   * @param templateName name of the Thymeleaf template to render
+   * @param variables values available inside the template
+   *
+   * @throws RuntimeException if the email could not be created or sent
+   */
   public void sendMail(
       String to, String subject, String templateName, Map<String, Object> variables) {
     try {

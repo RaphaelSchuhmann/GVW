@@ -10,9 +10,25 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.RestTemplate;
 
+/**
+ * General Spring application bean configuration.
+ *
+ * <p>Provides shared application components such as:
+ * <ul>
+ *   <li>Database HTTP client</li>
+ *   <li>Password hashing implementation</li>
+ *   <li>JWT service</li>
+ * </ul>
+ */
 @Configuration
 public class AppConfig {
 
+  /**
+   * Creates the RestTemplate used for CouchDB communication.
+   *
+   * <p>The client automatically adds HTTP Basic Authentication credentials
+   * required by CouchDB.
+   */
   @Bean
   @Qualifier("dbRestTemplate")
   public RestTemplate dbRestTemplate(
@@ -22,6 +38,7 @@ public class AppConfig {
     return restTemplate;
   }
 
+  // BCrypt is used for one-way password hashing
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();

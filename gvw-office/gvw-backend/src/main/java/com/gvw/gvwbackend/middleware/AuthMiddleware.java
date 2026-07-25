@@ -20,6 +20,29 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+/**
+ * Authentication middleware responsible for validating JWT bearer tokens
+ * and establishing the Spring Security context.
+ *
+ * <p>For protected endpoints, the filter:
+ * <ul>
+ *   <li>Extracts the JWT from the Authorization header</li>
+ *   <li>Validates the token using {@link JwtService}</li>
+ *   <li>Extracts the user ID and role claims</li>
+ *   <li>Creates an authenticated Spring Security context</li>
+ * </ul>
+ *
+ * <p>The following paths bypass authentication:
+ * <ul>
+ *   <li>Authentication endpoints</li>
+ *   <li>Development endpoints</li>
+ *   <li>Emergency recovery endpoints</li>
+ *   <li>Public settings access</li>
+ *   <li>Password change endpoint</li>
+ * </ul>
+ *
+ * <p>Invalid or missing authentication information results in HTTP 401.
+ */
 @Component
 public class AuthMiddleware extends OncePerRequestFilter {
   private final JwtService jwtService;
@@ -32,6 +55,10 @@ public class AuthMiddleware extends OncePerRequestFilter {
     this.jwtService = jwtService;
   }
 
+  /**
+   * Sends a standardized unauthorized response containing the GVW error code
+   * used by the frontend to handle authentication failures.
+   */
   private void sendUnauthorized(HttpServletResponse response) throws IOException {
     String code = String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 401));
     response.setHeader("X-GVW-Error-Code", code);
@@ -39,6 +66,12 @@ public class AuthMiddleware extends OncePerRequestFilter {
     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, code);
   }
 
+  /**
+   * Determines whether authentication should be skipped for a request.
+   *
+   * <p>Paths matching the excluded endpoint list are allowed to continue
+   * without requiring a JWT.
+   */
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
     String path = request.getServletPath();
@@ -46,6 +79,30 @@ public class AuthMiddleware extends OncePerRequestFilter {
     return EXCLUDED_PATHS.stream().anyMatch(pattern -> pathMatcher.match(pattern, path));
   }
 
+  /**
+   * Processes incoming requests and authenticates users using JWT bearer tokens.
+   *
+   * <p>Requests using HTTP OPTIONS are passed through without authentication to
+   * allow CORS preflight requests to succeed.
+   *
+   * <p>For all other requests, the filter:
+   * <ul>
+   *   <li>Extracts the JWT from the Authorization header</li>
+   *   <li>Validates and parses the token using {@link JwtService}</li>
+   *   <li>Extracts the user ID and role from the token claims</li>
+   *   <li>Creates a Spring Security authentication context</li>
+   *   <li>Stores the authenticated user ID as a request attribute</li>
+   * </ul>
+   *
+   * <p>If the token is missing, invalid, or does not contain a valid role,
+   * the request is rejected with HTTP 401 Unauthorized.
+   *
+   * @param request current HTTP request
+   * @param response current HTTP response
+   * @param filterChain chain used to continue request processing
+   * @throws IOException if writing the response fails
+   * @throws ServletException if request processing fails
+   */
   @Override
   protected void doFilterInternal(
       HttpServletRequest request,
@@ -54,6 +111,7 @@ public class AuthMiddleware extends OncePerRequestFilter {
       throws IOException, ServletException {
 
     if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+      // Allow CORS preflight requests without requiring authentication
       filterChain.doFilter(request, response);
       return;
     }
@@ -87,9 +145,11 @@ public class AuthMiddleware extends OncePerRequestFilter {
 
       SecurityContextHolder.getContext().setAuthentication(authToken);
 
+      // Make user ID available for controllers/services without re-parsing the JWT
       request.setAttribute("userId", userId);
       filterChain.doFilter(request, response);
     } catch (Exception e) {
+      // Any JWT parsing, validation, or claim extraction failure is treated as invalid authentication
       sendUnauthorized(response);
     }
   }

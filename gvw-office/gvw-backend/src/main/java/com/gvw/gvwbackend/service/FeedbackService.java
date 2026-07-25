@@ -18,6 +18,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Service responsible for managing user feedback submissions.
+ *
+ * <p>Handles retrieving feedback entries, resolving feedback details,
+ * creating new feedback reports, and deleting existing feedback.
+ *
+ * <p>Changes to feedback data are broadcast through {@link SseService}
+ * so connected clients can refresh their data automatically.
+ */
 @Service
 public class FeedbackService {
   private final DbService dbService;
@@ -32,6 +41,13 @@ public class FeedbackService {
     this.userService = userService;
   }
 
+  /**
+   * Retrieves all feedback entries.
+   *
+   * <p>Returns only summary information intended for feedback list views.
+   *
+   * @return response containing all available feedback summaries
+   */
   public FeedbacksResponseDTO getFeedbacks() {
     List<Map<String, Object>> rawFeedbacks = dbService.findAll("feedbacks");
 
@@ -50,6 +66,17 @@ public class FeedbackService {
     return new FeedbacksResponseDTO(feedbackResponseDTOS);
   }
 
+  /**
+   * Retrieves detailed information about a single feedback entry.
+   *
+   * <p>The stored user ID is resolved into an email address before returning
+   * the response.
+   *
+   * @param id database ID of the feedback entry
+   * @return detailed feedback information
+   * @throws BadRequestException if the ID is missing
+   * @throws NotFoundException if no feedback exists with the given ID
+   */
   public FeedbackDetailsResponseDTO getFeedbackDetails(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -73,6 +100,17 @@ public class FeedbackService {
         feedback.getMetaData().getRoute());
   }
 
+  /**
+   * Creates a new feedback entry from a user submission.
+   *
+   * <p>The current user ID and additional application metadata are stored
+   * together with the feedback content. After creation, connected clients are
+   * notified through SSE.
+   *
+   * @param request feedback data submitted by the user
+   * @param userId ID of the user creating the feedback
+   * @throws BadRequestException if no user ID is provided
+   */
   public void addFeedback(AddFeedbackRequestDTO request, String userId) {
     if (userId == null || userId.isBlank()) {
       throw new BadRequestException(
@@ -102,6 +140,15 @@ public class FeedbackService {
     }
   }
 
+  /**
+   * Deletes an existing feedback entry.
+   *
+   * <p>After successful deletion, connected clients are notified through SSE.
+   *
+   * @param id database ID of the feedback entry
+   * @throws BadRequestException if the ID is missing
+   * @throws NotFoundException if no feedback exists with the given ID
+   */
   public void deleteFeedback(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(

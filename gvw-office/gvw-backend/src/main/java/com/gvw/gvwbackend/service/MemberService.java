@@ -18,6 +18,17 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Service responsible for managing members and their linked user accounts.
+ *
+ * <p>Provides functionality for retrieving, creating, updating, and deleting
+ * members. Member operations may also create or update associated user
+ * accounts to keep member and authentication data synchronized.
+ *
+ * <p>Uses {@link DbService} for persistence, {@link MemberMapper} for DTO
+ * mapping, {@link MailService} for account notifications, and
+ * {@link SseService} for broadcasting real-time updates.
+ */
 @Service
 public class MemberService {
   private final DbService dbService;
@@ -28,6 +39,15 @@ public class MemberService {
   private final SseService sseService;
   private static final Logger log = LoggerFactory.getLogger(MemberService.class);
 
+  /**
+   * Creates a new member service instance.
+   *
+   * @param dbService service used for database operations
+   * @param memberMapper mapper used for updating member and user entities
+   * @param passwordEncoder encoder used for storing user passwords securely
+   * @param mailService service used for sending account emails
+   * @param sseService service used for broadcasting member changes
+   */
   public MemberService(
       DbService dbService,
       MemberMapper memberMapper,
@@ -41,6 +61,14 @@ public class MemberService {
     this.sseService = sseService;
   }
 
+  /**
+   * Retrieves all members.
+   *
+   * <p>Loads members from storage and converts them into response DTOs for
+   * administration and display purposes.
+   *
+   * @return list of all members
+   */
   public MembersResponseDTO getMembers() {
     List<Map<String, Object>> membersRaw = dbService.findAll("members");
 
@@ -73,6 +101,14 @@ public class MemberService {
     return new MembersResponseDTO(responseMembers);
   }
 
+  /**
+   * Checks whether a member exists.
+   *
+   * @param id identifier of the member
+   *
+   * @throws BadRequestException if the identifier is empty
+   * @throws NotFoundException if no member exists with the given identifier
+   */
   public void checkMember(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -86,6 +122,21 @@ public class MemberService {
     }
   }
 
+  /**
+   * Creates a new member and the associated user account.
+   *
+   * <p>Creates the member record, generates a linked user account with a
+   * temporary password, sends the credentials via email, and broadcasts a
+   * member refresh event.
+   *
+   * <p>If user creation fails after the member has been created, the created
+   * member is removed to prevent orphaned records.
+   *
+   * @param request member creation data
+   *
+   * @throws ConflictException if a user with the provided email already exists
+   * @throws NotFoundException if the created member cannot be retrieved
+   */
   public void addMember(AddMemberRequestDTO request) {
     if (emailExists(request.email())) {
       throw new ConflictException(
@@ -151,6 +202,17 @@ public class MemberService {
     }
   }
 
+  /**
+   * Deletes a member and its linked user account.
+   *
+   * <p>Removes both the member record and the associated authentication user
+   * record, then broadcasts a member refresh event.
+   *
+   * @param id identifier of the member
+   *
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if the member or linked user does not exist
+   */
   public void deleteMember(String id) {
     if (id == null || id.isEmpty()) {
       throw new BadRequestException(
@@ -166,6 +228,18 @@ public class MemberService {
     sseService.broadcastRefresh("MEMBERS");
   }
 
+  /**
+   * Updates member information and the associated user account.
+   *
+   * <p>Updates both records to keep member data and authentication data
+   * synchronized. After a successful update, a member refresh event is
+   * broadcast.
+   *
+   * @param request updated member information
+   * @return list containing the new revisions of the member and user records
+   *
+   * @throws NotFoundException if the member or linked user does not exist
+   */
   public List<String> updateMember(UpdateMemberRequestDTO request) {
     // Can throw not found
     Member member = getMemberById(request.id(), ErrorAction.UPDATE);
@@ -196,6 +270,19 @@ public class MemberService {
         String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.UPDATE, 500)));
   }
 
+  /**
+   * Toggles the active state of a member.
+   *
+   * <p>Switches the member status between {@code active} and {@code inactive}
+   * and broadcasts a member refresh event after updating.
+   *
+   * @param id identifier of the member
+   * @param _rev current database revision of the member
+   * @return new database revision of the updated member
+   *
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if the member does not exist
+   */
   public String updateMemberStatus(String id, String _rev) {
     if (id == null || id.isEmpty()) {
       throw new BadRequestException(
@@ -223,6 +310,12 @@ public class MemberService {
         String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.UPDATE, 500)));
   }
 
+  /**
+   * Checks whether an email address is already associated with a user account.
+   *
+   * @param email email address to check
+   * @return {@code true} if a user with the email exists
+   */
   private boolean emailExists(String email) {
     Map<String, Object> query = Map.of("selector", Map.of("email", email), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
@@ -230,6 +323,15 @@ public class MemberService {
     return !users.isEmpty();
   }
 
+  /**
+   * Creates a user entity from a member creation request.
+   *
+   * <p>Initializes default authentication state including first login
+   * requirement, generated user identifier, and assigned role.
+   *
+   * @param request member creation data
+   * @return initialized user entity
+   */
   private User createUserFromRequest(AddMemberRequestDTO request) {
     User user = new User();
     user.setEmail(request.email());
@@ -246,6 +348,12 @@ public class MemberService {
     return user;
   }
 
+  /**
+   * Creates a member entity from a creation request.
+   *
+   * @param request member creation data
+   * @return initialized member entity
+   */
   private Member createMemberFromRequest(AddMemberRequestDTO request) {
     Member member = new Member();
     member.setName(request.name());
@@ -262,6 +370,15 @@ public class MemberService {
     return member;
   }
 
+  /**
+   * Retrieves a member by database identifier.
+   *
+   * @param id identifier of the member
+   * @param action action context used for generating error codes
+   * @return matching member entity
+   *
+   * @throws NotFoundException if no member exists with the given identifier
+   */
   private Member getMemberById(String id, ErrorAction action) {
     Member member = dbService.findById("members", id, Member.class);
 
@@ -271,6 +388,15 @@ public class MemberService {
     return member;
   }
 
+  /**
+   * Retrieves the user account linked to a member.
+   *
+   * @param memberId identifier of the linked member
+   * @param action action context used for generating error codes
+   * @return linked user entity
+   *
+   * @throws NotFoundException if no linked user exists
+   */
   private User getUserByMemberId(String memberId, ErrorAction action) {
     Map<String, Object> query = Map.of("selector", Map.of("memberId", memberId), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
