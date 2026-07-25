@@ -72,8 +72,8 @@ export function sanitize(html) {
     html = html
         .replaceAll("&nbsp;", " ")
         .replaceAll("\u00A0", " ")
-        .replaceAll(/[ \t]+(\r?\n)/g, "$1")
-        .replaceAll(/\n\s+/g, "\n");
+        .replaceAll(/[ \t]+$/gm, "")
+        .replaceAll(/\n[ \t]+/g, "\n");
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, "text/html");
