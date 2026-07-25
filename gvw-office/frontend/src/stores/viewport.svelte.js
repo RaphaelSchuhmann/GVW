@@ -1,4 +1,3 @@
-// We use a private $state variable for the raw width
 let _width = $state(globalThis.window === undefined ? 1024 : window.innerWidth);
 
 // Create a manual listener that updates our state
@@ -10,11 +9,9 @@ if (globalThis.window !== undefined) {
 }
 
 export const viewport = {
-    // We provide a getter so components can "read" the width
     get width() {
         return _width;
     },
-    // The derived logic stays the same
     get isMobile() {
         return _width < 768;
     }

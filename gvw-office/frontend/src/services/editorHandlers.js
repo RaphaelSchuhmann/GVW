@@ -2,19 +2,29 @@ import { tick } from "svelte";
 import { addBlock, handleAutoLink, isCaretAtBoundary } from "./textEditorService.svelte.js";
 import { sanitize } from "./utils.js";
 
+/**
+ * Creates keyboard event handlers for a content editor.
+ *
+ * The handlers manage editor-specific keyboard behavior such as splitting
+ * blocks, removing rich links, and navigating between adjacent blocks.
+ *
+ * @param {Object} contentStore - Reactive store containing the editor blocks.
+ * @returns {Object} Editor event handlers.
+ * @returns {Function} returns.handleKeyDown - Keyboard event handler for editor blocks.
+ */
 export function createEditorHandlers(contentStore) {
     /**
      * Handles keyboard interactions inside an editor block.
      *
      * Supports:
-     * - Auto-link detection on space/enter
+     * - Automatic link detection on space/enter
      * - Enter key block splitting
      * - Backspace rich-link deletion handling
      * - Arrow key navigation between blocks
      *
-     * Updates the internal `content` array to stay in sync with DOM changes.
+     * Keeps the internal content store synchronized with DOM changes.
      *
-     * @param {KeyboardEvent} e - The keyboard event
+     * @param {KeyboardEvent} e - The keyboard event.
      * @returns {void}
      */
     function handleKeyDown(e) {
@@ -38,6 +48,18 @@ export function createEditorHandlers(contentStore) {
     return { handleKeyDown };
 }
 
+/**
+ * Splits the current editor block at the caret position.
+ *
+ * Creates a new block containing the content after the caret and moves
+ * focus to the newly created block.
+ *
+ * @param {KeyboardEvent} e - The keyboard event.
+ * @param {HTMLElement} currentBlock - The editor block receiving the event.
+ * @param {Array<Object>} content - The current editor block data.
+ *
+ * @returns {void}
+ */
 function handleEnter(e, currentBlock, content) {
     if (e.shiftKey) return;
 
@@ -73,6 +95,16 @@ function handleEnter(e, currentBlock, content) {
     }
 }
 
+/**
+ * Gets the DOM node immediately before the current caret position.
+ *
+ * Used for detecting whether the caret is positioned directly after a
+ * removable structural element such as a rich link.
+ *
+ * @param {Range} range - The current selection range.
+ *
+ * @returns {Node|null} The previous DOM node relative to the caret.
+ */
 function getPreviousTargetNode(range) {
     const { startContainer, startOffset } = range;
 
@@ -85,6 +117,18 @@ function getPreviousTargetNode(range) {
     return startContainer;
 }
 
+/**
+ * Handles backspace behavior inside an editor block.
+ *
+ * Removes rich-link elements when the caret is directly after them.
+ * Empty blocks are removed and focus is moved to the previous block.
+ *
+ * @param {KeyboardEvent} e - The keyboard event.
+ * @param {HTMLElement} currentBlock - The editor block receiving the event.
+ * @param {Array<Object>} content - The current editor block data.
+ *
+ * @returns {void}
+ */
 function handleBackspace(e, currentBlock, content) {
     const selection = window.getSelection();
 
@@ -142,6 +186,16 @@ function handleBackspace(e, currentBlock, content) {
     }
 }
 
+/**
+ * Moves the caret to the previous editor block when pressing ArrowUp
+ * at the top boundary of the current block.
+ *
+ * @param {KeyboardEvent} e - The keyboard event.
+ * @param {HTMLElement} currentBlock - The editor block receiving the event.
+ * @param {Array<Object>} content - The current editor block data.
+ *
+ * @returns {void}
+ */
 function handleArrowUp(e, currentBlock, content) {
     if (isCaretAtBoundary(currentBlock, "top")) {
         e.preventDefault();
@@ -163,6 +217,16 @@ function handleArrowUp(e, currentBlock, content) {
     }
 }
 
+/**
+ * Moves the caret to the next editor block when pressing ArrowDown
+ * at the bottom boundary of the current block.
+ *
+ * @param {KeyboardEvent} e - The keyboard event.
+ * @param {HTMLElement} currentBlock - The editor block receiving the event.
+ * @param {Array<Object>} content - The current editor block data.
+ *
+ * @returns {void}
+ */
 function handleArrowDown(e, currentBlock, content) {
     if (isCaretAtBoundary(currentBlock, "bottom")) {
         e.preventDefault();

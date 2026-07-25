@@ -375,6 +375,27 @@ export async function downloadAttachments(reportId) {
     }
 }
 
+/**
+ * Updates an existing report on the backend.
+ *
+ * Sends the report data as JSON together with any pending image files
+ * using a multipart form request. Prevents multiple simultaneous update
+ * requests and returns the new revision identifier when the update succeeds.
+ *
+ * Displays a success notification after a successful update and falls back
+ * to the current revision if the update fails or no new revision is returned.
+ *
+ * @async
+ * @param {Object} reportData - The report data to update.
+ * @param {string} reportData.id - The unique identifier of the report.
+ * @param {string} [reportData.rev] - The current revision identifier of the report.
+ * @param {string} reportData.title - The title of the report.
+ * @param {string} reportData.editor - The report editor information.
+ * @param {string} reportData.content - The report content.
+ *
+ * @returns {Promise<string>} The new report revision identifier, or the existing
+ * revision if the update fails.
+ */
 export async function updateReport(reportData) {
     if (isFetching.updateReport) return reportData.rev || "";
 

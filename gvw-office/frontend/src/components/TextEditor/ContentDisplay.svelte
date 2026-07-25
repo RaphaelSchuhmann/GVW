@@ -209,8 +209,6 @@
     });
 
     function handleDragOver(e) { e.preventDefault(); }
-
-
 </script>
 
 <div class="h-full flex flex-col items-start justify-start gap-1 w-full overflow-y-auto overflow-x-hidden">

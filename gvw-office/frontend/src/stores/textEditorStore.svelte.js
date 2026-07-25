@@ -1,3 +1,6 @@
+/**
+ * Svelte store for editor selection data
+ */
 export const editorSelectionStore = $state({
     itemId: null,
     root: null,
@@ -10,6 +13,9 @@ export const editorSelectionStore = $state({
     }
 });
 
+/**
+ * Svelte store for editor metadata
+ */
 export const editorMetadataStore = $state({
     activeFeature: "",
 })

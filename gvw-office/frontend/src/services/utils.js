@@ -45,6 +45,14 @@ export function triggerFileDownload(blob, zipName) {
     setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+/**
+ * Creates a copy of a file with a different name while preserving its contents
+ * and MIME type.
+ *
+ * @param {File} originalFile - The original file to rename.
+ * @param {string} newName - The new name for the file.
+ * @returns {File} A new File object with the updated name.
+ */
 export function renameFile(originalFile, newName) {
     const fileOptions = { type: originalFile.type };
     return new File([originalFile], newName, fileOptions);

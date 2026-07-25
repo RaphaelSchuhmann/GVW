@@ -109,7 +109,6 @@ export async function apiDeleteBugReport(id) {
  *   console.log("Bug Report added");
  * }
  */
-
 export async function apiAddBugReport(bugReport) {
     const resp = await httpPost(`${apiUrl}/support/bugs/add`, {
         title: bugReport.title,
