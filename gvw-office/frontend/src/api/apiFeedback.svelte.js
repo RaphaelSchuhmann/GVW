@@ -106,7 +106,6 @@ export async function apiDeleteFeedback(id) {
  *   console.log("Feedback added");
  * }
  */
-
 export async function apiAddFeedback(feedback) {
     const resp = await httpPost(`${apiUrl}/support/feedback/add`, {
         title: feedback.title,

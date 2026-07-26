@@ -17,6 +17,25 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+/**
+ * Spring Security configuration for the application.
+ *
+ * <p>The application uses stateless JWT-based authentication instead of
+ * server-side sessions. Incoming requests are authenticated through the
+ * custom {@link AuthMiddleware}.
+ *
+ * <p>The security chain performs the following:
+ * <ul>
+ *   <li>Configures CORS handling</li>
+ *   <li>Disables CSRF because the application does not use cookie-based sessions</li>
+ *   <li>Enforces stateless session management</li>
+ *   <li>Allows unauthenticated access to public endpoints</li>
+ *   <li>Requires authentication for all remaining endpoints</li>
+ * </ul>
+ *
+ * <p>The {@link EmergencySecurityFilter} is placed before authentication to
+ * protect emergency endpoints that intentionally bypass normal JWT validation.
+ */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
@@ -33,6 +52,16 @@ public class SecurityConfig {
     this.emergencySecurityFilter = emergencySecurityFilter;
   }
 
+  /**
+   * Configures the application's HTTP security filter chain.
+   *
+   * <p>Requests are authenticated using JWT tokens through {@link AuthMiddleware}.
+   * CORS preflight requests and explicitly configured public endpoints are allowed
+   * without authentication.
+   *
+   * @param http Spring Security HTTP configuration
+   * @return configured security filter chain
+   */
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -59,6 +88,15 @@ public class SecurityConfig {
     return http.build();
   }
 
+  /**
+   * Configures CORS rules for frontend communication.
+   *
+   * <p>The allowed origins are loaded from configuration to support different
+   * deployment environments. The API exposes selected headers required by the
+   * frontend.
+   *
+   * @return CORS configuration source
+   */
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration config = new CorsConfiguration();

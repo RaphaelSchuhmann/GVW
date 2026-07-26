@@ -160,7 +160,7 @@ export async function deleteChangelog(changelogId) {
 export function formatChangelog(rawText) {
     if (!rawText) return "";
 
-    const html = rawText
+    return rawText
         .split("\n")
         .map(line => {
             const trimmed = line.trim();
@@ -176,6 +176,4 @@ export function formatChangelog(rawText) {
             return line;
         })
         .join("");
-
-    return html;
 }

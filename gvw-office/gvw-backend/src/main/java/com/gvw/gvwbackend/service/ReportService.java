@@ -25,6 +25,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Service responsible for managing reports.
+ *
+ * <p>Provides functionality for creating, retrieving, updating, deleting,
+ * and searching reports. Handles persistence through {@link DbService},
+ * editor asset management through {@link TextEditorService}, and real-time
+ * client updates through {@link SseService}.
+ *
+ * <p>Report updates also manage linked editor assets and attachments,
+ * including cleanup of unused files.
+ */
 @Service
 public class ReportService {
   private final DbService dbService;
@@ -33,6 +44,13 @@ public class ReportService {
   private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(ReportService.class);
 
+  /**
+   * Creates a new report service instance.
+   *
+   * @param dbService service used for report persistence
+   * @param sseService service used for broadcasting report changes
+   * @param editorService service used for managing editor content and assets
+   */
   public ReportService(
       DbService dbService, SseService sseService, TextEditorService editorService) {
     this.dbService = dbService;
@@ -40,6 +58,14 @@ public class ReportService {
     this.editorService = editorService;
   }
 
+  /**
+   * Retrieves all available reports.
+   *
+   * <p>Loads reports from storage and converts them into lightweight response
+   * objects suitable for report listings.
+   *
+   * @return list of available reports
+   */
   public ReportsResponseDTO getReports() {
     List<Map<String, Object>> rawReports = dbService.findAll("reports");
 
@@ -66,6 +92,14 @@ public class ReportService {
     return new ReportsResponseDTO(responseDTOS);
   }
 
+  /**
+   * Checks whether a report exists.
+   *
+   * @param id identifier of the report
+   *
+   * @throws BadRequestException if the identifier is empty
+   * @throws NotFoundException if no report exists with the given identifier
+   */
   public void checkReport(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -79,6 +113,15 @@ public class ReportService {
     }
   }
 
+  /**
+   * Creates a new report.
+   *
+   * <p>Initializes the report metadata and creates an empty text editor block
+   * as the starting content. After successful creation, a refresh event is
+   * broadcast to connected clients.
+   *
+   * @param request report creation data
+   */
   public void createReport(AddReportRequestDTO request) {
     Report report = new Report();
     report.setTitle(request.title());
@@ -103,6 +146,18 @@ public class ReportService {
     }
   }
 
+  /**
+   * Retrieves a complete report including editor content and metadata.
+   *
+   * <p>Additionally calculates plain text statistics such as word count and
+   * estimated reading time.
+   *
+   * @param id identifier of the report
+   * @return complete report information
+   *
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if the report does not exist
+   */
   public FullReportResponseDTO getReport(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -144,6 +199,19 @@ public class ReportService {
         filenames);
   }
 
+  /**
+   * Verifies that an editor asset belongs to a report.
+   *
+   * <p>Used to prevent unauthorized access to files that are not referenced
+   * by the requested report content.
+   *
+   * @param documentId identifier of the report
+   * @param filename asset filename to verify
+   *
+   * @throws BadRequestException if parameters are invalid or the asset is not
+   * referenced by the report
+   * @throws NotFoundException if the report does not exist
+   */
   public void verifyAssetOwnership(String documentId, String filename) {
     if (documentId == null || documentId.isBlank() || filename == null || filename.isBlank()) {
       throw new BadRequestException(
@@ -164,6 +232,17 @@ public class ReportService {
     }
   }
 
+  /**
+   * Deletes a report and all associated assets.
+   *
+   * <p>Removes the report from storage, deletes editor block assets, removes
+   * uploaded attachments from disk, and broadcasts a report refresh event.
+   *
+   * @param id identifier of the report
+   *
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if the report does not exist
+   */
   public void deleteReport(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -202,6 +281,15 @@ public class ReportService {
     }
   }
 
+  /**
+   * Searches through report contents for a given search term.
+   *
+   * <p>Uses deep text search on editor content and returns matching reports
+   * together with surrounding text snippets.
+   *
+   * @param input search term
+   * @return matching reports with search context
+   */
   public ReportsSearchResponseDTO reportDeepSearch(String input) {
     if (input == null || input.isBlank()) {
       return new ReportsSearchResponseDTO(List.of());
@@ -234,6 +322,20 @@ public class ReportService {
     return new ReportsSearchResponseDTO(responseDTOS);
   }
 
+  /**
+   * Updates report content and handles editor asset synchronization.
+   *
+   * <p>Processes uploaded editor files, replaces temporary image references,
+   * updates the report content, removes unused assets, and broadcasts a refresh
+   * event after successful persistence.
+   *
+   * @param request updated report data
+   * @param files newly uploaded editor files
+   * @return new database revision of the updated report
+   *
+   * @throws BadRequestException if uploaded files or content are invalid
+   * @throws NotFoundException if the report does not exist
+   */
   public String updateReport(UpdateReportRequestDTO request, List<MultipartFile> files) {
     Report report = dbService.findById("reports", request.id(), Report.class);
     if (report == null) {
@@ -299,6 +401,17 @@ public class ReportService {
     }
   }
 
+  /**
+   * Updates the description of an existing report.
+   *
+   * <p>If no description is provided, a default placeholder description is
+   * stored instead.
+   *
+   * @param request updated description information
+   * @return new database revision of the updated report
+   *
+   * @throws NotFoundException if the report does not exist
+   */
   public String updateReportDescription(UpdateReportDescriptionRequestDTO request) {
     String description = request.description();
 
@@ -331,6 +444,24 @@ public class ReportService {
     return (String) resp.get("rev");
   }
 
+  /**
+   * Updates the attachments of a report.
+   *
+   * <p>Stores newly uploaded files, removes deleted attachments from disk,
+   * updates the report metadata, and broadcasts a refresh event.
+   *
+   * <p>If the update fails, newly stored files are removed to prevent orphaned
+   * files on disk.
+   *
+   * @param request attachment update information
+   * @param files newly uploaded files
+   * @param reportId identifier of the report
+   * @return new database revision of the updated report
+   *
+   * @throws BadRequestException if the request is invalid or the revision does
+   * not match
+   * @throws NotFoundException if the report does not exist
+   */
   public String updateAttachments(
       UpdateDocumentAttachmentsDTO request, List<MultipartFile> files, String reportId) {
     if (reportId == null || reportId.isBlank()) {
@@ -445,6 +576,17 @@ public class ReportService {
     }
   }
 
+  /**
+   * Streams report attachments as a ZIP archive.
+   *
+   * <p>Creates a ZIP archive directly on the provided output stream without
+   * loading all files into memory.
+   *
+   * @param files files to include in the archive
+   * @param out output stream receiving the ZIP data
+   *
+   * @throws RuntimeException if archive creation fails
+   */
   public void streamFilesAsZip(List<File> files, OutputStream out) {
     Path root = Paths.get(editorService.getFilesDir());
 

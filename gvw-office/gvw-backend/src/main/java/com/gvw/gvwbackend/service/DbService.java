@@ -25,6 +25,29 @@ import org.springframework.web.client.RestTemplate;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Central database abstraction layer for CouchDB communication.
+ *
+ * <p>This service provides all database operations used by the backend and
+ * hides direct HTTP communication with CouchDB from other services.
+ *
+ * <p>The application communicates with CouchDB exclusively through this class.
+ * Services should not create their own RestTemplate requests.
+ *
+ * <p>Error handling:
+ * <ul>
+ *   <li>Connection failures are converted into {@link DatabaseConnectionException}</li>
+ *   <li>Revision conflicts are converted into {@link ConflictException}</li>
+ *   <li>JSON mapping errors are converted into {@link DatabaseMappingException}</li>
+ * </ul>
+ *
+ * <p>Important CouchDB behavior:
+ * <ul>
+ *   <li>Documents require the current revision (_rev) when updating/deleting.</li>
+ *   <li>The insert method is also used for replacing existing documents when a
+ *       document contains an existing _id and _rev.</li>
+ * </ul>
+ */
 @Service
 public class DbService {
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -66,6 +89,17 @@ public class DbService {
     log.info("DB Service initialized");
   }
 
+  /**
+   * Creates or replaces a CouchDB document.
+   *
+   * <p>This method internally uses CouchDB's POST endpoint.
+   * If a document contains an existing ID and revision, CouchDB replaces the
+   * existing document instead of creating a new one.
+   *
+   * @param db target CouchDB database
+   * @param doc document object to store
+   * @return true if CouchDB confirms the operation succeeded
+   */
   public <T> boolean insert(String db, T doc) {
     String url = String.format("%s/%s", baseUrl, db);
     Map<String, Object> resp =
@@ -73,6 +107,18 @@ public class DbService {
     return resp != null && Boolean.TRUE.equals(resp.get("ok"));
   }
 
+  /**
+   * Updates an existing CouchDB document using its document ID.
+   *
+   * <p>The supplied document must contain the current CouchDB revision.
+   * If another client modified the document in the meantime, CouchDB rejects
+   * the update and a ConflictException is thrown.
+   *
+   * @param db target database
+   * @param id document ID
+   * @param doc updated document contents
+   * @return CouchDB response containing the new revision
+   */
   public <T> Map<String, Object> update(String db, String id, T doc) {
     String url = String.format("%s/%s/%s", baseUrl, db, id);
 
@@ -96,6 +142,20 @@ public class DbService {
         db);
   }
 
+  /**
+   * Deletes a document from CouchDB using its current revision.
+   *
+   * <p>CouchDB requires the document revision (_rev) to prevent deleting
+   * outdated versions of documents.
+   *
+   * <p>If the revision does not match the current database version, CouchDB
+   * rejects the operation and the error is handled by {@link #safeExecute}.
+   *
+   * @param db target CouchDB database
+   * @param id document ID
+   * @param rev current CouchDB document revision
+   * @return true if CouchDB confirms deletion
+   */
   public boolean delete(String db, String id, String rev) {
     String url = String.format("%s/%s/%s?rev=%s", baseUrl, db, id, rev);
     Map<String, Object> resp =
@@ -104,6 +164,18 @@ public class DbService {
     return resp != null && Boolean.TRUE.equals(resp.get("ok"));
   }
 
+  /**
+   * Retrieves all documents from a CouchDB database.
+   *
+   * <p>This method uses the "_all_docs" endpoint with "include_docs=true" so
+   * that the complete document content is returned instead of only metadata.
+   *
+   * <p>Documents without a "doc" field are ignored. This can happen for deleted
+   * CouchDB documents (tombstones).
+   *
+   * @param db target CouchDB database
+   * @return list of raw CouchDB documents
+   */
   public List<Map<String, Object>> findAll(String db) {
     String url = String.format("%s/%s/_all_docs?include_docs=true", baseUrl, db);
     Map<String, Object> resp = safeExecute(() -> restTemplate.getForObject(url, Map.class), db);
@@ -123,6 +195,20 @@ public class DbService {
     return docs;
   }
 
+  /**
+   * Retrieves a single CouchDB document by its ID and maps it to a Java object.
+   *
+   * <p>A missing document is represented by a null return value instead of an
+   * exception. Services using this method are responsible for deciding whether
+   * a missing document is an error.
+   *
+   * <p>Mapping failures are converted into {@link DatabaseMappingException}.
+   *
+   * @param db target CouchDB database
+   * @param id document ID
+   * @param clazz target Java class
+   * @return mapped document or null if it does not exist
+   */
   public <T> T findById(String db, String id, Class<T> clazz) {
     String url = String.format("%s/%s/%s", baseUrl, db, id);
     String json = safeExecute(() -> restTemplate.getForObject(url, String.class), db);
@@ -136,6 +222,22 @@ public class DbService {
     }
   }
 
+  /**
+   * Executes a CouchDB Mango query and maps all matching documents to the
+   * requested Java type.
+   *
+   * <p>This method uses CouchDB's "_find" endpoint. The provided query map is
+   * sent directly as the Mango query body.
+   *
+   * <p>If no documents match the query, an empty list is returned.
+   *
+   * <p>Mapping failures are converted into {@link DatabaseMappingException}.
+   *
+   * @param db target CouchDB database
+   * @param query Mango query selector and options
+   * @param clazz target Java class for document mapping
+   * @return list of mapped documents
+   */
   public <T> List<T> findByQuery(String db, Map<String, Object> query, Class<T> clazz) {
     String url = String.format("%s/%s/_find", baseUrl, db);
     String resp = safeExecute(() -> restTemplate.postForObject(url, query, String.class), db);
@@ -159,6 +261,18 @@ public class DbService {
     }
   }
 
+  /**
+   * Initializes the required CouchDB databases.
+   *
+   * <p>This method is executed during application startup and ensures all
+   * required databases exist.
+   *
+   * <p>Additionally, this method resets the default application settings
+   * document ("general") to the built-in defaults.
+   *
+   * <p>This behavior is intentional because this method is used for initial
+   * installation/setup. It should not be called during normal runtime.
+   */
   public void createDatabases() {
     for (String database : databases) {
       String url = String.format("%s/%s", baseUrl, database);
@@ -222,6 +336,19 @@ public class DbService {
     log.info("Inserted default settings document {}", kv("db", appSettingsDb));
   }
 
+  /**
+   * Executes a CouchDB request and normalizes all low-level HTTP/network errors
+   * into application-specific exceptions.
+   *
+   * <p>All database operations go through this method to ensure consistent
+   * error handling and logging.
+   *
+   * <p>404 responses are intentionally not converted because some callers use
+   * missing documents as valid states.
+   *
+   * @param action database operation
+   * @param db database name for logging context
+   */
   private <T> T safeExecute(Supplier<T> action, String db) {
     try {
       return action.get();
@@ -251,6 +378,16 @@ public class DbService {
     }
   }
 
+  /**
+   * Checks whether an exception chain contains a connection refused error.
+   *
+   * <p>Spring wraps low-level network exceptions inside multiple layers of
+   * exceptions. This method walks through the complete cause chain to find the
+   * original {@link ConnectException}.
+   *
+   * @param e exception to inspect
+   * @return true if the root cause is a refused connection
+   */
   private boolean isConnectionRefused(Throwable e) {
     while (e != null) {
       if (e instanceof ConnectException) return true;

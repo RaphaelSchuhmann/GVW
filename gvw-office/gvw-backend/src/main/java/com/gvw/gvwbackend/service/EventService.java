@@ -18,6 +18,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Service responsible for managing calendar events.
+ *
+ * <p>Handles creation, retrieval, updating, and deletion of events.
+ * Event changes are broadcast through {@link SseService} so connected clients
+ * can update their calendar data automatically.
+ *
+ * <p>This service also handles automatic status updates for expired single
+ * events when retrieving the event list.
+ */
 @Service
 public class EventService {
   private final ObjectMapper mapper = new ObjectMapper();
@@ -32,6 +42,17 @@ public class EventService {
     this.sseService = sseService;
   }
 
+  /**
+   * Retrieves all events from the database.
+   *
+   * <p>While loading events, expired single events that are still marked as
+   * "upcoming" are automatically changed to "finished" and persisted.
+   *
+   * <p>If automatic status updates occur, connected clients receive an SSE
+   * refresh notification.
+   *
+   * @return all events formatted for the API response
+   */
   public EventsResponseDTO allEvents() {
     List<Map<String, Object>> eventsRaw = dbService.findAll("events");
     boolean changed = false;
@@ -102,6 +123,13 @@ public class EventService {
     return new EventsResponseDTO(responseEvents);
   }
 
+  /**
+   * Checks whether an event exists.
+   *
+   * @param id database ID of the event
+   * @throws BadRequestException if the ID is missing
+   * @throws NotFoundException if no event exists with the given ID
+   */
   public void checkEvent(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -115,6 +143,15 @@ public class EventService {
     }
   }
 
+  /**
+   * Creates a new calendar event.
+   *
+   * <p>The recurrence configuration is validated before storing the event.
+   * After successful creation, connected clients are notified through SSE.
+   *
+   * @param request event creation data
+   * @throws BadRequestException if the recurrence configuration is invalid
+   */
   public void addEvent(AddEventRequestDTO request) {
     if (!validateRecurrence(request.mode(), request.recurrence())) {
       throw new BadRequestException(
@@ -132,6 +169,15 @@ public class EventService {
     }
   }
 
+  /**
+   * Deletes an existing event.
+   *
+   * <p>After successful deletion, connected clients are notified through SSE.
+   *
+   * @param id database ID of the event
+   * @throws BadRequestException if the ID is missing
+   * @throws NotFoundException if the event does not exist
+   */
   public void deleteEvent(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -153,6 +199,13 @@ public class EventService {
     }
   }
 
+  /**
+   * Toggles the status of an event between "upcoming" and "finished".
+   *
+   * @param id database ID of the event
+   * @param _rev CouchDB revision used for optimistic locking
+   * @return updated CouchDB revision
+   */
   public String updateEventStatus(String id, String _rev) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -189,6 +242,15 @@ public class EventService {
         String.valueOf(ErrorDomain.EVENTS.createCode(ErrorAction.UPDATE, 500)));
   }
 
+  /**
+   * Updates event information using values from an update request.
+   *
+   * <p>The mapper updates existing fields while preserving database identity
+   * information such as the document ID.
+   *
+   * @param request updated event data
+   * @return updated CouchDB revision
+   */
   public String updateEvent(UpdateEventRequestDTO request) {
     Event event = dbService.findById("events", request.id(), Event.class);
 
@@ -217,6 +279,20 @@ public class EventService {
         String.valueOf(ErrorDomain.EVENTS.createCode(ErrorAction.UPDATE, 500)));
   }
 
+  /**
+   * Validates whether the recurrence configuration matches the selected event mode.
+   *
+   * <p>Single and weekly events do not require additional recurrence data.
+   * Monthly events require either:
+   * <ul>
+   *   <li>a weekday + ordinal combination (for example: second Monday)</li>
+   *   <li>a specific day of month</li>
+   * </ul>
+   *
+   * @param mode event recurrence mode
+   * @param recurrence recurrence configuration
+   * @return true if the recurrence configuration is valid
+   */
   private boolean validateRecurrence(String mode, Event.Recurrence recurrence) {
     if (mode.equalsIgnoreCase("single") || mode.equalsIgnoreCase("weekly")) return true;
 

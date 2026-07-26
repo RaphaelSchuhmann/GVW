@@ -18,6 +18,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Service responsible for managing user-submitted bug reports.
+ *
+ * <p>Bug reports are stored in CouchDB and contain additional metadata about the client that
+ * submitted the report, such as browser, operating system, application version, and viewport
+ * size.
+ *
+ * <p>Creating or deleting reports broadcasts SSE refresh events so connected clients can update
+ * their data automatically.
+ */
 @Service
 public class BugReportService {
   private final DbService dbService;
@@ -38,6 +48,15 @@ public class BugReportService {
     this.mailService = mailService;
   }
 
+  /**
+   * Retrieves all bug reports from the database.
+   *
+   * <p>Only summary information is returned for each report. Detailed information including
+   * reproduction steps and client metadata is loaded separately through {@link
+   * #getBugReportDetails(String)}.
+   *
+   * @return list of bug report summaries
+   */
   public BugReportsResponseDTO getBugReports() {
     List<Map<String, Object>> rawBugReports = dbService.findAll("bug_reports");
 
@@ -56,6 +75,15 @@ public class BugReportService {
     return new BugReportsResponseDTO(bugReportResponseDTOS);
   }
 
+  /**
+   * Retrieves the complete information of a single bug report.
+   *
+   * <p>The stored user ID is resolved into an email address before returning the response to
+   * provide administrators with the reporter information.
+   *
+   * @param id database ID of the bug report
+   * @return detailed bug report information
+   */
   public BugReportDetailsResponseDTO getBugReportDetails(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
@@ -81,6 +109,23 @@ public class BugReportService {
         bugReport.getMetaData().getViewport());
   }
 
+  /**
+   * Creates a new bug report.
+   *
+   * <p>The report is stored together with metadata describing the client environment. After
+   * successful creation:
+   *
+   * <ul>
+   *   <li>The reporting user receives an email confirmation.
+   *   <li>Connected clients are notified through SSE.
+   * </ul>
+   *
+   * <p>Email failures are intentionally ignored because a failed notification should not prevent a
+   * valid bug report from being stored.
+   *
+   * @param request submitted bug report data
+   * @param userId ID of the user creating the report
+   */
   public void addBugReport(AddBugReportRequestDTO request, String userId) {
     if (userId == null || userId.isBlank()) {
       throw new BadRequestException(
@@ -122,6 +167,13 @@ public class BugReportService {
     }
   }
 
+  /**
+   * Permanently deletes a bug report from the database.
+   *
+   * <p>After deletion, connected clients receive an SSE refresh event.
+   *
+   * @param id database ID of the bug report to remove
+   */
   public void deleteBugReport(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(

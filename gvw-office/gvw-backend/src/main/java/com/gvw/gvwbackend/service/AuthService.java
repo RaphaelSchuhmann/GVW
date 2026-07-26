@@ -12,6 +12,20 @@ import java.util.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * Handles authentication-related operations.
+ *
+ * <p>This service is responsible for:
+ * <ul>
+ *   <li>User login and JWT generation</li>
+ *   <li>Failed login attempt tracking and temporary account locking</li>
+ *   <li>Password changes</li>
+ *   <li>Automatic login validation for existing sessions</li>
+ *   <li>Generation of temporary passwords for recovery flows</li>
+ * </ul>
+ *
+ * <p>User data is stored in CouchDB through {@link DbService}.
+ */
 @Service
 public class AuthService {
 
@@ -39,6 +53,27 @@ public class AuthService {
     this.jwtService = jwtService;
   }
 
+  /**
+   * Authenticates a user and creates a JWT token.
+   *
+   * <p>The login flow:
+   * <ol>
+   *   <li>Loads the user by email.</li>
+   *   <li>Checks whether the account is currently locked.</li>
+   *   <li>Validates the supplied password.</li>
+   *   <li>Tracks failed login attempts and locks the account after repeated failures.</li>
+   *   <li>Resets failed attempts after a successful login.</li>
+   *   <li>Creates a JWT containing the user's ID and role.</li>
+   * </ol>
+   *
+   * <p>Failed login attempts are stored persistently so that restarting the backend does not reset
+   * the protection mechanism.
+   *
+   * @param requestDTO login credentials
+   * @return JWT token and additional login state information
+   * @throws InvalidCredentialsException if credentials are invalid
+   * @throws TooManyRequestsException if the account is temporarily locked
+   */
   public LoginResponseDTO login(LoginRequestDTO requestDTO) {
     Map<String, Object> query = Map.of("selector", Map.of("email", requestDTO.email()), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
@@ -97,6 +132,17 @@ public class AuthService {
         rev);
   }
 
+  /**
+   * Changes the password of an existing user.
+   *
+   * <p>The old password must be verified before changing the password. New passwords cannot be
+   * identical to the current password.
+   *
+   * <p>This method also clears account flags related to first login and forced password changes.
+   *
+   * @param requestDTO password change request containing user credentials
+   * @return updated CouchDB document revision
+   */
   public String changePassword(ChangePwRequestDTO requestDTO) {
     Map<String, Object> query = Map.of("selector", Map.of("email", requestDTO.email()), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
@@ -134,6 +180,15 @@ public class AuthService {
         String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.UPDATE, 500)));
   }
 
+  /**
+   * Retrieves user information required for automatic login.
+   *
+   * <p>This does not authenticate a user or create a token. It only validates that the user still
+   * exists and returns account state information required by the frontend.
+   *
+   * @param id internal user identifier
+   * @return user information required for automatic login handling
+   */
   public AutoLoginResponseDTO autoLogin(String id) {
     if (id == null || id.isBlank()) {
       throw new InvalidCredentialsException(
@@ -155,6 +210,18 @@ public class AuthService {
         Boolean.TRUE.equals(user.getFirstLogin()));
   }
 
+  /**
+   * Generates a temporary human-readable password.
+   *
+   * <p>The generated password consists of randomly selected words combined with random digits.
+   * Words are capitalized and all generated parts are shuffled before being combined.
+   *
+   * <p>This method uses {@link java.security.SecureRandom} to avoid predictable password generation.
+   *
+   * @param wordCount number of random words to include
+   * @param numberCount number of random digits to include
+   * @return generated temporary password
+   */
   public static String generatePassword(int wordCount, int numberCount) {
     java.security.SecureRandom random = new java.security.SecureRandom();
 

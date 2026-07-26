@@ -1,7 +1,3 @@
-/**
- * Maps margin top values to Tailwind CSS classes
- * @type {Object<string, string>}
- */
 export const marginMap = {
     "0": "mt-0",
     "": "mt-0",
@@ -17,10 +13,6 @@ export const marginMap = {
     "10": "mt-10",
 };
 
-/**
- * Maps padding values to Tailwind CSS classes
- * @type {Object<string, string>}
- */
 export const paddingMap = {
     "0": "p-0",
     "": "p-0",
@@ -36,10 +28,6 @@ export const paddingMap = {
     "10": "p-10",
 };
 
-/**
- * Maps justify content values to Tailwind CSS classes
- * @type {Object<string, string>}
- */
 export const justifyMap = {
     "justify-start": "justify-start",
     "justify-end": "justify-end",
@@ -60,10 +48,6 @@ export const justifyMap = {
     "": "justify-start",
 };
 
-/**
- * Maps width values to Tailwind CSS classes
- * @type {Object<string, string>}
- */
 export const widthMap = {
     "1/2": "w-full xl:w-1/2",
 
@@ -105,10 +89,6 @@ export const widthMap = {
     "auto": "w-auto",
 };
 
-/**
- * Maps height values to Tailwind CSS classes
- * @type {Object<string, string>}
- */
 export const heightMap = {
     "1/2": "h-1/2",
     "1/3": "h-1/3",
@@ -145,10 +125,6 @@ export const heightMap = {
     "auto": "h-auto",
 };
 
-/**
- * Maps font color values to Tailwind CSS classes
- * @type {Object<string, string>}
- */
 export const fontColorMap = {
     "": "text-gv-dark-text",
     "text-gv-dark-text": "text-gv-dark-text",
