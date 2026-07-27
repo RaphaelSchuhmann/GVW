@@ -60,7 +60,7 @@ export function renameFile(originalFile, newName) {
 
 const ALLOWED_TAGS = new Set([
     "b", "i", "u", "strong", "em", "a", "span", "img",
-    "br", "li", "ul", "ol", "dl", "dt", "dd"
+    "br", "li", "ul", "ol", "dl", "dt", "dd", "mark"
 ]);
 
 const ALLOWED_ATTR = new Set([
