@@ -19,6 +19,7 @@
     import { createContextMenu } from "../../lib/contextMenu.svelte";
     import { addToast } from "../../stores/toasts.svelte";
     import AddEventModal from "../../components/AddEventModal.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     // ================
     // MODAL REFERENCES
@@ -121,14 +122,16 @@
 
 <svelte:window oncontextmenu={closeMenu} />
 
-<ToastStack/>
+<ToastStack />
 
 <ContextMenu bind:open={menu.data.open} x={menu.data.x} y={menu.data.y}>
-    <Button type="contextMenu" onclick={async () =>  await push(`/events/details?id=${menu.data.activeId}&editing=false`)}>
+    <Button type="contextMenu"
+            onclick={async () =>  await push(`/events/details?id=${menu.data.activeId}&editing=false`)}>
         Details
     </Button>
     {#if user.role === "board_member" || user.role === "admin"}
-        <Button type="contextMenu" onclick={async () =>  await push(`/events/details?id=${menu.data.activeId}&editing=true`)}>
+        <Button type="contextMenu"
+                onclick={async () =>  await push(`/events/details?id=${menu.data.activeId}&editing=true`)}>
             Bearbeiten
         </Button>
         <Button type="contextMenu" onclick={handleSwitchStatus}>Status ändern</Button>
@@ -148,7 +151,7 @@
 
 <!--Switches to mobile page if width is less than 870px!-->
 <main class="flex h-screen overflow-hidden">
-    <DesktopSidebar currentPage="events"/>
+    <DesktopSidebar currentPage="events" />
 
     <div class="flex flex-col w-full overflow-hidden p-10 min-h-0">
         <PageHeader title="Veranstaltungen" subTitle="Verwaltung von Events, Proben und Konzerten"
@@ -178,43 +181,49 @@
                       page="events" />
 
         <div class="flex-1 min-h-0 overflow-y-auto mt-5">
-            <div
-                class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
-                {#each eventsStore.display as event (event.id)}
-                    <Card data-id={event.id} oncontextmenu={handleMenuOpenFromEvent}>
-                        <div class="flex items-center w-full">
-                            <p class="text-gv-dark-text text-dt-3 max-w-3/4 text-nowrap truncate">{event.title}</p>
-                            <div class="ml-auto">
-                                <Chip text={typeMap[event.type]} />
+            {#if eventsStore.display.length > 0}
+                <div
+                    class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
+                    {#each eventsStore.display as event (event.id)}
+                        <Card data-id={event.id} oncontextmenu={handleMenuOpenFromEvent}>
+                            <div class="flex items-center w-full">
+                                <p class="text-gv-dark-text text-dt-3 max-w-3/4 text-nowrap truncate">{event.title}</p>
+                                <div class="ml-auto">
+                                    <Chip text={typeMap[event.type]} />
+                                </div>
                             </div>
-                        </div>
-                        <div class="flex items-center w-full mt-2 gap-10">
-                            <div class="flex items-stretch gap-2">
+                            <div class="flex items-center w-full mt-2 gap-10">
+                                <div class="flex items-stretch gap-2">
                                 <span
                                     class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">calendar_today</span>
-                                <p class="text-dt-6 text-gv-light-text">{getEventOccurrenceById(event.id)}</p>
+                                    <p class="text-dt-6 text-gv-light-text">{getEventOccurrenceById(event.id)}</p>
+                                </div>
+                                <div class="flex items-stretch gap-2">
+                                    <span
+                                        class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">schedule</span>
+                                    <p class="text-dt-6 text-gv-light-text">{event.time}</p>
+                                </div>
+                                <button
+                                    class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2 ml-auto"
+                                    data-id={event.id}
+                                    onclick={handleMenuOpenFromBtn}>
+                                    <span class="material-symbols-rounded">more_horiz</span>
+                                </button>
                             </div>
-                            <div class="flex items-stretch gap-2">
-                                <span class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">schedule</span>
-                                <p class="text-dt-6 text-gv-light-text">{event.time}</p>
+                            <div class="flex items-center w-full mt-2 gap-2">
+                                <span
+                                    class="material-symbols-rounded text-icon-dt-5 text-gv-light-text">location_on</span>
+                                <p class="text-dt-5 text-gv-dark-text text-nowrap truncate">{event.location}</p>
                             </div>
-                            <button
-                                class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2 ml-auto"
-                                data-id={event.id}
-                                onclick={handleMenuOpenFromBtn}>
-                                <span class="material-symbols-rounded">more_horiz</span>
-                            </button>
-                        </div>
-                        <div class="flex items-center w-full mt-2 gap-2">
-                            <span class="material-symbols-rounded text-icon-dt-5 text-gv-light-text">location_on</span>
-                            <p class="text-dt-5 text-gv-dark-text text-nowrap truncate">{event.location}</p>
-                        </div>
-                        <div class="flex items-center w-full mt-2">
-                            <p class="text-dt-5 text-gv-light-text text-start text-nowrap truncate">{event.description}</p>
-                        </div>
-                    </Card>
-                {/each}
-            </div>
+                            <div class="flex items-center w-full mt-2">
+                                <p class="text-dt-5 text-gv-light-text text-start text-nowrap truncate">{event.description}</p>
+                            </div>
+                        </Card>
+                    {/each}
+                </div>
+            {:else}
+                <EmptyState message="Keine Veranstaltungen gefunden" />
+            {/if}
         </div>
     </div>
 </main>

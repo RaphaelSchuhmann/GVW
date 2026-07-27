@@ -18,6 +18,7 @@
     import { reportDeepSearchStore, reportsStore } from "../../stores/report.svelte.js";
     import { formatISODateString } from "../../services/dateTimeUtils.js";
     import Chip from "../../components/Chip.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     // ==================
     // MODAL REFERENCES
@@ -132,7 +133,7 @@
 
 <Modal bind:this={deepSearchResultModal} width="1/2"
        title="Deep Search Suchergebnisse" subTitle="" hideSubTitle={true}>
-    <div class="flex items-center gap-4 w-full">
+    <div class="flex flex-col items-center gap-4 w-full">
         {#each reportDeepSearchStore.data as report (report.id)}
             <ReportItem id={report.id} title={report.title} date={formatISODateString(report.createdAt)}
                         author={report.author} type={report.type} additionalText={highlight(report.snippet, reportDeepSearchStore.query)}
@@ -177,10 +178,16 @@
         {/if}
 
         <div class="flex-1 min-h-0 overflow-y-auto mt-5 flex flex-col items-center justify-start gap-2">
-            {#each reportsStore.display as report (report.id)}
-                <ReportItem id={report.id} title={report.title} date={formatISODateString(report.createdAt)}
-                            author={report.author} type={report.type} additionalText={report.description} />
-            {/each}
+            {#if reportsStore.display.length > 0}
+                {#each reportsStore.display as report (report.id)}
+                    <ReportItem id={report.id} title={report.title} date={formatISODateString(report.createdAt)}
+                                author={report.author} type={report.type} additionalText={report.description} />
+                {/each}
+            {:else}
+                {#if reportDeepSearchStore.data.length === 0}
+                    <EmptyState message={"Keine Berichte gefunden"} />
+                {/if}
+            {/if}
         </div>
     </div>
 </main>

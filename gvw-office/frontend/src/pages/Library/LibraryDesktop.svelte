@@ -28,6 +28,7 @@
     import FileSelector from "../../components/FileSelector.svelte";
     import Spinner from "../../components/Spinner.svelte";
     import ChipPicker from "../../components/ChipPicker.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     // ==================
     // MODAL REFERENCES
@@ -397,54 +398,60 @@
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto mt-5">
-            <div
-                class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
-                {#each libraryStore.display as score (score.id)}
-                    <Card data-id={score.id} oncontextmenu={handleMenuOpenFromEvent}>
-                        <div class="flex items-start justify-start gap-2 w-full">
-                            <span class="material-symbols-rounded text-icon-dt-6 text-gv-primary">music_note</span>
-                            <div class="flex flex-col items-start gap-1 max-w-2/3">
-                                <p class="text-gv-dark-text text-dt-5">{score.title}</p>
-                                <p class="text-gv-light-text text-dt-7">{score.artist}</p>
+            {#if libraryStore.display.length > 0}
+                <div
+                    class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
+                    {#each libraryStore.display as score (score.id)}
+                        <Card data-id={score.id} oncontextmenu={handleMenuOpenFromEvent}>
+                            <div class="flex items-start justify-start gap-2 w-full">
+                                <span class="material-symbols-rounded text-icon-dt-6 text-gv-primary">music_note</span>
+                                <div class="flex flex-col items-start gap-1 max-w-2/3">
+                                    <p class="text-gv-dark-text text-dt-5 text-nowrap truncate w-full">{score.title}</p>
+                                    <p class="text-gv-light-text text-dt-7 text-nowrap truncate w-full">{score.artist}</p>
+                                </div>
+                                <div class="flex items-center justify-center ml-auto">
+                                    <button
+                                        class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2"
+                                        onclick={async () => await downloadScoreFiles(score.id)}>
+                                        <span class="material-symbols-rounded text-icon-dt-5">download</span>
+                                    </button>
+                                    <button
+                                        class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2"
+                                        data-id={score.id}
+                                        onclick={handleMenuOpenFromBtn}>
+                                        <span class="material-symbols-rounded text-icon-dt-5">more_horiz</span>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex items-center justify-center ml-auto">
-                                <button
-                                    class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2"
-                                    onclick={async () => await downloadScoreFiles(score.id)}>
-                                    <span class="material-symbols-rounded text-icon-dt-5">download</span>
-                                </button>
-                                <button
-                                    class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2"
-                                    data-id={score.id}
-                                    onclick={handleMenuOpenFromBtn}>
-                                    <span class="material-symbols-rounded text-icon-dt-5">more_horiz</span>
-                                </button>
+
+                            <div class="flex w-full items-center justify-start mt-2">
+                                <Chip text={appSettings.scoreCategories[score.type]} />
                             </div>
-                        </div>
 
-                        <div class="flex w-full items-center justify-start mt-2">
-                            <Chip text={appSettings.scoreCategories[score.type]} />
-                        </div>
+                            <div class="flex w-full items-center justify-start mt-4 gap-2">
+                                <span
+                                    class="material-symbols-rounded text-gv-light-text text-icon-dt-5">import_contacts</span>
+                                {#each score.voices as voice, i (i)}
+                                    <p class="text-gv-light-text text-dt-7">{voiceMap[voice]}</p>
+                                {/each}
+                            </div>
 
-                        <div class="flex w-full items-center justify-start mt-4 gap-2">
-                            <span
-                                class="material-symbols-rounded text-gv-light-text text-icon-dt-5">import_contacts</span>
-                            {#each score.voices as voice, i (i)}
-                                <p class="text-gv-light-text text-dt-7">{voiceMap[voice]}</p>
-                            {/each}
-                        </div>
+                            <div class="flex w-full items-center justify-start mt-2">
+                                <p class="text-gv-light-text text-dt-7">{score.voiceCount}-stimmig</p>
+                            </div>
 
-                        <div class="flex w-full items-center justify-start mt-2">
-                            <p class="text-gv-light-text text-dt-7">{score.voiceCount}-stimmig</p>
-                        </div>
-
-                        <div class="flex w-full items-center justify-start mt-2">
-                            <p class="text-gv-light-text text-dt-6">
-                                Noten-ID: {score.scoreId || "Keine ID vorhanden"}</p>
-                        </div>
-                    </Card>
-                {/each}
-            </div>
+                            <div class="flex w-full items-center justify-start mt-2">
+                                <p class="text-gv-light-text text-dt-6">
+                                    Noten-ID: {score.scoreId || "Keine ID vorhanden"}</p>
+                            </div>
+                        </Card>
+                    {/each}
+                </div>
+            {:else}
+                <div class="w-full h-1/3 flex items-center justify-center">
+                    <EmptyState message={"Keine Noten gefunden..."} />
+                </div>
+            {/if}
         </div>
     </div>
 </main>

@@ -18,6 +18,7 @@
     import { formatISODateString } from "../../services/dateTimeUtils.js";
     import MobileSidebar from "../../components/MobileSidebar.svelte";
     import Chip from "../../components/Chip.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     let addReportModal = null;
     let deepSearchResultModal = null;
@@ -164,11 +165,17 @@
         {/if}
 
         <div class="w-full mt-5 flex flex-col items-center justify-start gap-3">
-            {#each reportsStore.display as report (report.id)}
-                <ReportItem id={report.id} title={report.title} date={formatISODateString(report.createdAt)}
-                            author={report.author} type={report.type} additionalText={report.description}
-                            isMobile={true} deletable={false} />
-            {/each}
+            {#if reportsStore.display.length > 0}
+                {#each reportsStore.display as report (report.id)}
+                    <ReportItem id={report.id} title={report.title} date={formatISODateString(report.createdAt)}
+                                author={report.author} type={report.type} additionalText={report.description}
+                                isMobile={true} deletable={false} />
+                {/each}
+            {:else}
+                {#if reportDeepSearchStore.data.length === 0}
+                    <EmptyState message={"Keine Berichte gefunden"} />
+                {/if}
+            {/if}
         </div>
     </div>
 </main>

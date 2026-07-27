@@ -12,6 +12,7 @@
     import { push } from "svelte-spa-router";
     import MobileSidebar from "../../components/MobileSidebar.svelte";
     import AddEventModal from "../../components/AddEventModal.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     // ================
     // MODAL REFERENCES
@@ -62,6 +63,7 @@
                       page="events" />
 
         <div class="flex-1 min-h-0 overflow-y-auto mt-5">
+            {#if eventsStore.display.length > 0}
             <div
                 class="flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
                 {#each eventsStore.display as event (event.id)}
@@ -94,6 +96,9 @@
                     </button>
                 {/each}
             </div>
+            {:else}
+                <EmptyState message="Keine Veranstaltungen gefunden" />
+            {/if}
         </div>
     </div>
 </main>

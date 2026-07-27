@@ -23,6 +23,7 @@
     import MobileSidebar from "../../components/MobileSidebar.svelte";
     import Spinner from "../../components/Spinner.svelte";
     import ChipPicker from "../../components/ChipPicker.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     // ==================
     // MODAL REFERENCES
@@ -218,10 +219,13 @@
 
     function updateCategory(value) { scoreInput.type = appSettings.scoreCategories[value]; }
 
-    function updateChoirType(value) { selectedChoirType = value; scoreInput.voices = []; }
+    function updateChoirType(value) {
+        selectedChoirType = value;
+        scoreInput.voices = [];
+    }
 </script>
 
-<ToastStack isMobile={true}/>
+<ToastStack isMobile={true} />
 
 <CategoryModal bind:this={categoryModal} isMobile={true} />
 
@@ -274,12 +278,14 @@
                 <span class="material-symbols-rounded text-icon-dt-4 text-gv-dark-text">menu</span>
             </button>
         </div>
-        <PageHeader title="Notenbibliothek" subTitle="Verwaltung des gesamten Notenmaterials" showSlot={false}></PageHeader>
+        <PageHeader title="Notenbibliothek" subTitle="Verwaltung des gesamten Notenmaterials"
+                    showSlot={false}></PageHeader>
 
         {#if user.role === "board_member" || user.role === "admin" || user.role === "librarian" || user.role === "conductor"}
             <div class="flex flex-col items-center w-full gap-2 mt-5">
                 <Button type="primary" onclick={showCategoryModal}>
-                    <span class="material-symbols-rounded min-[1000px]:text-icon-dt-4 text-icon-dt-5 mr-2">discover_tune</span>
+                    <span
+                        class="material-symbols-rounded min-[1000px]:text-icon-dt-4 text-icon-dt-5 mr-2">discover_tune</span>
                     <p class="min-[1000px]:text-dt-4 text-dt-5">Kategorien</p>
                 </Button>
                 <Button type="primary" onclick={showAddScoreModal}>
@@ -297,43 +303,50 @@
         </div>
 
         <div class="flex-1 min-h-0 overflow-y-auto mt-5">
-            <div
-                class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
-                {#each libraryStore.display as score (score.id)}
-                    <button onclick={async () => await push(`/library/details?id=${score.id}&editing=false`)}>
-                        <Card>
-                            <div class="flex items-start justify-start gap-2 w-full">
-                                <span class="material-symbols-rounded text-icon-dt-6 text-gv-primary">music_note</span>
-                                <div class="flex flex-col items-start gap-1 max-w-2/3">
-                                    <p class="text-gv-dark-text text-dt-5 text-left line-clamp-2 truncate">{score.title}</p>
-                                    <p class="text-gv-light-text text-dt-7">{score.artist}</p>
+            {#if libraryStore.display.length > 0}
+                <div
+                    class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
+                    {#each libraryStore.display as score (score.id)}
+                        <button onclick={async () => await push(`/library/details?id=${score.id}&editing=false`)}>
+                            <Card>
+                                <div class="flex items-start justify-start gap-2 w-full">
+                                    <span
+                                        class="material-symbols-rounded text-icon-dt-6 text-gv-primary">music_note</span>
+                                    <div class="flex flex-col items-start gap-1 max-w-2/3">
+                                        <p class="text-gv-dark-text text-dt-5 w-full text-left text-nowrap truncate">{score.title}</p>
+                                        <p class="text-gv-light-text text-dt-7 w-full text-left text-nowrap truncate">{score.artist}</p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="flex w-full items-center justify-start mt-2">
-                                <Chip text={appSettings.scoreCategories[score.type]} />
-                            </div>
+                                <div class="flex w-full items-center justify-start mt-2">
+                                    <Chip text={appSettings.scoreCategories[score.type]} />
+                                </div>
 
-                            <div class="flex w-full items-center justify-start mt-4 gap-2">
+                                <div class="flex w-full items-center justify-start mt-4 gap-2">
                             <span
                                 class="material-symbols-rounded text-gv-light-text text-icon-dt-5">import_contacts</span>
-                                {#each score.voices as voice, i (i)}
-                                    <p class="text-gv-light-text text-dt-7">{voiceMap[voice]}</p>
-                                {/each}
-                            </div>
+                                    {#each score.voices as voice, i (i)}
+                                        <p class="text-gv-light-text text-dt-7">{voiceMap[voice]}</p>
+                                    {/each}
+                                </div>
 
-                            <div class="flex w-full items-center justify-start mt-2">
-                                <p class="text-gv-light-text text-dt-7">{score.voiceCount}-stimmig</p>
-                            </div>
+                                <div class="flex w-full items-center justify-start mt-2">
+                                    <p class="text-gv-light-text text-dt-7">{score.voiceCount}-stimmig</p>
+                                </div>
 
-                            <div class="flex w-full items-center justify-start mt-2">
-                                <p class="text-gv-light-text text-dt-6">
-                                    Noten-ID: {score.scoreId || "Keine ID vorhanden"}</p>
-                            </div>
-                        </Card>
-                    </button>
-                {/each}
-            </div>
+                                <div class="flex w-full items-center justify-start mt-2">
+                                    <p class="text-gv-light-text text-dt-6">
+                                        Noten-ID: {score.scoreId || "Keine ID vorhanden"}</p>
+                                </div>
+                            </Card>
+                        </button>
+                    {/each}
+                </div>
+            {:else}
+                <div class="w-full h-1/3 flex items-center justify-center">
+                    <EmptyState message={"Keine Noten gefunden..."} />
+                </div>
+            {/if}
         </div>
     </div>
 </main>
