@@ -1,5 +1,6 @@
 (bootloader) 	Bootloader_SN_Part1: 3e0b4c2489cfc141a9bf4f8c99f69b42
 (bootloader) 	Bootloader_SN_Part2: 72ea144e46b939c44a5999b187258b55
+bootloader sn combined: 3e0b4c2489cfc141a9bf4f8c99f69b4272ea144e46b939c44a5999b187258b55
 (bootloader) 	fuse: yes
 (bootloader) 	flash_lock: no
 (bootloader) 	shipmode_state: 0
