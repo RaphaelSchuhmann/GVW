@@ -75,3 +75,14 @@ bootloader sn combined: 3e0b4c2489cfc141a9bf4f8c99f69b4272ea144e46b939c44a5999b1
 (bootloader) 	max-download-size: 0x8000000
 (bootloader) 	version-bootloader: sycamore_row_wifi_dfab77ca_20250919002
 (bootloader) 	version: 0.5
+
+Mapping:
+boot_a       sdc29
+boot_b       sdc53
+vendor_boot  sdc30/sdc54
+dtbo         sdc32/sdc58
+vbmeta       sdc7/sdc10
+super        sdc62
+lk           sdc28/sdc52
+seccfg       sdc17
+lenovolock   sdc63

@@ -23,21 +23,28 @@
 [build.version.extensions.t]: [14]
 [build.version.extensions.u]: [14]
 [build.version.extensions.v]: [14]
-[cache_key.display_info]: [-4471181540200739039]
-[cache_key.get_packages_for_uid]: [-4471181540200739030]
-[cache_key.has_system_feature]: [-4471181540200739347]
-[cache_key.is_compat_change_enabled]: [-4471181540200739027]
-[cache_key.is_interactive]: [-4471181540200739046]
-[cache_key.is_power_save_mode]: [-4471181540200739067]
-[cache_key.is_user_unlocked]: [-4471181540200739290]
-[cache_key.location_enabled]: [-4471181540200739331]
-[cache_key.package_info]: [-4471181540200739026]
-[cache_key.system_server.accounts_data]: [-4471181540200739095]
-[cache_key.system_server.connectionless_stylus_handwriting]: [-4471181540200739266]
-[cache_key.system_server.device_policy_manager_caches]: [-4471181540200739334]
-[cache_key.system_server.get_credential_type]: [-4471181540200739330]
-[cache_key.system_server.get_night_mode]: [-4471181540200739336]
-[cache_key.system_server.stylus_handwriting]: [-4471181540200739267]
+[cache_key.bluetooth.bluetooth_adapter_get_connection_state]: [-3912221915277211992]
+[cache_key.bluetooth.bluetooth_adapter_get_profile_connection_state]: [-3912221915277212002]
+[cache_key.bluetooth.bluetooth_adapter_get_state]: [-3912221915277211991]
+[cache_key.bluetooth.bluetooth_adapter_is_offloaded_filtering_supported]: [-3912221915277211996]
+[cache_key.bluetooth.bluetooth_device_get_bond_state]: [-3912221915277211999]
+[cache_key.bluetooth.bluetooth_map_get_connection_state]: [-3912221915277211993]
+[cache_key.bluetooth.bluetooth_sap_get_connection_state]: [-3912221915277211997]
+[cache_key.display_info]: [-7758594986109817291]
+[cache_key.get_packages_for_uid]: [-7758594986109817127]
+[cache_key.has_system_feature]: [-7758594986109817332]
+[cache_key.is_compat_change_enabled]: [-7758594986109817171]
+[cache_key.is_interactive]: [-7758594986109817345]
+[cache_key.is_power_save_mode]: [-7758594986109817314]
+[cache_key.is_user_unlocked]: [-7758594986109817279]
+[cache_key.location_enabled]: [-7758594986109817316]
+[cache_key.package_info]: [-7758594986109817170]
+[cache_key.system_server.accounts_data]: [-7758594986109817267]
+[cache_key.system_server.connectionless_stylus_handwriting]: [-7758594986109817256]
+[cache_key.system_server.device_policy_manager_caches]: [-7758594986109817319]
+[cache_key.system_server.get_credential_type]: [-7758594986109817315]
+[cache_key.system_server.get_night_mode]: [-7758594986109817321]
+[cache_key.system_server.stylus_handwriting]: [-7758594986109817257]
 [camera.disable_zsl_mode]: [1]
 [dalvik.vm.appimageformat]: [lz4]
 [dalvik.vm.dex2oat-Xms]: [64m]
@@ -97,13 +104,11 @@
 [debug.sf.predict_hwc_composition_strategy]: [0]
 [debug.sf.treat_170m_as_sRGB]: [1]
 [debug.sf.use_phase_offsets_as_durations]: [1]
-[debug.sqlite.syncmode]: []
 [debug.stagefright.c2inputsurface]: [-1]
 [debug.tracing.battery_status]: [2]
 [debug.tracing.device_state]: [0:DEFAULT]
 [debug.tracing.plug_type]: [2]
-[debug.tracing.screen_brightness]: [0.39763778]
-[debug.tracing.screen_state]: [2]
+[debug.tracing.screen_brightness]: [0.05]
 [dev.bootcomplete]: [1]
 [dev.mnt.blk.data]: [sdc69]
 [dev.mnt.blk.data.user.0]: [sdc69]
@@ -218,7 +223,6 @@
 [init.svc.dmesgd]: [stopped]
 [init.svc.dms-hal-2-0]: [running]
 [init.svc.drm]: [running]
-[init.svc.dumpmeminfo]: [stopped]
 [init.svc.eara-io]: [running]
 [init.svc.eventslog_cur]: [running]
 [init.svc.factory_aidl_service]: [running]
@@ -233,7 +237,7 @@
 [init.svc.hwservicemanager]: [running]
 [init.svc.idmap2d]: [stopped]
 [init.svc.incidentd]: [running]
-[init.svc.init_thh_service]: [stopped]
+[init.svc.init_thh_service]: [running]
 [init.svc.insmod_sh]: [stopped]
 [init.svc.installd]: [running]
 [init.svc.kernellog]: [running]
@@ -273,7 +277,6 @@
 [init.svc.persist_storage-1-0]: [running]
 [init.svc.power-hal-1-0]: [running]
 [init.svc.prng_seeder]: [running]
-[init.svc.rss_hwm_reset]: [stopped]
 [init.svc.servicemanager]: [running]
 [init.svc.setsarcal]: [stopped]
 [init.svc.statsd]: [running]
@@ -487,10 +490,10 @@
 [persist.sys.battery.battery_maintenance_v2.enabled]: [0]
 [persist.sys.battery.health]: [100]
 [persist.sys.boot.reason]: []
-[persist.sys.boot.reason.history]: [bootloader,1784904849
-bootloader,1784904279
-bootloader,1784903939
-cold,powerkey,1262304019]
+[persist.sys.boot.reason.history]: [bootloader,1785259048
+cold,powerkey,1785254404
+bootloader,1785017738
+bootloader,1785015824]
 [persist.sys.brightness_rate]: [0]
 [persist.sys.colormode_api]: [mtk]
 [persist.sys.colormode_modes]: [0:standard;1:native]
@@ -518,6 +521,8 @@ cold,powerkey,1262304019]
 [persist.sys.zui.theme]: [mostbeautiful]
 [persist.sysui.notification.ongoing_dismissal]: [false]
 [persist.traced.enable]: [1]
+[persist.vendor.aee.db.count]: [4]
+[persist.vendor.aee.fatal_db.count]: [4]
 [persist.vendor.aeev.boot.reason.status]: [done]
 [persist.vendor.aeev.last.boot.reason]: [bootloader]
 [persist.vendor.audiohal.besloudness_state]: [0]
@@ -528,6 +533,7 @@ cold,powerkey,1262304019]
 [persist.vendor.connsys.wifi_fw_ver]: [20250110150354]
 [persist.vendor.md_c2k_cap_dep_check]: [0]
 [persist.vendor.mims_support]: [1]
+[persist.vendor.mtk.aee.mode]: [4]
 [persist.vendor.mtk_sim_switch_policy]: [2]
 [persist.vendor.pms_removable]: [1]
 [persist.vendor.radio.mtk_ps2_rat]: [N/L/W/G]
@@ -611,7 +617,7 @@ cold,powerkey,1262304019]
 [ro.boot.dtbo_idx]: [0]
 [ro.boot.dynamic_partitions]: [true]
 [ro.boot.esim]: [0]
-[ro.boot.flash.locked]: [1]
+[ro.boot.flash.locked]: [0]
 [ro.boot.force_normal_boot]: [1]
 [ro.boot.fused]: [true]
 [ro.boot.hardware]: [mt8755]
@@ -628,11 +634,11 @@ cold,powerkey,1262304019]
 [ro.boot.stage]: [MP]
 [ro.boot.vbmeta.avb_version]: [1.2]
 [ro.boot.vbmeta.device]: [PARTUUID=00000006-39c2-4488-9bb0-00cb43c9ccd4]
-[ro.boot.vbmeta.device_state]: [locked]
+[ro.boot.vbmeta.device_state]: [unlocked]
 [ro.boot.vbmeta.digest]: [2561692e27738cdc8893979fde2f6cd754f806333af93aac3a14dbe2cd7c3c35]
 [ro.boot.vbmeta.hash_alg]: [sha256]
 [ro.boot.vbmeta.size]: [11776]
-[ro.boot.verifiedbootstate]: [green]
+[ro.boot.verifiedbootstate]: [orange]
 [ro.boot.veritymode]: [enforcing]
 [ro.boot.veritymode.managed]: [yes]
 [ro.bootimage.build.date]: [Fri Sep 19 08:24:00 CST 2025]
@@ -1175,13 +1181,12 @@ cold,powerkey,1262304019]
 [sys.ipo.pwrdncap]: [2]
 [sys.lenovo.turbo.touch.game]: [null]
 [sys.lenovo.widevine_security_level]: [L1]
-[sys.lgsi.standbymode.topAppComponent]: [com.android.settings/com.android.settings.Settings]
+[sys.lgsi.standbymode.topAppComponent]: [NotificationShade]
 [sys.oem_unlock_allowed]: [1]
-[sys.rss_hwm_reset.on]: [0]
 [sys.sysctl.extra_free_kbytes]: [48000]
 [sys.system_server.start_count]: [1]
-[sys.system_server.start_elapsed]: [23192]
-[sys.system_server.start_uptime]: [23192]
+[sys.system_server.start_elapsed]: [18735]
+[sys.system_server.start_uptime]: [18735]
 [sys.usb.config]: [adb]
 [sys.usb.configfs]: [1]
 [sys.usb.controller]: [11201000.usb0]
@@ -1190,12 +1195,12 @@ cold,powerkey,1262304019]
 [sys.user.0.ce_available]: [true]
 [sys.wifitracing.started]: [1]
 [sys.zui.capture_secure_layer]: [0]
-[sys.zuidebug.dump_meminfo]: [0]
 [vendor.MB.running]: [0]
 [vendor.af.dynamic.sleeptime.enable]: [true]
 [vendor.af.pausewait.enable]: [false]
 [vendor.af.threshold.src_and_effect_count]: [5]
 [vendor.bluetooth.ldac.abr]: [true]
+[vendor.bluetooth.state]: [1]
 [vendor.boostfwk.version]: [2]
 [vendor.connsys.adie.chipid]: [0x6631]
 [vendor.connsys.bt.adie.chipid]: [0x6631]
@@ -1223,8 +1228,6 @@ cold,powerkey,1262304019]
 [vendor.debug.pq.xml.disp.type]: [Normal]
 [vendor.debug.pq.xml.mode]: [0
 ]
-[vendor.gps.clock.type]: [21]
-[vendor.gps.gps.version]: [0x6835]
 [vendor.mtk.atci.boot_completed]: [1]
 [vendor.mtk.camera.app.fd.video]: [1]
 [vendor.mtk.nvram.ready]: [1]
@@ -1261,3 +1264,89 @@ cold,powerkey,1262304019]
 [vold.has_compress]: [0]
 [vold.has_quota]: [1]
 [vold.has_reserved]: [1]
+
+ls -l /dev/block/by-name:
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 bk1 -> /dev/block/sdc68
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 boot_a -> /dev/block/sdc29
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 boot_b -> /dev/block/sdc53
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 boot_para -> /dev/block/sdc41
+lrwxrwxrwx 1 root root 22 2026-07-28 19:17 bootloader1 -> /dev/block/by-name/lk1
+lrwxrwxrwx 1 root root 22 2026-07-28 19:17 bootloader2 -> /dev/block/by-name/lk2
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 connsys_bt_a -> /dev/block/sdc34
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 connsys_bt_b -> /dev/block/sdc55
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 connsys_gnss_a -> /dev/block/sdc36
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 connsys_gnss_b -> /dev/block/sdc57
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 connsys_wifi_a -> /dev/block/sdc35
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 connsys_wifi_b -> /dev/block/sdc56
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 dpm_a -> /dev/block/sdc22
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 dpm_b -> /dev/block/sdc46
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 dram_para -> /dev/block/sdc42
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 dtbo_a -> /dev/block/sdc32
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 dtbo_b -> /dev/block/sdc58
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 efuse -> /dev/block/sdc39
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 expdb -> /dev/block/sdc3
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 flashinfo -> /dev/block/sdc71
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 frp -> /dev/block/sdc4
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 gz_a -> /dev/block/sdc27
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 gz_b -> /dev/block/sdc51
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 init_boot_a -> /dev/block/sdc31
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 init_boot_b -> /dev/block/sdc61
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lenovocust -> /dev/block/sdc67
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lenovolock -> /dev/block/sdc63
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lenovoraw -> /dev/block/sdc66
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lenovosku_1 -> /dev/block/sdc64
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lenovosku_2 -> /dev/block/sdc65
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lk_a -> /dev/block/sdc28
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 lk_b -> /dev/block/sdc52
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 logo_a -> /dev/block/sdc43
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 logo_b -> /dev/block/sdc59
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 mcupm_a -> /dev/block/sdc26
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 mcupm_b -> /dev/block/sdc50
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 metadata -> /dev/block/sdc13
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 misc -> /dev/block/sdc1
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 mrdump -> /dev/block/sdc70
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 nvcfg -> /dev/block/sdc5
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 nvdata -> /dev/block/sdc6
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 nvram -> /dev/block/sdc40
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 otp -> /dev/block/sdc18
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 para -> /dev/block/sdc2
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 persist -> /dev/block/sdc14
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 pi_img_a -> /dev/block/sdc21
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 pi_img_b -> /dev/block/sdc45
+lrwxrwxrwx 1 root root 23 2026-07-28 19:17 preloader_a -> /dev/block/mmcblk0boot0
+lrwxrwxrwx 1 root root 23 2026-07-28 19:17 preloader_b -> /dev/block/mmcblk0boot1
+lrwxrwxrwx 1 root root 30 2026-07-28 19:17 preloader_emmc_a -> /dev/block/by-name/preloader_a
+lrwxrwxrwx 1 root root 30 2026-07-28 19:17 preloader_emmc_b -> /dev/block/by-name/preloader_b
+lrwxrwxrwx 1 root root 22 2026-07-28 19:17 preloader_raw_a -> /dev/block/mapper/pl_a
+lrwxrwxrwx 1 root root 22 2026-07-28 19:17 preloader_raw_b -> /dev/block/mapper/pl_b
+lrwxrwxrwx 1 root root 30 2026-07-28 19:17 preloader_ufs_a -> /dev/block/by-name/preloader_a
+lrwxrwxrwx 1 root root 30 2026-07-28 19:17 preloader_ufs_b -> /dev/block/by-name/preloader_b
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 proinfo -> /dev/block/sdc38
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 protect1 -> /dev/block/sdc15
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 protect2 -> /dev/block/sdc16
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 pstore -> /dev/block/sdc19
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 scp_a -> /dev/block/sdc23
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 scp_b -> /dev/block/sdc47
+lrwxrwxrwx 1 root root 14 2026-07-28 19:17 sda -> /dev/block/sda
+lrwxrwxrwx 1 root root 14 2026-07-28 19:17 sdb -> /dev/block/sdb
+lrwxrwxrwx 1 root root 14 2026-07-28 19:17 sdc -> /dev/block/sdc
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 sec1 -> /dev/block/sdc37
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 seccfg -> /dev/block/sdc17
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 spmfw_a -> /dev/block/sdc20
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 spmfw_b -> /dev/block/sdc44
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 sspm_a -> /dev/block/sdc25
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 sspm_b -> /dev/block/sdc49
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 super -> /dev/block/sdc62
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 tee_a -> /dev/block/sdc33
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 tee_b -> /dev/block/sdc60
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 userdata -> /dev/block/sdc69
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 vbmeta_a -> /dev/block/sdc7
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vbmeta_b -> /dev/block/sdc10
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 vbmeta_system_a -> /dev/block/sdc8
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vbmeta_system_b -> /dev/block/sdc11
+lrwxrwxrwx 1 root root 15 2026-07-28 19:17 vbmeta_vendor_a -> /dev/block/sdc9
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vbmeta_vendor_b -> /dev/block/sdc12
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vcp_a -> /dev/block/sdc24
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vcp_b -> /dev/block/sdc48
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vendor_boot_a -> /dev/block/sdc30
+lrwxrwxrwx 1 root root 16 2026-07-28 19:17 vendor_boot_b -> /dev/block/sdc54
