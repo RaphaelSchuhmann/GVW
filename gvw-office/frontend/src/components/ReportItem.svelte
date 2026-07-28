@@ -29,12 +29,12 @@
         <button class="flex flex-col items-start gap-4 cursor-pointer w-full" onclick={openReport}>
             <div class="flex items-center gap-2">
                 <span class="material-symbols-rounded text-gv-primary text-icon-dt-4">docs</span>
-                <span class="text-gv-dark-text text-dt-5 text-nowrap truncate text-left">{title}</span>
+                <span class="text-gv-dark-text text-dt-5 w-full text-nowrap truncate text-left">{title}</span>
             </div>
             <div class="flex items-center gap-4">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-rounded text-gv-light-text text-icon-dt-6">calendar_today</span>
-                    <span class="text-gv-light-text text-dt-6 text-left">{date}</span>
+                    <span class="text-gv-light-text text-dt-6 w-full text-left text-nowrap truncate">{date}</span>
                 </div>
                 <div class="flex items-center gap-2 w-full">
                     <span class="material-symbols-rounded text-gv-light-text text-icon-dt-6">person</span>
