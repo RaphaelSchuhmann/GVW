@@ -47,10 +47,9 @@
         toggleUserOptions();
     }
 
-    function selectCategory(event) {
-        const button = event.currentTarget.dataset.button;
-        currentCategory = button.title;
-        helpCenterStore.activeCategory = button.id;
+    function selectCategory(e) {
+        currentCategory = e.currentTarget.dataset.title;
+        helpCenterStore.activeCategory = e.currentTarget.dataset.id;
     }
 </script>
 
@@ -65,7 +64,7 @@
             <span class="text-dt-3 text-gv-dark-text group-hover:underline">Dashboard</span>
         </button>
         {#each buttons as button (button.title)}
-            <SidebarButton onclick={selectCategory} data-button={button}
+            <SidebarButton onclick={selectCategory} data-id={button.id} data-title={button.title}
                            selected={currentCategory === button.title}>
                 <div class="flex items-center justify-start gap-2">
                     <span class="material-symbols-rounded text-icon-dt-4">{button.icon}</span>
