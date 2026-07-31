@@ -12,7 +12,7 @@
     function toggleExpanded() { expanded = !expanded; }
 </script>
 
-<div class="w-full flex flex-col gap-2 p-4 items-start justify-start rounded-2 shadow-md bg-white">
+<div class="w-full flex flex-col gap-2 p-4 items-start justify-start rounded-2 shadow-md bg-white max-h-[30vh]">
     <div class="flex w-full items-center">
         <button
             type="button"

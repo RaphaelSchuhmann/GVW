@@ -27,7 +27,7 @@
         return eventsStore.raw.find(item => item.id === eventId) || null;
     });
 
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!user.loaded) return;

@@ -19,7 +19,7 @@
     /** @type {import("../components/FeedbackModal.svelte").default} */
     let feedbackModal = null;
 
-    const mitgliederAccess = ["admin", "board_member"];
+    const memberAccess = ["admin", "board_member"];
     const reportsAccess = ["admin", "board_member", "secretary"];
 
     let userOptionsVisible = $state(false);
@@ -60,7 +60,7 @@
             {#if !minimized}<p class="ml-2">Dashboard</p>{/if}
         </SidebarButton>
 
-        {#if mitgliederAccess.includes(user.role)}
+        {#if memberAccess.includes(user.role)}
             <SidebarButton selected={currentPage === "members"} minimized={minimized} marginTop="5"
                            onclick={async () => await push("/members")}>
                 <span class="material-symbols-rounded text-icon-dt-4">group</span>

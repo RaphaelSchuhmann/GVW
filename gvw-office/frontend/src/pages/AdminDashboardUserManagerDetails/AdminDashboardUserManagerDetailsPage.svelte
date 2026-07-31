@@ -13,6 +13,7 @@
     import AdminDashboardUserManagerDetailsMobile from "./AdminDashboardUserManagerDetailsMobile.svelte";
     import Spinner from "../../components/Spinner.svelte";
     import LibraryDetailsMobile from "../LibraryDetails/LibraryDetailsMobile.svelte";
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     let isGlobalLoading = $derived(user.name.length === 0);
 
@@ -29,7 +30,7 @@
         return userManagerStore.raw.find(item => item.id === userId) || null;
     });
 
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!user.loaded) return;
@@ -81,9 +82,11 @@
     function updateIsEditing(val) { isEditing = val; }
 
     function updateIsDeleting(val) { isDeleting = val; }
+
+    let isLoading = $derived(!userData.rev || !userData || !userId || !ready);
 </script>
 
-{#if userData && !isGlobalLoading}
+<GlobalLoader loading={isLoading}>
     {#key userData.rev}
         {#if viewport.isMobile}
             <AdminDashboardUserManagerDetailsMobile {userData} bind:isEditing bind:isDeleting
@@ -95,8 +98,4 @@
                                                      onChangeIsDeleting={updateIsDeleting} />
         {/if}
     {/key}
-{:else}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..." />
-    </div>
-{/if}
+</GlobalLoader>
