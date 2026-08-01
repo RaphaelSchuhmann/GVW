@@ -62,7 +62,7 @@
                 <Spinner light={true} />
                 <p>Speichern...</p>
             {:else}
-                Hinzufügen
+                Speichern
             {/if}
         </Button>
     </div>
