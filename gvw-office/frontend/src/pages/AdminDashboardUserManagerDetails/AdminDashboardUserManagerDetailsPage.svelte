@@ -11,11 +11,7 @@
 
     import AdminDashboardUserManagerDetailsDesktop from "./AdminDashboardUserManagerDetailsDesktop.svelte";
     import AdminDashboardUserManagerDetailsMobile from "./AdminDashboardUserManagerDetailsMobile.svelte";
-    import Spinner from "../../components/Spinner.svelte";
-    import LibraryDetailsMobile from "../LibraryDetails/LibraryDetailsMobile.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
-
-    let isGlobalLoading = $derived(user.name.length === 0);
 
     const hash = window.location.hash;
     const queryString = hash.split("?")[1];
@@ -83,7 +79,7 @@
 
     function updateIsDeleting(val) { isDeleting = val; }
 
-    let isLoading = $derived(!userData.rev || !userData || !userId || !ready);
+    let isLoading = $derived(!userData || !userData.rev || !userId || !ready);
 </script>
 
 <GlobalLoader loading={isLoading}>

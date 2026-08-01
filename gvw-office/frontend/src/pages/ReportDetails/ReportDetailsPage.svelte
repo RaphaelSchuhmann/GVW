@@ -13,8 +13,6 @@
     import { editorMetadataStore } from "../../stores/textEditorStore.svelte.js";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isLoading = $derived(user.name.length === 0);
-
     const hash = window.location.hash;
     const queryString = hash.split("?")[1];
     const params = new URLSearchParams(queryString);
@@ -22,7 +20,7 @@
     const reportId = params.get("id");
     let reportData = $state(null);
 
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!auth.token) return;
@@ -85,6 +83,6 @@
     })
 </script>
 
-<GlobalLoader loading={isLoading}>
+<GlobalLoader loading={!ready}>
     <ReportDetailsDesktop reportData={reportData} />
 </GlobalLoader>

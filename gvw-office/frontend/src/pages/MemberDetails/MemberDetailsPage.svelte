@@ -13,8 +13,6 @@
     import Spinner from "../../components/Spinner.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isGlobalLoading = $derived(user.name.length === 0);
-
     const hash = window.location.hash;
     const queryString = hash.split("?")[1];
     const params = new URLSearchParams(queryString);
