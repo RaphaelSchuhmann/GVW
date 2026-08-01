@@ -14,8 +14,6 @@
     import EventDetailsMobile from "../EventDetails/EventDetailsMobile.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isGlobalLoading = $derived(user.name.length === 0);
-
     const hash = window.location.hash;
     const queryString = hash.split("?")[1];
     const params = new URLSearchParams(queryString);
@@ -29,7 +27,7 @@
         return libraryStore.raw.find(item => item.id === scoreId) || null;
     });
 
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!user.loaded) return;

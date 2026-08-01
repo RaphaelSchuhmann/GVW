@@ -11,10 +11,9 @@
     import DashboardReportHubMobile from "./AdminDashboardReportHubMobile.svelte";
     import Spinner from "../../components/Spinner.svelte";
     import { getAllBugReports, getAllFeedbacks } from "../../services/reportHubService.svelte";
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isGlobalLoading = $derived(user.name.length === 0);
-
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!auth.token) return;
@@ -45,14 +44,10 @@
     });
 </script>
 
-{#if isGlobalLoading}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..." />
-    </div>
-{:else}
+<GlobalLoader loading={!ready}>
     {#if viewport.isMobile}
         <DashboardReportHubMobile />
     {:else}
         <DashboardReportHubDesktop />
     {/if}
-{/if}
+</GlobalLoader>

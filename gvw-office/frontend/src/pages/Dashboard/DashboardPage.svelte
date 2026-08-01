@@ -11,8 +11,7 @@
     import { loadDashboardData } from "../../services/dashboardService.svelte.js";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isLoading = $derived(user.name.length === 0);
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!auth.token) return;
@@ -39,7 +38,7 @@
     });
 </script>
 
-<GlobalLoader loading={isLoading}>
+<GlobalLoader loading={!ready}>
     {#if viewport.isMobile}
         <DashboardMobile />
     {:else}

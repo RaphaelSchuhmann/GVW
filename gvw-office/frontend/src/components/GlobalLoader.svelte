@@ -14,7 +14,7 @@
 
 {#if isLoading}
     <div class="w-dvw h-dvh flex justify-center items-center bg-white z-9999999 absolute top-0 left-0">
-        <WaveLoadingAnimation title="GVW Office" subTitle="Daten werden geladen..." />
+        <WaveLoadingAnimation title={title} subTitle={subTitle} />
     </div>
 {:else}
     {@render children()}
