@@ -139,7 +139,7 @@
 <main class="flex h-screen overflow-hidden">
     <DesktopSidebar currentPage="adminDashboard"/>
     <div class="flex-1 min-h-0 overflow-y-auto">
-        <div class="flex flex-col w-full h-full flex-1 overflow-hidden p-10 min-h-0">
+        <div class="flex flex-col w-full h-full flex-1 overflow-x-hidden p-10 min-h-0">
             <HorizontalNavBar currentPage="reportHub" />
             <PageHeader
                 title="Berichte Hub"
@@ -181,7 +181,7 @@
                         </Card>
                     </div>
                     {#if viewport.width > 1300}
-                        <div class="h-full min-[1650px]:w-2/5 w-1/2">
+                        <div class="h-full min-[1650px]:w-2/5 w-1/2 overflow-y-auto">
                             <Card fillHeight={true}>
                                 {#if feedbackItemDetails.title}
                                     <div class="w-full h-full flex flex-col items-start justify-start gap-4 p-2">

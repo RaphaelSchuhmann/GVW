@@ -165,6 +165,7 @@
     }
 
     function changeMode(val) {
+        if (draft.mode === modeMap[val]) return;
         draft.mode = modeMap[val];
 
         if (draft.mode === "monthly") {

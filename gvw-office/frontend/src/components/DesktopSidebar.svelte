@@ -8,7 +8,7 @@
 
     let minimized = $state(uiStates.sidebarMinimized || false);
 
-    let toggleIcon = minimized ? "arrow_menu_open" : "arrow_menu_close";
+    let toggleIcon = $derived(minimized ? "arrow_menu_open" : "arrow_menu_close");
 
     /**
      * Toggles the sidebar state

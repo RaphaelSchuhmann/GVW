@@ -4,16 +4,15 @@
     import HelpCenterMobile from "./HelpCenterMobile.svelte";
     import { ensureUserData } from "../../services/userService.svelte.js";
     import { auth } from "../../stores/auth.svelte.js";
-    import { user } from "../../stores/user.svelte.js";
     import Spinner from "../../components/Spinner.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { getArticles, categoryExists, articleExists } from "../../services/helpCenterService.svelte.js";
     import { helpCenterStore } from "../../stores/helpCenterStore.svelte.js";
     import { editorMetadataStore } from "../../stores/textEditorStore.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isGlobalLoading = $derived(user.name.length === 0);
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!auth.token) return;
@@ -66,11 +65,7 @@
     });
 </script>
 
-{#if isGlobalLoading}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..." />
-    </div>
-{:else}
+<GlobalLoader loading={!ready}>
     {#if helpCenterStore.isLoading}
         <div class="z-999 top-0 left-0 w-dvw h-dvh flex bg-gv-overlay fixed items-center justify-center">
             <Spinner with="1/5" />
@@ -81,4 +76,4 @@
     {:else}
         <HelpCenterDesktop />
     {/if}
-{/if}
+</GlobalLoader>

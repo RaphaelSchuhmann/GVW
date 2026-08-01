@@ -11,8 +11,7 @@
     import { memberExists } from "../../services/membersService.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
     import Spinner from "../../components/Spinner.svelte";
-
-    let isGlobalLoading = $derived(user.name.length === 0);
+    import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     const hash = window.location.hash;
     const queryString = hash.split("?")[1];
@@ -27,7 +26,7 @@
         return membersStore.raw.find(item => item.id === memberId) || null;
     });
 
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!user.loaded) return;
@@ -72,9 +71,11 @@
     function updateIsEditing(val) { isEditing = val; }
 
     function updateIsDeleting(val) { isDeleting = val; }
+
+    let isLoading = $derived(!memberData || !ready || !memberId);
 </script>
 
-{#if memberData && !isGlobalLoading}
+<GlobalLoader loading={isLoading}>
     {#key memberData.rev}
         {#if viewport.isMobile}
             <MemberDetailsMobile {memberData} bind:isEditing bind:isDeleting onChangeIsEditing={updateIsEditing}
@@ -84,8 +85,4 @@
                                   onChangeIsDeleting={updateIsDeleting} />
         {/if}
     {/key}
-{:else}
-    <div class="w-full h-screen flex justify-center items-center">
-        <Spinner title="GVW Office" subTitle="Daten werden geladen..." />
-    </div>
-{/if}
+</GlobalLoader>

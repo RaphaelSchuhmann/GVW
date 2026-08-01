@@ -95,7 +95,7 @@ public class AuthService {
 
     if (!passwordEncoder.matches(requestDTO.password(), user.getPassword())) {
       int failedAttempts = Optional.ofNullable(user.getFailedLoginAttempts()).orElse(0);
-      if (failedAttempts > 4) {
+      if (failedAttempts >= 4) {
         user.setLockUntil(Instant.now().plus(Duration.ofMinutes(15)));
         dbService.update("users", user.getId(), user);
 

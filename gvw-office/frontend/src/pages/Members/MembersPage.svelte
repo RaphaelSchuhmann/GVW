@@ -13,9 +13,7 @@
     import Spinner from "../../components/Spinner.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
-    let isLoading = $derived(user.name.length === 0);
-
-    let ready = false;
+    let ready = $state(false);
 
     $effect(() => {
         if (!user.loaded) return;
@@ -45,7 +43,7 @@
     })
 </script>
 
-<GlobalLoader loading={isLoading}>
+<GlobalLoader loading={!ready}>
     {#if viewport.isMobile}
         <MembersMobile />
     {:else}
