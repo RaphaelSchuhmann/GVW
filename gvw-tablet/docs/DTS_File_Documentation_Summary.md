@@ -1,5 +1,7 @@
 # Lenovo TB336FU DTS File Documentation
 
+Full DTS file [lenovo_tb336fu.dts](./lenovo_tb336fu.dts)
+
 ## System Overview
 - Platform: MediaTek MT6835/MT6983 SoC
 - Device: Lenovo TB336FU tablet
