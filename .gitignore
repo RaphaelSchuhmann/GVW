@@ -197,3 +197,5 @@ api-logs/
 
 prod/
 .run/
+
+*_extract/
