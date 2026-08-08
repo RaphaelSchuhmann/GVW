@@ -21,13 +21,13 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing members and their linked user accounts.
  *
- * <p>Provides functionality for retrieving, creating, updating, and deleting
- * members. Member operations may also create or update associated user
- * accounts to keep member and authentication data synchronized.
+ * <p>Provides functionality for retrieving, creating, updating, and deleting members. Member
+ * operations may also create or update associated user accounts to keep member and authentication
+ * data synchronized.
  *
- * <p>Uses {@link DbService} for persistence, {@link MemberMapper} for DTO
- * mapping, {@link MailService} for account notifications, and
- * {@link SseService} for broadcasting real-time updates.
+ * <p>Uses {@link DbService} for persistence, {@link MemberMapper} for DTO mapping, {@link
+ * MailService} for account notifications, and {@link SseService} for broadcasting real-time
+ * updates.
  */
 @Service
 public class MemberService {
@@ -64,8 +64,8 @@ public class MemberService {
   /**
    * Retrieves all members.
    *
-   * <p>Loads members from storage and converts them into response DTOs for
-   * administration and display purposes.
+   * <p>Loads members from storage and converts them into response DTOs for administration and
+   * display purposes.
    *
    * @return list of all members
    */
@@ -105,7 +105,6 @@ public class MemberService {
    * Checks whether a member exists.
    *
    * @param id identifier of the member
-   *
    * @throws BadRequestException if the identifier is empty
    * @throws NotFoundException if no member exists with the given identifier
    */
@@ -125,15 +124,13 @@ public class MemberService {
   /**
    * Creates a new member and the associated user account.
    *
-   * <p>Creates the member record, generates a linked user account with a
-   * temporary password, sends the credentials via email, and broadcasts a
-   * member refresh event.
+   * <p>Creates the member record, generates a linked user account with a temporary password, sends
+   * the credentials via email, and broadcasts a member refresh event.
    *
-   * <p>If user creation fails after the member has been created, the created
-   * member is removed to prevent orphaned records.
+   * <p>If user creation fails after the member has been created, the created member is removed to
+   * prevent orphaned records.
    *
    * @param request member creation data
-   *
    * @throws ConflictException if a user with the provided email already exists
    * @throws NotFoundException if the created member cannot be retrieved
    */
@@ -205,11 +202,10 @@ public class MemberService {
   /**
    * Deletes a member and its linked user account.
    *
-   * <p>Removes both the member record and the associated authentication user
-   * record, then broadcasts a member refresh event.
+   * <p>Removes both the member record and the associated authentication user record, then
+   * broadcasts a member refresh event.
    *
    * @param id identifier of the member
-   *
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the member or linked user does not exist
    */
@@ -231,13 +227,11 @@ public class MemberService {
   /**
    * Updates member information and the associated user account.
    *
-   * <p>Updates both records to keep member data and authentication data
-   * synchronized. After a successful update, a member refresh event is
-   * broadcast.
+   * <p>Updates both records to keep member data and authentication data synchronized. After a
+   * successful update, a member refresh event is broadcast.
    *
    * @param request updated member information
    * @return list containing the new revisions of the member and user records
-   *
    * @throws NotFoundException if the member or linked user does not exist
    */
   public List<String> updateMember(UpdateMemberRequestDTO request) {
@@ -273,13 +267,12 @@ public class MemberService {
   /**
    * Toggles the active state of a member.
    *
-   * <p>Switches the member status between {@code active} and {@code inactive}
-   * and broadcasts a member refresh event after updating.
+   * <p>Switches the member status between {@code active} and {@code inactive} and broadcasts a
+   * member refresh event after updating.
    *
    * @param id identifier of the member
    * @param _rev current database revision of the member
    * @return new database revision of the updated member
-   *
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the member does not exist
    */
@@ -326,8 +319,8 @@ public class MemberService {
   /**
    * Creates a user entity from a member creation request.
    *
-   * <p>Initializes default authentication state including first login
-   * requirement, generated user identifier, and assigned role.
+   * <p>Initializes default authentication state including first login requirement, generated user
+   * identifier, and assigned role.
    *
    * @param request member creation data
    * @return initialized user entity
@@ -376,7 +369,6 @@ public class MemberService {
    * @param id identifier of the member
    * @param action action context used for generating error codes
    * @return matching member entity
-   *
    * @throws NotFoundException if no member exists with the given identifier
    */
   private Member getMemberById(String id, ErrorAction action) {
@@ -394,7 +386,6 @@ public class MemberService {
    * @param memberId identifier of the linked member
    * @param action action context used for generating error codes
    * @return linked user entity
-   *
    * @throws NotFoundException if no linked user exists
    */
   private User getUserByMemberId(String memberId, ErrorAction action) {

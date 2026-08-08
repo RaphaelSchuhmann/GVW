@@ -22,8 +22,7 @@ import tools.jackson.databind.ObjectMapper;
  * Service responsible for managing user-submitted bug reports.
  *
  * <p>Bug reports are stored in CouchDB and contain additional metadata about the client that
- * submitted the report, such as browser, operating system, application version, and viewport
- * size.
+ * submitted the report, such as browser, operating system, application version, and viewport size.
  *
  * <p>Creating or deleting reports broadcasts SSE refresh events so connected clients can update
  * their data automatically.

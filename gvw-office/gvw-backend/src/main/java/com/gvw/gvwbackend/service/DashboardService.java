@@ -15,15 +15,15 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for preparing dashboard data.
  *
- * <p>The dashboard does not store its own data. Instead, it aggregates
- * information from multiple CouchDB collections and creates lightweight
- * summary DTOs used by the frontend dashboard.
+ * <p>The dashboard does not store its own data. Instead, it aggregates information from multiple
+ * CouchDB collections and creates lightweight summary DTOs used by the frontend dashboard.
  *
  * <p>Currently aggregated data:
+ *
  * <ul>
- *   <li>Member status and voice distribution</li>
- *   <li>Upcoming events</li>
- *   <li>Total number of scores in the library</li>
+ *   <li>Member status and voice distribution
+ *   <li>Upcoming events
+ *   <li>Total number of scores in the library
  * </ul>
  */
 @Service
@@ -38,11 +38,11 @@ public class DashboardService {
   /**
    * Loads and aggregates all data required for the dashboard view.
    *
-   * <p>This method intentionally returns summary information instead of full
-   * documents to avoid sending unnecessary data to the frontend.
+   * <p>This method intentionally returns summary information instead of full documents to avoid
+   * sending unnecessary data to the frontend.
    *
-   * <p>Upcoming events are filtered by status and sorted by date so that the
-   * dashboard always displays the nearest events first.
+   * <p>Upcoming events are filtered by status and sorted by date so that the dashboard always
+   * displays the nearest events first.
    *
    * @return aggregated dashboard data
    */

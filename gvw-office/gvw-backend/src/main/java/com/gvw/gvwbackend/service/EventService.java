@@ -21,12 +21,11 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing calendar events.
  *
- * <p>Handles creation, retrieval, updating, and deletion of events.
- * Event changes are broadcast through {@link SseService} so connected clients
- * can update their calendar data automatically.
+ * <p>Handles creation, retrieval, updating, and deletion of events. Event changes are broadcast
+ * through {@link SseService} so connected clients can update their calendar data automatically.
  *
- * <p>This service also handles automatic status updates for expired single
- * events when retrieving the event list.
+ * <p>This service also handles automatic status updates for expired single events when retrieving
+ * the event list.
  */
 @Service
 public class EventService {
@@ -45,11 +44,10 @@ public class EventService {
   /**
    * Retrieves all events from the database.
    *
-   * <p>While loading events, expired single events that are still marked as
-   * "upcoming" are automatically changed to "finished" and persisted.
+   * <p>While loading events, expired single events that are still marked as "upcoming" are
+   * automatically changed to "finished" and persisted.
    *
-   * <p>If automatic status updates occur, connected clients receive an SSE
-   * refresh notification.
+   * <p>If automatic status updates occur, connected clients receive an SSE refresh notification.
    *
    * @return all events formatted for the API response
    */
@@ -146,8 +144,8 @@ public class EventService {
   /**
    * Creates a new calendar event.
    *
-   * <p>The recurrence configuration is validated before storing the event.
-   * After successful creation, connected clients are notified through SSE.
+   * <p>The recurrence configuration is validated before storing the event. After successful
+   * creation, connected clients are notified through SSE.
    *
    * @param request event creation data
    * @throws BadRequestException if the recurrence configuration is invalid
@@ -245,8 +243,8 @@ public class EventService {
   /**
    * Updates event information using values from an update request.
    *
-   * <p>The mapper updates existing fields while preserving database identity
-   * information such as the document ID.
+   * <p>The mapper updates existing fields while preserving database identity information such as
+   * the document ID.
    *
    * @param request updated event data
    * @return updated CouchDB revision
@@ -282,11 +280,12 @@ public class EventService {
   /**
    * Validates whether the recurrence configuration matches the selected event mode.
    *
-   * <p>Single and weekly events do not require additional recurrence data.
-   * Monthly events require either:
+   * <p>Single and weekly events do not require additional recurrence data. Monthly events require
+   * either:
+   *
    * <ul>
-   *   <li>a weekday + ordinal combination (for example: second Monday)</li>
-   *   <li>a specific day of month</li>
+   *   <li>a weekday + ordinal combination (for example: second Monday)
+   *   <li>a specific day of month
    * </ul>
    *
    * @param mode event recurrence mode

@@ -13,20 +13,21 @@ import org.springframework.stereotype.Service;
 /**
  * Service responsible for managing application-wide settings.
  *
- * <p>The application settings are stored as a single CouchDB document with the
- * fixed identifier {@code general}. This service provides controlled access to
- * modifying those settings and handles synchronization notifications through SSE.
+ * <p>The application settings are stored as a single CouchDB document with the fixed identifier
+ * {@code general}. This service provides controlled access to modifying those settings and handles
+ * synchronization notifications through SSE.
  *
  * <p>Settings managed by this service include:
+ *
  * <ul>
- *   <li>Member limits</li>
- *   <li>Library score categories</li>
- *   <li>Help center categories</li>
- *   <li>Application metadata</li>
+ *   <li>Member limits
+ *   <li>Library score categories
+ *   <li>Help center categories
+ *   <li>Application metadata
  * </ul>
  *
- * <p>Changes made through this service should trigger an SSE refresh event so
- * connected clients can update their local state.
+ * <p>Changes made through this service should trigger an SSE refresh event so connected clients can
+ * update their local state.
  */
 @Service
 public class AppSettingsService {
@@ -37,10 +38,9 @@ public class AppSettingsService {
   /**
    * Keys that are rejected for user-defined configuration values.
    *
-   * <p>These values are commonly involved in prototype pollution attacks in
-   * JavaScript environments. Although the backend is written in Java, these
-   * values are eventually consumed by the frontend and therefore must not be
-   * accepted as dynamic configuration keys.
+   * <p>These values are commonly involved in prototype pollution attacks in JavaScript
+   * environments. Although the backend is written in Java, these values are eventually consumed by
+   * the frontend and therefore must not be accepted as dynamic configuration keys.
    */
   private static final Set<String> BLOCKED_KEYS = Set.of("__proto__", "constructor", "prototype");
 
@@ -70,8 +70,8 @@ public class AppSettingsService {
   /**
    * Updates the maximum allowed number of members.
    *
-   * <p>The CouchDB revision supplied by the client is used to prevent accidental
-   * overwrites of newer changes.
+   * <p>The CouchDB revision supplied by the client is used to prevent accidental overwrites of
+   * newer changes.
    *
    * @param requestDTO update request containing the new limit and document revision
    * @return updated CouchDB revision
@@ -102,13 +102,14 @@ public class AppSettingsService {
    * Adds a new library score category.
    *
    * <p>Categories are stored as a bidirectional mapping:
+   *
    * <pre>
    * type -> display name
    * display name -> type
    * </pre>
    *
-   * <p>This allows conversion between internal category identifiers and their
-   * user-facing names without additional database queries.
+   * <p>This allows conversion between internal category identifiers and their user-facing names
+   * without additional database queries.
    *
    * @param requestDTO category data
    * @return updated CouchDB revision
@@ -159,8 +160,8 @@ public class AppSettingsService {
   /**
    * Removes a library score category and its reverse lookup entry.
    *
-   * <p>Because categories are stored bidirectionally, both the internal type
-   * and display name entries must be removed.
+   * <p>Because categories are stored bidirectionally, both the internal type and display name
+   * entries must be removed.
    */
   public String removeCategory(RemoveCategoryRequestDTO requestDTO) {
     String type = requestDTO.type();
@@ -199,11 +200,11 @@ public class AppSettingsService {
   /**
    * Adds a new help center category to the application settings document.
    *
-   * <p>Help center categories are embedded directly inside the settings document
-   * instead of being stored as separate database documents.
+   * <p>Help center categories are embedded directly inside the settings document instead of being
+   * stored as separate database documents.
    *
-   * <p>A generated UUID is used as the category identifier because the category
-   * needs a stable reference for article counters and featured state updates.
+   * <p>A generated UUID is used as the category identifier because the category needs a stable
+   * reference for article counters and featured state updates.
    */
   public String addHelpCenterCategoryToSettings(AddHelpCenterCategoryRequestDTO dto) {
     AppSettings settings = appSettings(ErrorAction.CREATE, ErrorResource.HELP_CENTER_CATEGORY);
@@ -254,10 +255,9 @@ public class AppSettingsService {
   /**
    * Removes a help center category from the global application settings.
    *
-   * <p>Help center categories are currently stored as embedded objects inside the
-   * application settings document. Removing a category updates the settings
-   * document and notifies connected clients to refresh both help center data and
-   * application settings.
+   * <p>Help center categories are currently stored as embedded objects inside the application
+   * settings document. Removing a category updates the settings document and notifies connected
+   * clients to refresh both help center data and application settings.
    *
    * @param id unique identifier of the help center category to remove
    * @return the new CouchDB document revision after the update
@@ -305,8 +305,8 @@ public class AppSettingsService {
   /**
    * Updates the featured state of help center categories.
    *
-   * <p>The request contains a map of category IDs to their desired featured state.
-   * Only categories included in the request are modified.
+   * <p>The request contains a map of category IDs to their desired featured state. Only categories
+   * included in the request are modified.
    *
    * @param request requested featured states
    * @return updated CouchDB revision
@@ -346,8 +346,8 @@ public class AppSettingsService {
   /**
    * Updates the cached article count of a help center category.
    *
-   * <p>The article count is stored in settings instead of calculated dynamically
-   * to avoid additional database queries when loading the help center overview.
+   * <p>The article count is stored in settings instead of calculated dynamically to avoid
+   * additional database queries when loading the help center overview.
    *
    * @param id category identifier
    * @param newCount new article count
@@ -403,8 +403,8 @@ public class AppSettingsService {
   /**
    * Loads the global application settings document.
    *
-   * <p>All settings operations use this method to ensure consistent handling
-   * of missing configuration data and error reporting.
+   * <p>All settings operations use this method to ensure consistent handling of missing
+   * configuration data and error reporting.
    *
    * @param action action being performed for error reporting
    * @param resource affected resource for error reporting

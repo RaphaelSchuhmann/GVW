@@ -21,11 +21,11 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing user feedback submissions.
  *
- * <p>Handles retrieving feedback entries, resolving feedback details,
- * creating new feedback reports, and deleting existing feedback.
+ * <p>Handles retrieving feedback entries, resolving feedback details, creating new feedback
+ * reports, and deleting existing feedback.
  *
- * <p>Changes to feedback data are broadcast through {@link SseService}
- * so connected clients can refresh their data automatically.
+ * <p>Changes to feedback data are broadcast through {@link SseService} so connected clients can
+ * refresh their data automatically.
  */
 @Service
 public class FeedbackService {
@@ -69,8 +69,7 @@ public class FeedbackService {
   /**
    * Retrieves detailed information about a single feedback entry.
    *
-   * <p>The stored user ID is resolved into an email address before returning
-   * the response.
+   * <p>The stored user ID is resolved into an email address before returning the response.
    *
    * @param id database ID of the feedback entry
    * @return detailed feedback information
@@ -103,9 +102,8 @@ public class FeedbackService {
   /**
    * Creates a new feedback entry from a user submission.
    *
-   * <p>The current user ID and additional application metadata are stored
-   * together with the feedback content. After creation, connected clients are
-   * notified through SSE.
+   * <p>The current user ID and additional application metadata are stored together with the
+   * feedback content. After creation, connected clients are notified through SSE.
    *
    * @param request feedback data submitted by the user
    * @param userId ID of the user creating the feedback

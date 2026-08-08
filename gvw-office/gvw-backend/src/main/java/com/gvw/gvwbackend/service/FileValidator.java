@@ -7,13 +7,12 @@ import org.springframework.web.multipart.MultipartFile;
 /**
  * Validates uploaded files based on their file extensions.
  *
- * <p>This component is used to reject unsupported file types before they are
- * stored on the server. Only explicitly allowed extensions are accepted.
+ * <p>This component is used to reject unsupported file types before they are stored on the server.
+ * Only explicitly allowed extensions are accepted.
  *
- * <p>This validation only checks the filename extension and should not be
- * considered a complete file security solution. Additional validation such as
- * size limits, storage isolation, and content handling should be performed
- * by the consuming service.
+ * <p>This validation only checks the filename extension and should not be considered a complete
+ * file security solution. Additional validation such as size limits, storage isolation, and content
+ * handling should be performed by the consuming service.
  */
 @Component
 public class FileValidator {
@@ -46,8 +45,8 @@ public class FileValidator {
   /**
    * Checks whether an uploaded file has an allowed extension.
    *
-   * <p>The extension is extracted from the original filename and compared
-   * against the configured allowlist.
+   * <p>The extension is extracted from the original filename and compared against the configured
+   * allowlist.
    *
    * @param file uploaded file to validate
    * @return {@code true} if the file extension is allowed, otherwise {@code false}

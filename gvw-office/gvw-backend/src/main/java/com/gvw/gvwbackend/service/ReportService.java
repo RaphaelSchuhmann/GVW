@@ -28,13 +28,12 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing reports.
  *
- * <p>Provides functionality for creating, retrieving, updating, deleting,
- * and searching reports. Handles persistence through {@link DbService},
- * editor asset management through {@link TextEditorService}, and real-time
- * client updates through {@link SseService}.
+ * <p>Provides functionality for creating, retrieving, updating, deleting, and searching reports.
+ * Handles persistence through {@link DbService}, editor asset management through {@link
+ * TextEditorService}, and real-time client updates through {@link SseService}.
  *
- * <p>Report updates also manage linked editor assets and attachments,
- * including cleanup of unused files.
+ * <p>Report updates also manage linked editor assets and attachments, including cleanup of unused
+ * files.
  */
 @Service
 public class ReportService {
@@ -61,8 +60,8 @@ public class ReportService {
   /**
    * Retrieves all available reports.
    *
-   * <p>Loads reports from storage and converts them into lightweight response
-   * objects suitable for report listings.
+   * <p>Loads reports from storage and converts them into lightweight response objects suitable for
+   * report listings.
    *
    * @return list of available reports
    */
@@ -96,7 +95,6 @@ public class ReportService {
    * Checks whether a report exists.
    *
    * @param id identifier of the report
-   *
    * @throws BadRequestException if the identifier is empty
    * @throws NotFoundException if no report exists with the given identifier
    */
@@ -116,9 +114,8 @@ public class ReportService {
   /**
    * Creates a new report.
    *
-   * <p>Initializes the report metadata and creates an empty text editor block
-   * as the starting content. After successful creation, a refresh event is
-   * broadcast to connected clients.
+   * <p>Initializes the report metadata and creates an empty text editor block as the starting
+   * content. After successful creation, a refresh event is broadcast to connected clients.
    *
    * @param request report creation data
    */
@@ -149,12 +146,10 @@ public class ReportService {
   /**
    * Retrieves a complete report including editor content and metadata.
    *
-   * <p>Additionally calculates plain text statistics such as word count and
-   * estimated reading time.
+   * <p>Additionally calculates plain text statistics such as word count and estimated reading time.
    *
    * @param id identifier of the report
    * @return complete report information
-   *
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the report does not exist
    */
@@ -202,14 +197,13 @@ public class ReportService {
   /**
    * Verifies that an editor asset belongs to a report.
    *
-   * <p>Used to prevent unauthorized access to files that are not referenced
-   * by the requested report content.
+   * <p>Used to prevent unauthorized access to files that are not referenced by the requested report
+   * content.
    *
    * @param documentId identifier of the report
    * @param filename asset filename to verify
-   *
-   * @throws BadRequestException if parameters are invalid or the asset is not
-   * referenced by the report
+   * @throws BadRequestException if parameters are invalid or the asset is not referenced by the
+   *     report
    * @throws NotFoundException if the report does not exist
    */
   public void verifyAssetOwnership(String documentId, String filename) {
@@ -235,11 +229,10 @@ public class ReportService {
   /**
    * Deletes a report and all associated assets.
    *
-   * <p>Removes the report from storage, deletes editor block assets, removes
-   * uploaded attachments from disk, and broadcasts a report refresh event.
+   * <p>Removes the report from storage, deletes editor block assets, removes uploaded attachments
+   * from disk, and broadcasts a report refresh event.
    *
    * @param id identifier of the report
-   *
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the report does not exist
    */
@@ -284,8 +277,8 @@ public class ReportService {
   /**
    * Searches through report contents for a given search term.
    *
-   * <p>Uses deep text search on editor content and returns matching reports
-   * together with surrounding text snippets.
+   * <p>Uses deep text search on editor content and returns matching reports together with
+   * surrounding text snippets.
    *
    * @param input search term
    * @return matching reports with search context
@@ -325,14 +318,12 @@ public class ReportService {
   /**
    * Updates report content and handles editor asset synchronization.
    *
-   * <p>Processes uploaded editor files, replaces temporary image references,
-   * updates the report content, removes unused assets, and broadcasts a refresh
-   * event after successful persistence.
+   * <p>Processes uploaded editor files, replaces temporary image references, updates the report
+   * content, removes unused assets, and broadcasts a refresh event after successful persistence.
    *
    * @param request updated report data
    * @param files newly uploaded editor files
    * @return new database revision of the updated report
-   *
    * @throws BadRequestException if uploaded files or content are invalid
    * @throws NotFoundException if the report does not exist
    */
@@ -404,12 +395,10 @@ public class ReportService {
   /**
    * Updates the description of an existing report.
    *
-   * <p>If no description is provided, a default placeholder description is
-   * stored instead.
+   * <p>If no description is provided, a default placeholder description is stored instead.
    *
    * @param request updated description information
    * @return new database revision of the updated report
-   *
    * @throws NotFoundException if the report does not exist
    */
   public String updateReportDescription(UpdateReportDescriptionRequestDTO request) {
@@ -447,19 +436,16 @@ public class ReportService {
   /**
    * Updates the attachments of a report.
    *
-   * <p>Stores newly uploaded files, removes deleted attachments from disk,
-   * updates the report metadata, and broadcasts a refresh event.
+   * <p>Stores newly uploaded files, removes deleted attachments from disk, updates the report
+   * metadata, and broadcasts a refresh event.
    *
-   * <p>If the update fails, newly stored files are removed to prevent orphaned
-   * files on disk.
+   * <p>If the update fails, newly stored files are removed to prevent orphaned files on disk.
    *
    * @param request attachment update information
    * @param files newly uploaded files
    * @param reportId identifier of the report
    * @return new database revision of the updated report
-   *
-   * @throws BadRequestException if the request is invalid or the revision does
-   * not match
+   * @throws BadRequestException if the request is invalid or the revision does not match
    * @throws NotFoundException if the report does not exist
    */
   public String updateAttachments(
@@ -579,12 +565,11 @@ public class ReportService {
   /**
    * Streams report attachments as a ZIP archive.
    *
-   * <p>Creates a ZIP archive directly on the provided output stream without
-   * loading all files into memory.
+   * <p>Creates a ZIP archive directly on the provided output stream without loading all files into
+   * memory.
    *
    * @param files files to include in the archive
    * @param out output stream receiving the ZIP data
-   *
    * @throws RuntimeException if archive creation fails
    */
   public void streamFilesAsZip(List<File> files, OutputStream out) {

@@ -3,8 +3,8 @@ package com.gvw.gvwbackend.exception;
 /**
  * Defines the primary domain/category of an application error.
  *
- * <p>The domain forms the first section of the GVW error code and identifies
- * the affected application area.
+ * <p>The domain forms the first section of the GVW error code and identifies the affected
+ * application area.
  *
  * <p>Error codes are generated using the following format:
  *
@@ -13,10 +13,11 @@ package com.gvw.gvwbackend.exception;
  * </pre>
  *
  * where:
+ *
  * <ul>
- *   <li>{@code DD} - error domain</li>
- *   <li>{@code AA} - error action</li>
- *   <li>{@code HHH} - HTTP status code</li>
+ *   <li>{@code DD} - error domain
+ *   <li>{@code AA} - error action
+ *   <li>{@code HHH} - HTTP status code
  * </ul>
  *
  * <p>When a resource is provided, the extended format is:
@@ -39,8 +40,7 @@ public enum ErrorDomain {
   FEEDBACK(90),
   BUG_REPORT(11),
   CHANGELOG(12),
-  FILE_VALIDATOR(
-      13), // Currently only used by hard-coded file validation responses
+  FILE_VALIDATOR(13), // Currently only used by hard-coded file validation responses
   TEXT_EDITOR(14),
   HELP_CENTER(15);
 

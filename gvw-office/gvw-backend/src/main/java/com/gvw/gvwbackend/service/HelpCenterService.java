@@ -15,12 +15,11 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing the GVW Office help center.
  *
- * <p>Handles help center categories and articles, including creation,
- * retrieval, updates, deletion, searching, attachment handling, and
- * synchronization events.
+ * <p>Handles help center categories and articles, including creation, retrieval, updates, deletion,
+ * searching, attachment handling, and synchronization events.
  *
- * <p>Articles use the text editor infrastructure for storing rich content
- * blocks and managing uploaded assets.
+ * <p>Articles use the text editor infrastructure for storing rich content blocks and managing
+ * uploaded assets.
  */
 @Service
 public class HelpCenterService {
@@ -46,9 +45,9 @@ public class HelpCenterService {
   /**
    * Validates that a help center category exists.
    *
-   * <p>Categories are not stored as individual database documents but inside
-   * the application settings document. This method checks the configured
-   * category list for the requested identifier.
+   * <p>Categories are not stored as individual database documents but inside the application
+   * settings document. This method checks the configured category list for the requested
+   * identifier.
    *
    * @param id category identifier to validate
    * @throws BadRequestException if the identifier is empty
@@ -101,13 +100,11 @@ public class HelpCenterService {
   /**
    * Removes a help center category from application settings.
    *
-   * <p>A category cannot be removed while articles are still assigned to it.
-   * This prevents articles from becoming inaccessible because of a missing
-   * category reference.
+   * <p>A category cannot be removed while articles are still assigned to it. This prevents articles
+   * from becoming inaccessible because of a missing category reference.
    *
    * @param id category identifier to remove
    * @return new settings revision after the update
-   *
    * @throws ConflictException if articles still use this category
    */
   public String removeHelpCenterCategory(String id) {
@@ -130,13 +127,12 @@ public class HelpCenterService {
   /**
    * Creates a new help center article.
    *
-   * <p>The method validates that the target category exists, creates an empty
-   * initial text block for the editor, stores the article, updates the category
-   * article counter, and broadcasts a refresh event.
+   * <p>The method validates that the target category exists, creates an empty initial text block
+   * for the editor, stores the article, updates the category article counter, and broadcasts a
+   * refresh event.
    *
    * @param dto article creation data
    * @return new application settings revision after updating the category count
-   *
    * @throws BadRequestException if the provided category does not exist
    */
   public String createArticle(AddHelpCenterArticleRequestDTO dto) {
@@ -193,12 +189,11 @@ public class HelpCenterService {
   /**
    * Retrieves all articles belonging to a specific category.
    *
-   * <p>This method only returns article metadata. Full editor contents are
-   * loaded separately through {@link #getArticle(String)}.
+   * <p>This method only returns article metadata. Full editor contents are loaded separately
+   * through {@link #getArticle(String)}.
    *
    * @param category category identifier
    * @return list of articles in the requested category
-   *
    * @throws BadRequestException if the category identifier is missing
    */
   public ArticlesResponseDTO getArticles(String category) {
@@ -232,12 +227,11 @@ public class HelpCenterService {
   /**
    * Retrieves a complete help center article.
    *
-   * <p>Returns the complete editor content including text blocks and calculates
-   * additional metadata such as reading time.
+   * <p>Returns the complete editor content including text blocks and calculates additional metadata
+   * such as reading time.
    *
    * @param id article identifier
    * @return complete article information
-   *
    * @throws BadRequestException if the identifier is empty
    * @throws NotFoundException if the article does not exist
    */
@@ -269,16 +263,15 @@ public class HelpCenterService {
   /**
    * Updates an existing help center article.
    *
-   * <p>Handles uploading new editor assets and replacing temporary upload IDs
-   * with permanent internal filenames before saving the article.
+   * <p>Handles uploading new editor assets and replacing temporary upload IDs with permanent
+   * internal filenames before saving the article.
    *
-   * <p>If the database update succeeds, unused previous assets are removed.
-   * Failed updates leave newly uploaded files cleaned up by the editor service.
+   * <p>If the database update succeeds, unused previous assets are removed. Failed updates leave
+   * newly uploaded files cleaned up by the editor service.
    *
    * @param request updated article data
    * @param files newly uploaded editor files
    * @return new database revision identifier
-   *
    * @throws NotFoundException if the article does not exist
    * @throws BadRequestException if uploaded temporary files cannot be resolved
    */
@@ -354,13 +347,11 @@ public class HelpCenterService {
   /**
    * Verifies that an uploaded editor asset belongs to a specific article.
    *
-   * <p>This prevents users from accessing arbitrary files by guessing
-   * filenames. Only files referenced by the article's content blocks are
-   * considered valid.
+   * <p>This prevents users from accessing arbitrary files by guessing filenames. Only files
+   * referenced by the article's content blocks are considered valid.
    *
    * @param documentId article identifier
    * @param filename requested asset filename
-   *
    * @throws BadRequestException if parameters are invalid or the asset is not linked
    * @throws NotFoundException if the article does not exist
    */
@@ -388,11 +379,10 @@ public class HelpCenterService {
   /**
    * Deletes a help center article.
    *
-   * <p>The operation updates the category article count, removes the database
-   * document, deletes all editor assets, and broadcasts a refresh event.
+   * <p>The operation updates the category article count, removes the database document, deletes all
+   * editor assets, and broadcasts a refresh event.
    *
    * @param id article identifier
-   *
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the article does not exist
    */
@@ -441,10 +431,11 @@ public class HelpCenterService {
    * Searches help center articles.
    *
    * <p>The search combines multiple strategies:
+   *
    * <ul>
-   *   <li>Title matching</li>
-   *   <li>Full text search through editor content</li>
-   *   <li>Snippet generation for matched content</li>
+   *   <li>Title matching
+   *   <li>Full text search through editor content
+   *   <li>Snippet generation for matched content
    * </ul>
    *
    * <p>If no search term is provided, all articles are returned.

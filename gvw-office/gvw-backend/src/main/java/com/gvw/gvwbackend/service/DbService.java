@@ -28,24 +28,26 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Central database abstraction layer for CouchDB communication.
  *
- * <p>This service provides all database operations used by the backend and
- * hides direct HTTP communication with CouchDB from other services.
+ * <p>This service provides all database operations used by the backend and hides direct HTTP
+ * communication with CouchDB from other services.
  *
- * <p>The application communicates with CouchDB exclusively through this class.
- * Services should not create their own RestTemplate requests.
+ * <p>The application communicates with CouchDB exclusively through this class. Services should not
+ * create their own RestTemplate requests.
  *
  * <p>Error handling:
+ *
  * <ul>
- *   <li>Connection failures are converted into {@link DatabaseConnectionException}</li>
- *   <li>Revision conflicts are converted into {@link ConflictException}</li>
- *   <li>JSON mapping errors are converted into {@link DatabaseMappingException}</li>
+ *   <li>Connection failures are converted into {@link DatabaseConnectionException}
+ *   <li>Revision conflicts are converted into {@link ConflictException}
+ *   <li>JSON mapping errors are converted into {@link DatabaseMappingException}
  * </ul>
  *
  * <p>Important CouchDB behavior:
+ *
  * <ul>
- *   <li>Documents require the current revision (_rev) when updating/deleting.</li>
- *   <li>The insert method is also used for replacing existing documents when a
- *       document contains an existing _id and _rev.</li>
+ *   <li>Documents require the current revision (_rev) when updating/deleting.
+ *   <li>The insert method is also used for replacing existing documents when a document contains an
+ *       existing _id and _rev.
  * </ul>
  */
 @Service
@@ -92,9 +94,8 @@ public class DbService {
   /**
    * Creates or replaces a CouchDB document.
    *
-   * <p>This method internally uses CouchDB's POST endpoint.
-   * If a document contains an existing ID and revision, CouchDB replaces the
-   * existing document instead of creating a new one.
+   * <p>This method internally uses CouchDB's POST endpoint. If a document contains an existing ID
+   * and revision, CouchDB replaces the existing document instead of creating a new one.
    *
    * @param db target CouchDB database
    * @param doc document object to store
@@ -110,9 +111,8 @@ public class DbService {
   /**
    * Updates an existing CouchDB document using its document ID.
    *
-   * <p>The supplied document must contain the current CouchDB revision.
-   * If another client modified the document in the meantime, CouchDB rejects
-   * the update and a ConflictException is thrown.
+   * <p>The supplied document must contain the current CouchDB revision. If another client modified
+   * the document in the meantime, CouchDB rejects the update and a ConflictException is thrown.
    *
    * @param db target database
    * @param id document ID
@@ -145,11 +145,11 @@ public class DbService {
   /**
    * Deletes a document from CouchDB using its current revision.
    *
-   * <p>CouchDB requires the document revision (_rev) to prevent deleting
-   * outdated versions of documents.
+   * <p>CouchDB requires the document revision (_rev) to prevent deleting outdated versions of
+   * documents.
    *
-   * <p>If the revision does not match the current database version, CouchDB
-   * rejects the operation and the error is handled by {@link #safeExecute}.
+   * <p>If the revision does not match the current database version, CouchDB rejects the operation
+   * and the error is handled by {@link #safeExecute}.
    *
    * @param db target CouchDB database
    * @param id document ID
@@ -167,11 +167,11 @@ public class DbService {
   /**
    * Retrieves all documents from a CouchDB database.
    *
-   * <p>This method uses the "_all_docs" endpoint with "include_docs=true" so
-   * that the complete document content is returned instead of only metadata.
+   * <p>This method uses the "_all_docs" endpoint with "include_docs=true" so that the complete
+   * document content is returned instead of only metadata.
    *
-   * <p>Documents without a "doc" field are ignored. This can happen for deleted
-   * CouchDB documents (tombstones).
+   * <p>Documents without a "doc" field are ignored. This can happen for deleted CouchDB documents
+   * (tombstones).
    *
    * @param db target CouchDB database
    * @return list of raw CouchDB documents
@@ -198,9 +198,8 @@ public class DbService {
   /**
    * Retrieves a single CouchDB document by its ID and maps it to a Java object.
    *
-   * <p>A missing document is represented by a null return value instead of an
-   * exception. Services using this method are responsible for deciding whether
-   * a missing document is an error.
+   * <p>A missing document is represented by a null return value instead of an exception. Services
+   * using this method are responsible for deciding whether a missing document is an error.
    *
    * <p>Mapping failures are converted into {@link DatabaseMappingException}.
    *
@@ -223,11 +222,10 @@ public class DbService {
   }
 
   /**
-   * Executes a CouchDB Mango query and maps all matching documents to the
-   * requested Java type.
+   * Executes a CouchDB Mango query and maps all matching documents to the requested Java type.
    *
-   * <p>This method uses CouchDB's "_find" endpoint. The provided query map is
-   * sent directly as the Mango query body.
+   * <p>This method uses CouchDB's "_find" endpoint. The provided query map is sent directly as the
+   * Mango query body.
    *
    * <p>If no documents match the query, an empty list is returned.
    *
@@ -264,14 +262,13 @@ public class DbService {
   /**
    * Initializes the required CouchDB databases.
    *
-   * <p>This method is executed during application startup and ensures all
-   * required databases exist.
+   * <p>This method is executed during application startup and ensures all required databases exist.
    *
-   * <p>Additionally, this method resets the default application settings
-   * document ("general") to the built-in defaults.
+   * <p>Additionally, this method resets the default application settings document ("general") to
+   * the built-in defaults.
    *
-   * <p>This behavior is intentional because this method is used for initial
-   * installation/setup. It should not be called during normal runtime.
+   * <p>This behavior is intentional because this method is used for initial installation/setup. It
+   * should not be called during normal runtime.
    */
   public void createDatabases() {
     for (String database : databases) {
@@ -337,14 +334,14 @@ public class DbService {
   }
 
   /**
-   * Executes a CouchDB request and normalizes all low-level HTTP/network errors
-   * into application-specific exceptions.
+   * Executes a CouchDB request and normalizes all low-level HTTP/network errors into
+   * application-specific exceptions.
    *
-   * <p>All database operations go through this method to ensure consistent
-   * error handling and logging.
+   * <p>All database operations go through this method to ensure consistent error handling and
+   * logging.
    *
-   * <p>404 responses are intentionally not converted because some callers use
-   * missing documents as valid states.
+   * <p>404 responses are intentionally not converted because some callers use missing documents as
+   * valid states.
    *
    * @param action database operation
    * @param db database name for logging context
@@ -381,9 +378,8 @@ public class DbService {
   /**
    * Checks whether an exception chain contains a connection refused error.
    *
-   * <p>Spring wraps low-level network exceptions inside multiple layers of
-   * exceptions. This method walks through the complete cause chain to find the
-   * original {@link ConnectException}.
+   * <p>Spring wraps low-level network exceptions inside multiple layers of exceptions. This method
+   * walks through the complete cause chain to find the original {@link ConnectException}.
    *
    * @param e exception to inspect
    * @return true if the root cause is a refused connection

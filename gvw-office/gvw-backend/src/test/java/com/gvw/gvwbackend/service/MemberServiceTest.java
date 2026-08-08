@@ -270,7 +270,7 @@ public class MemberServiceTest {
             "member",
             "birthdate",
             "joined",
-            "1-rev");
+            "rev-member");
 
     Member existingMember = generateValidMember();
     existingMember.setId(memberId);

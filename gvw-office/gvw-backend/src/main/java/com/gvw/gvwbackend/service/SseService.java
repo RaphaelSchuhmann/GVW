@@ -12,15 +12,12 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 /**
  * Service responsible for managing Server-Sent Events (SSE) connections.
  *
- * <p>Maintains active client connections, sends real-time update events,
- * and removes disconnected clients automatically. Also sends periodic
- * heartbeat events to keep SSE connections alive.
+ * <p>Maintains active client connections, sends real-time update events, and removes disconnected
+ * clients automatically. Also sends periodic heartbeat events to keep SSE connections alive.
  */
 @Service
 public class SseService {
-  /**
-   * Thread-safe collection of currently connected SSE clients.
-   */
+  /** Thread-safe collection of currently connected SSE clients. */
   private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
   private static final Logger log = LoggerFactory.getLogger(SseService.class);
@@ -28,8 +25,8 @@ public class SseService {
   /**
    * Creates and registers a new SSE connection.
    *
-   * <p>Creates an emitter with a one-hour timeout, registers lifecycle callbacks
-   * to remove disconnected clients, and sends an initial connection event.
+   * <p>Creates an emitter with a one-hour timeout, registers lifecycle callbacks to remove
+   * disconnected clients, and sends an initial connection event.
    *
    * @return newly created and registered SSE emitter
    */
@@ -54,8 +51,8 @@ public class SseService {
   /**
    * Broadcasts a refresh event to all connected clients.
    *
-   * <p>Clients receive an event named {@code refresh} containing the affected
-   * entity type. Emitters that can no longer receive events are removed.
+   * <p>Clients receive an event named {@code refresh} containing the affected entity type. Emitters
+   * that can no longer receive events are removed.
    *
    * @param entityType type of entity that has changed and requires refreshing
    */
@@ -78,8 +75,8 @@ public class SseService {
   /**
    * Sends heartbeat events to all active SSE connections.
    *
-   * <p>Heartbeat comments keep long-lived HTTP connections alive and allow
-   * inactive connections to be detected and removed.
+   * <p>Heartbeat comments keep long-lived HTTP connections alive and allow inactive connections to
+   * be detected and removed.
    *
    * <p>This method runs automatically every 25 seconds.
    */

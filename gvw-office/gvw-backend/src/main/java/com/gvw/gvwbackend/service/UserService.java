@@ -24,10 +24,9 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing application users.
  *
- * <p>Provides operations for retrieving, creating, updating, deleting, and
- * resetting user accounts. Handles user validation, password generation,
- * persistence through {@link DbService}, email notifications, and broadcasting
- * real-time updates through {@link SseService}.
+ * <p>Provides operations for retrieving, creating, updating, deleting, and resetting user accounts.
+ * Handles user validation, password generation, persistence through {@link DbService}, email
+ * notifications, and broadcasting real-time updates through {@link SseService}.
  */
 @Service
 public class UserService {
@@ -66,7 +65,6 @@ public class UserService {
    *
    * @param userId authentication identifier of the user
    * @return user information including role, contact details, and revision
-   *
    * @throws InvalidCredentialsException if the identifier is missing or invalid
    * @throws NotFoundException if no matching user exists
    */
@@ -92,13 +90,11 @@ public class UserService {
   /**
    * Resets a user's password using the associated member identifier.
    *
-   * <p>Generates a temporary password, stores its encoded value, marks the
-   * account as requiring a password change, and sends the temporary password
-   * to the user's email address.
+   * <p>Generates a temporary password, stores its encoded value, marks the account as requiring a
+   * password change, and sends the temporary password to the user's email address.
    *
    * @param memberId identifier of the associated member
    * @return the new database revision of the updated user
-   *
    * @throws BadRequestException if the member identifier is invalid
    * @throws NotFoundException if no user is linked to the member
    */
@@ -133,8 +129,8 @@ public class UserService {
   /**
    * Retrieves all users with additional management information.
    *
-   * <p>Checks whether linked member records still exist and marks users without
-   * valid member references as orphaned.
+   * <p>Checks whether linked member records still exist and marks users without valid member
+   * references as orphaned.
    *
    * @return collection of users formatted for administration views
    */
@@ -187,7 +183,6 @@ public class UserService {
    * Checks whether a user with the given identifier exists.
    *
    * @param id database identifier of the user
-   *
    * @throws BadRequestException if the identifier is empty
    * @throws NotFoundException if no user exists with the given identifier
    */
@@ -203,11 +198,10 @@ public class UserService {
   /**
    * Creates a new user account.
    *
-   * <p>Generates a temporary password, stores the user, sends the password
-   * via email, and broadcasts a user refresh event.
+   * <p>Generates a temporary password, stores the user, sends the password via email, and
+   * broadcasts a user refresh event.
    *
    * @param request data required to create the user
-   *
    * @throws ConflictException if another user already uses the requested email
    */
   public void addUser(AddUserAdminRequestDTO request) {
@@ -244,12 +238,11 @@ public class UserService {
   /**
    * Resets a user's password using the user database identifier.
    *
-   * <p>Generates a temporary password, updates the stored password hash,
-   * marks the account for password change, and sends the new password via email.
+   * <p>Generates a temporary password, updates the stored password hash, marks the account for
+   * password change, and sends the new password via email.
    *
    * @param id database identifier of the user
    * @return the new database revision of the updated user
-   *
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the user does not exist
    */
@@ -284,12 +277,11 @@ public class UserService {
   /**
    * Updates an existing user's information.
    *
-   * <p>Validates email uniqueness, updates the entity using the provided DTO,
-   * persists the changes, and broadcasts a user refresh event.
+   * <p>Validates email uniqueness, updates the entity using the provided DTO, persists the changes,
+   * and broadcasts a user refresh event.
    *
    * @param request updated user information
    * @return the new database revision of the updated user
-   *
    * @throws NotFoundException if the user does not exist
    * @throws ConflictException if the new email is already in use
    * @throws BadRequestException if the user cannot be updated
@@ -335,13 +327,12 @@ public class UserService {
   /**
    * Deletes a user account.
    *
-   * <p>A user can only be deleted if it is not linked to an existing member.
-   * After deletion, a user refresh event is broadcast.
+   * <p>A user can only be deleted if it is not linked to an existing member. After deletion, a user
+   * refresh event is broadcast.
    *
    * @param id database identifier of the user
-   *
-   * @throws BadRequestException if the identifier is invalid or the user is
-   * linked to an existing member
+   * @throws BadRequestException if the identifier is invalid or the user is linked to an existing
+   *     member
    * @throws NotFoundException if the user does not exist
    */
   public void deleteUser(String id) {
@@ -380,8 +371,8 @@ public class UserService {
     }
 
     List<User> users =
-            dbService.findByQuery(
-                    "users", Map.of("selector", Map.of("userId", id), "limit", 1), User.class);
+        dbService.findByQuery(
+            "users", Map.of("selector", Map.of("userId", id), "limit", 1), User.class);
     if (users == null || users.isEmpty()) {
       return "";
     }
@@ -410,14 +401,12 @@ public class UserService {
   /**
    * Retrieves a user by their authentication user identifier.
    *
-   * <p>Queries the user collection using the provided user identifier and
-   * returns the first matching user. Throws an exception when no matching
-   * user exists.
+   * <p>Queries the user collection using the provided user identifier and returns the first
+   * matching user. Throws an exception when no matching user exists.
    *
    * @param userId authentication identifier of the user
    * @param action action context used for generating the error code
    * @return the matching user entity
-   *
    * @throws NotFoundException if no user with the given identifier exists
    */
   private User getUserByUserId(String userId, ErrorAction action) {
@@ -433,13 +422,12 @@ public class UserService {
   /**
    * Retrieves a user by their database document identifier.
    *
-   * <p>Loads the user directly from the database using its document ID and
-   * throws an exception when no matching user exists.
+   * <p>Loads the user directly from the database using its document ID and throws an exception when
+   * no matching user exists.
    *
    * @param id database identifier of the user document
    * @param action action context used for generating the error code
    * @return the matching user entity
-   *
    * @throws NotFoundException if no user with the given identifier exists
    */
   private User getUserByID(String id, ErrorAction action) {
@@ -471,8 +459,8 @@ public class UserService {
   /**
    * Creates a new user entity from an administration request.
    *
-   * <p>Initializes default account state including first login requirement,
-   * generated user identifier, role, and login security fields.
+   * <p>Initializes default account state including first login requirement, generated user
+   * identifier, role, and login security fields.
    *
    * @param request user creation request
    * @return initialized user entity

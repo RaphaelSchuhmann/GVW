@@ -16,12 +16,13 @@ import org.springframework.stereotype.Service;
  * Handles authentication-related operations.
  *
  * <p>This service is responsible for:
+ *
  * <ul>
- *   <li>User login and JWT generation</li>
- *   <li>Failed login attempt tracking and temporary account locking</li>
- *   <li>Password changes</li>
- *   <li>Automatic login validation for existing sessions</li>
- *   <li>Generation of temporary passwords for recovery flows</li>
+ *   <li>User login and JWT generation
+ *   <li>Failed login attempt tracking and temporary account locking
+ *   <li>Password changes
+ *   <li>Automatic login validation for existing sessions
+ *   <li>Generation of temporary passwords for recovery flows
  * </ul>
  *
  * <p>User data is stored in CouchDB through {@link DbService}.
@@ -57,13 +58,14 @@ public class AuthService {
    * Authenticates a user and creates a JWT token.
    *
    * <p>The login flow:
+   *
    * <ol>
-   *   <li>Loads the user by email.</li>
-   *   <li>Checks whether the account is currently locked.</li>
-   *   <li>Validates the supplied password.</li>
-   *   <li>Tracks failed login attempts and locks the account after repeated failures.</li>
-   *   <li>Resets failed attempts after a successful login.</li>
-   *   <li>Creates a JWT containing the user's ID and role.</li>
+   *   <li>Loads the user by email.
+   *   <li>Checks whether the account is currently locked.
+   *   <li>Validates the supplied password.
+   *   <li>Tracks failed login attempts and locks the account after repeated failures.
+   *   <li>Resets failed attempts after a successful login.
+   *   <li>Creates a JWT containing the user's ID and role.
    * </ol>
    *
    * <p>Failed login attempts are stored persistently so that restarting the backend does not reset
@@ -216,7 +218,8 @@ public class AuthService {
    * <p>The generated password consists of randomly selected words combined with random digits.
    * Words are capitalized and all generated parts are shuffled before being combined.
    *
-   * <p>This method uses {@link java.security.SecureRandom} to avoid predictable password generation.
+   * <p>This method uses {@link java.security.SecureRandom} to avoid predictable password
+   * generation.
    *
    * @param wordCount number of random words to include
    * @param numberCount number of random digits to include

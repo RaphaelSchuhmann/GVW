@@ -25,8 +25,8 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Service responsible for managing the score library.
  *
- * <p>Handles score CRUD operations, file storage, ZIP streaming,
- * duplicate detection, and synchronization notifications via SSE.
+ * <p>Handles score CRUD operations, file storage, ZIP streaming, duplicate detection, and
+ * synchronization notifications via SSE.
  */
 @Service
 public class LibraryService {
@@ -47,8 +47,8 @@ public class LibraryService {
   /**
    * Retrieves all scores stored in the library.
    *
-   * <p>Loads score documents from the database and converts them into
-   * response DTOs containing metadata and attachment names.
+   * <p>Loads score documents from the database and converts them into response DTOs containing
+   * metadata and attachment names.
    *
    * @return response object containing all available scores
    */
@@ -86,8 +86,8 @@ public class LibraryService {
   /**
    * Checks whether a score exists.
    *
-   * <p>This method is intended for validation before performing operations
-   * that require an existing score document.
+   * <p>This method is intended for validation before performing operations that require an existing
+   * score document.
    *
    * @param id identifier of the score to check
    * @throws BadRequestException if the identifier is empty or null
@@ -109,11 +109,11 @@ public class LibraryService {
   /**
    * Creates a new score entry and stores all uploaded files.
    *
-   * <p>The operation stores uploaded files first, creates the database entry,
-   * and broadcasts a library refresh event after successful creation.
+   * <p>The operation stores uploaded files first, creates the database entry, and broadcasts a
+   * library refresh event after successful creation.
    *
-   * <p>If creation fails after files have been stored, all created files are
-   * removed to prevent orphaned assets.
+   * <p>If creation fails after files have been stored, all created files are removed to prevent
+   * orphaned assets.
    *
    * @param request metadata of the score to create
    * @param files uploaded score files
@@ -164,8 +164,7 @@ public class LibraryService {
   /**
    * Deletes a score and all associated files.
    *
-   * <p>Removes the database entry first and then deletes all physical files
-   * belonging to the score.
+   * <p>Removes the database entry first and then deletes all physical files belonging to the score.
    *
    * @param id identifier of the score to delete
    * @throws BadRequestException if the identifier is invalid
@@ -201,8 +200,7 @@ public class LibraryService {
   /**
    * Streams multiple score files as a ZIP archive.
    *
-   * <p>Only files existing on disk are included. Missing files are skipped
-   * and logged.
+   * <p>Only files existing on disk are included. Missing files are skipped and logged.
    *
    * @param files metadata of files that should be included
    * @param out output stream receiving the generated ZIP archive
@@ -244,14 +242,13 @@ public class LibraryService {
   /**
    * Updates an existing score entry.
    *
-   * <p>Supports metadata changes, file additions, and file removals.
-   * Newly uploaded files are rolled back if the database update fails.
+   * <p>Supports metadata changes, file additions, and file removals. Newly uploaded files are
+   * rolled back if the database update fails.
    *
    * @param request updated score information
    * @param newFiles files to add to the score
    * @param requestRemovedFiles names of files to remove
    * @return new database revision identifier
-   *
    * @throws NotFoundException if the score does not exist
    * @throws RuntimeException if updating fails
    */
@@ -332,8 +329,8 @@ public class LibraryService {
   /**
    * Stores uploaded files on disk and creates metadata objects.
    *
-   * <p>Files are assigned generated UUID based names while preserving
-   * their original names as metadata.
+   * <p>Files are assigned generated UUID based names while preserving their original names as
+   * metadata.
    *
    * @param files files to store
    * @param action error action used for exception generation

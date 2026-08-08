@@ -17,15 +17,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * Servlet filter responsible for logging incoming HTTP requests after completion.
  *
  * <p>The filter measures the total processing time of each request and logs:
+ *
  * <ul>
- *   <li>HTTP method</li>
- *   <li>Request endpoint</li>
- *   <li>Response status code</li>
- *   <li>Total processing duration</li>
+ *   <li>HTTP method
+ *   <li>Request endpoint
+ *   <li>Response status code
+ *   <li>Total processing duration
  * </ul>
  *
- * <p>The logging happens inside a {@code finally} block to ensure that requests
- * are logged even when an exception occurs during processing.
+ * <p>The logging happens inside a {@code finally} block to ensure that requests are logged even
+ * when an exception occurs during processing.
  */
 @Component
 public class RequestLogging extends OncePerRequestFilter {

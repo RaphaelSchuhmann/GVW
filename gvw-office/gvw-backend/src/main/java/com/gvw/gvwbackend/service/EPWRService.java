@@ -23,12 +23,12 @@ import org.springframework.stereotype.Service;
 /**
  * Service responsible for managing the emergency password reset (EPWR) system.
  *
- * <p>The emergency token provides a recovery mechanism for administrator access.
- * Tokens are never stored in plaintext. Only a SHA-256 hash is stored in the
- * database, while the plaintext token is returned only when generated.
+ * <p>The emergency token provides a recovery mechanism for administrator access. Tokens are never
+ * stored in plaintext. Only a SHA-256 hash is stored in the database, while the plaintext token is
+ * returned only when generated.
  *
- * <p>Using an emergency token invalidates the previous token by generating a
- * replacement token and resets all administrator passwords.
+ * <p>Using an emergency token invalidates the previous token by generating a replacement token and
+ * resets all administrator passwords.
  */
 @Service
 public class EPWRService {
@@ -52,9 +52,9 @@ public class EPWRService {
   /**
    * Generates and stores a new emergency access token.
    *
-   * <p>The generated token is returned once to the caller. Only its hash is
-   * persisted in the database. If an emergency token already exists, it is
-   * replaced instead of creating an additional token.
+   * <p>The generated token is returned once to the caller. Only its hash is persisted in the
+   * database. If an emergency token already exists, it is replaced instead of creating an
+   * additional token.
    *
    * <p>The generated token remains valid for 30 days.
    *
@@ -97,17 +97,15 @@ public class EPWRService {
   /**
    * Uses an emergency token to restore administrator access.
    *
-   * <p>The provided token is validated and immediately replaced with a new one
-   * to prevent reuse. All administrator passwords are reset and temporary
-   * passwords are sent via email.
+   * <p>The provided token is validated and immediately replaced with a new one to prevent reuse.
+   * All administrator passwords are reset and temporary passwords are sent via email.
    *
-   * <p>If multiple requests attempt to use the same token concurrently, only
-   * the first successful update is accepted.
+   * <p>If multiple requests attempt to use the same token concurrently, only the first successful
+   * update is accepted.
    *
    * @param token plaintext emergency token provided by the user
    * @return newly generated replacement emergency token
-   * @throws InvalidCredentialsException if the token is invalid, expired,
-   *     or already used
+   * @throws InvalidCredentialsException if the token is invalid, expired, or already used
    * @throws NotFoundException if no emergency token exists
    */
   public NewEmergencyTokenDTO useEmergencyToken(String token) {
@@ -138,10 +136,11 @@ public class EPWRService {
    * Loads and validates the currently active emergency token.
    *
    * <p>Validation checks:
+   *
    * <ul>
-   *   <li>token existence</li>
-   *   <li>expiration date</li>
-   *   <li>hash equality against the stored token hash</li>
+   *   <li>token existence
+   *   <li>expiration date
+   *   <li>hash equality against the stored token hash
    * </ul>
    *
    * @param token plaintext token provided by the user
@@ -171,8 +170,8 @@ public class EPWRService {
   /**
    * Resets passwords for all administrator accounts.
    *
-   * <p>Each administrator receives a newly generated temporary password and is
-   * forced to change it on the next login.
+   * <p>Each administrator receives a newly generated temporary password and is forced to change it
+   * on the next login.
    *
    * @param admins administrators whose passwords should be reset
    */
@@ -197,9 +196,9 @@ public class EPWRService {
   /**
    * Replaces the current emergency token with a newly generated one.
    *
-   * <p>This operation also refreshes the creation and expiration timestamps.
-   * Returning false indicates that the token could not be updated, which is
-   * treated as a possible concurrent token usage attempt.
+   * <p>This operation also refreshes the creation and expiration timestamps. Returning false
+   * indicates that the token could not be updated, which is treated as a possible concurrent token
+   * usage attempt.
    *
    * @param savedToken currently stored token document
    * @param newToken replacement plaintext token
@@ -214,8 +213,8 @@ public class EPWRService {
   }
 
   /**
-   * Sends a notification email to administrators informing them that the
-   * emergency access mechanism was used.
+   * Sends a notification email to administrators informing them that the emergency access mechanism
+   * was used.
    *
    * @param admins administrators to notify
    */

@@ -25,17 +25,17 @@ import org.springframework.web.multipart.MultipartFile;
  * Service responsible for handling text editor related operations.
  *
  * <p>Provides functionality for:
+ *
  * <ul>
- *   <li>Managing uploaded editor assets</li>
- *   <li>Resolving URL metadata for rich links</li>
- *   <li>Synchronizing and cleaning unused block assets</li>
- *   <li>Converting editor blocks into plain text</li>
- *   <li>Searching through text documents</li>
+ *   <li>Managing uploaded editor assets
+ *   <li>Resolving URL metadata for rich links
+ *   <li>Synchronizing and cleaning unused block assets
+ *   <li>Converting editor blocks into plain text
+ *   <li>Searching through text documents
  * </ul>
  *
- * <p>Files are stored on the local filesystem and validated before being
- * persisted. External URL requests are restricted to prevent access to
- * local or private network addresses.
+ * <p>Files are stored on the local filesystem and validated before being persisted. External URL
+ * requests are restricted to prevent access to local or private network addresses.
  */
 @Getter
 @Service
@@ -49,12 +49,11 @@ public class TextEditorService {
   /**
    * Retrieves an editor asset file from disk.
    *
-   * <p>Validates the filename to prevent path traversal attacks and resolves
-   * the file content type before returning the resource.
+   * <p>Validates the filename to prevent path traversal attacks and resolves the file content type
+   * before returning the resource.
    *
    * @param filename name of the asset file
    * @return file resource with detected content type
-   *
    * @throws BadRequestException if the filename is invalid
    * @throws NotFoundException if the file does not exist
    */
@@ -95,8 +94,8 @@ public class TextEditorService {
   /**
    * Resolves metadata for an external URL.
    *
-   * <p>Fetches the target page, extracts its title and favicon, and returns
-   * the favicon as a Base64 data URL for use in rich links.
+   * <p>Fetches the target page, extracts its title and favicon, and returns the favicon as a Base64
+   * data URL for use in rich links.
    *
    * <p>Only HTTPS URLs pointing to publicly accessible hosts are allowed.
    *
@@ -151,16 +150,14 @@ public class TextEditorService {
   /**
    * Stores uploaded editor files on disk.
    *
-   * <p>Each file receives a generated unique filename while preserving the
-   * original extension. The returned map contains the relationship between
-   * original filenames and stored filenames.
+   * <p>Each file receives a generated unique filename while preserving the original extension. The
+   * returned map contains the relationship between original filenames and stored filenames.
    *
    * <p>If storage fails, all files written during the operation are removed.
    *
    * @param files uploaded files
    * @param action action context used for generating error codes
    * @return mapping of original filenames to stored filenames
-   *
    * @throws BadRequestException if a file exceeds the maximum allowed size
    */
   public Map<String, String> processUploadedFiles(List<MultipartFile> files, ErrorAction action) {
@@ -208,8 +205,8 @@ public class TextEditorService {
   /**
    * Removes unused assets after updating editor content.
    *
-   * <p>Compares asset references between the previous and updated blocks and
-   * deletes files that are no longer referenced.
+   * <p>Compares asset references between the previous and updated blocks and deletes files that are
+   * no longer referenced.
    *
    * @param oldBlocks previous editor content
    * @param newBlocks updated editor content
@@ -258,8 +255,8 @@ public class TextEditorService {
   /**
    * Converts editor blocks into plain text.
    *
-   * <p>Image blocks are ignored and all HTML content is sanitized before being
-   * added to the resulting text.
+   * <p>Image blocks are ignored and all HTML content is sanitized before being added to the
+   * resulting text.
    *
    * @param contents editor blocks
    * @return plain text representation of the content
@@ -286,7 +283,6 @@ public class TextEditorService {
    *
    * @param file filename of the asset to delete
    * @param action action context used for generating error codes
-   *
    * @throws RuntimeException if deletion fails
    */
   public void deleteAssetFromDisk(String file, ErrorAction action) {
@@ -301,8 +297,7 @@ public class TextEditorService {
   /**
    * Checks whether an IP address points to a local or private network address.
    *
-   * <p>Used to prevent server-side requests to internal resources when
-   * resolving external URLs.
+   * <p>Used to prevent server-side requests to internal resources when resolving external URLs.
    *
    * @param addr address to validate
    * @return {@code true} if the address is blocked
@@ -317,16 +312,14 @@ public class TextEditorService {
   /**
    * Stores uploaded files and creates corresponding file metadata objects.
    *
-   * <p>Generates unique identifiers for files, stores them on disk, and
-   * collects metadata such as MIME type, size, and extension.
+   * <p>Generates unique identifiers for files, stores them on disk, and collects metadata such as
+   * MIME type, size, and extension.
    *
-   * <p>If storing fails, already persisted files from the current operation
-   * are removed.
+   * <p>If storing fails, already persisted files from the current operation are removed.
    *
    * @param files uploaded files
    * @param action action context used for generating error codes
    * @return metadata of successfully stored files
-   *
    * @throws BadRequestException if a file exceeds the maximum allowed size
    */
   public List<com.gvw.gvwbackend.model.File> storeFiles(
@@ -387,8 +380,7 @@ public class TextEditorService {
   /**
    * Calculates the estimated reading time of editor content.
    *
-   * <p>The calculation assumes an average reading speed of 200 words per
-   * minute.
+   * <p>The calculation assumes an average reading speed of 200 words per minute.
    *
    * @param content editor blocks
    * @return estimated reading time in minutes
@@ -406,12 +398,11 @@ public class TextEditorService {
   /**
    * Searches through multiple text documents for a given term.
    *
-   * <p>Searches sanitized plain text content and returns matching documents
-   * together with a surrounding text snippet.
+   * <p>Searches sanitized plain text content and returns matching documents together with a
+   * surrounding text snippet.
    *
    * @param documents documents to search
    * @param input search term
-   *
    * @param <T> document type extending {@link TextDocument}
    * @return matching documents with context snippets
    */

@@ -16,9 +16,8 @@ import org.thymeleaf.context.Context;
 /**
  * Service responsible for sending application emails.
  *
- * <p>Uses Thymeleaf templates to generate HTML email content and
- * {@link JavaMailSender} to deliver messages. Supports dynamic template
- * variables and embedded resources such as images.
+ * <p>Uses Thymeleaf templates to generate HTML email content and {@link JavaMailSender} to deliver
+ * messages. Supports dynamic template variables and embedded resources such as images.
  */
 @Service
 public class MailService {
@@ -43,15 +42,13 @@ public class MailService {
   /**
    * Sends an HTML email using a Thymeleaf template.
    *
-   * <p>The provided template is rendered with the given variables and sent to
-   * the specified recipient. The application logo is automatically embedded
-   * as an inline resource.
+   * <p>The provided template is rendered with the given variables and sent to the specified
+   * recipient. The application logo is automatically embedded as an inline resource.
    *
    * @param to recipient email address
    * @param subject email subject
    * @param templateName name of the Thymeleaf template to render
    * @param variables values available inside the template
-   *
    * @throws RuntimeException if the email could not be created or sent
    */
   public void sendMail(

@@ -14,10 +14,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 /**
  * Security filter restricting emergency endpoints to local machine access only.
  *
- * <p>Emergency endpoints intentionally bypass normal authentication because they
- * provide a recovery mechanism when regular authentication is unavailable.
- * To prevent remote abuse, this filter ensures that requests targeting
- * {@code /emergency/**} originate from localhost.
+ * <p>Emergency endpoints intentionally bypass normal authentication because they provide a recovery
+ * mechanism when regular authentication is unavailable. To prevent remote abuse, this filter
+ * ensures that requests targeting {@code /emergency/**} originate from localhost.
  *
  * <p>Requests from non-local addresses are rejected with HTTP 403.
  */

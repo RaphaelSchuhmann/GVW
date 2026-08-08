@@ -14,10 +14,11 @@ import org.springframework.web.client.RestTemplate;
  * General Spring application bean configuration.
  *
  * <p>Provides shared application components such as:
+ *
  * <ul>
- *   <li>Database HTTP client</li>
- *   <li>Password hashing implementation</li>
- *   <li>JWT service</li>
+ *   <li>Database HTTP client
+ *   <li>Password hashing implementation
+ *   <li>JWT service
  * </ul>
  */
 @Configuration
@@ -26,8 +27,7 @@ public class AppConfig {
   /**
    * Creates the RestTemplate used for CouchDB communication.
    *
-   * <p>The client automatically adds HTTP Basic Authentication credentials
-   * required by CouchDB.
+   * <p>The client automatically adds HTTP Basic Authentication credentials required by CouchDB.
    */
   @Bean
   @Qualifier("dbRestTemplate")

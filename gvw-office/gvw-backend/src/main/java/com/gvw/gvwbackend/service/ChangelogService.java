@@ -31,8 +31,8 @@ public class ChangelogService {
   /**
    * Retrieves all changelog entries from the database.
    *
-   * <p>The entries are converted from CouchDB documents into {@link Changelog} objects,
-   * sorted by timestamp descending (newest first), and mapped into response DTOs.
+   * <p>The entries are converted from CouchDB documents into {@link Changelog} objects, sorted by
+   * timestamp descending (newest first), and mapped into response DTOs.
    *
    * @return all available changelog entries sorted by creation date
    */

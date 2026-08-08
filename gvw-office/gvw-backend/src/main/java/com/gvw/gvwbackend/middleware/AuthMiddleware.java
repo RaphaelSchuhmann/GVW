@@ -21,24 +21,26 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Authentication middleware responsible for validating JWT bearer tokens
- * and establishing the Spring Security context.
+ * Authentication middleware responsible for validating JWT bearer tokens and establishing the
+ * Spring Security context.
  *
  * <p>For protected endpoints, the filter:
+ *
  * <ul>
- *   <li>Extracts the JWT from the Authorization header</li>
- *   <li>Validates the token using {@link JwtService}</li>
- *   <li>Extracts the user ID and role claims</li>
- *   <li>Creates an authenticated Spring Security context</li>
+ *   <li>Extracts the JWT from the Authorization header
+ *   <li>Validates the token using {@link JwtService}
+ *   <li>Extracts the user ID and role claims
+ *   <li>Creates an authenticated Spring Security context
  * </ul>
  *
  * <p>The following paths bypass authentication:
+ *
  * <ul>
- *   <li>Authentication endpoints</li>
- *   <li>Development endpoints</li>
- *   <li>Emergency recovery endpoints</li>
- *   <li>Public settings access</li>
- *   <li>Password change endpoint</li>
+ *   <li>Authentication endpoints
+ *   <li>Development endpoints
+ *   <li>Emergency recovery endpoints
+ *   <li>Public settings access
+ *   <li>Password change endpoint
  * </ul>
  *
  * <p>Invalid or missing authentication information results in HTTP 401.
@@ -56,8 +58,8 @@ public class AuthMiddleware extends OncePerRequestFilter {
   }
 
   /**
-   * Sends a standardized unauthorized response containing the GVW error code
-   * used by the frontend to handle authentication failures.
+   * Sends a standardized unauthorized response containing the GVW error code used by the frontend
+   * to handle authentication failures.
    */
   private void sendUnauthorized(HttpServletResponse response) throws IOException {
     String code = String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 401));
@@ -69,8 +71,7 @@ public class AuthMiddleware extends OncePerRequestFilter {
   /**
    * Determines whether authentication should be skipped for a request.
    *
-   * <p>Paths matching the excluded endpoint list are allowed to continue
-   * without requiring a JWT.
+   * <p>Paths matching the excluded endpoint list are allowed to continue without requiring a JWT.
    */
   @Override
   protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -82,20 +83,21 @@ public class AuthMiddleware extends OncePerRequestFilter {
   /**
    * Processes incoming requests and authenticates users using JWT bearer tokens.
    *
-   * <p>Requests using HTTP OPTIONS are passed through without authentication to
-   * allow CORS preflight requests to succeed.
+   * <p>Requests using HTTP OPTIONS are passed through without authentication to allow CORS
+   * preflight requests to succeed.
    *
    * <p>For all other requests, the filter:
+   *
    * <ul>
-   *   <li>Extracts the JWT from the Authorization header</li>
-   *   <li>Validates and parses the token using {@link JwtService}</li>
-   *   <li>Extracts the user ID and role from the token claims</li>
-   *   <li>Creates a Spring Security authentication context</li>
-   *   <li>Stores the authenticated user ID as a request attribute</li>
+   *   <li>Extracts the JWT from the Authorization header
+   *   <li>Validates and parses the token using {@link JwtService}
+   *   <li>Extracts the user ID and role from the token claims
+   *   <li>Creates a Spring Security authentication context
+   *   <li>Stores the authenticated user ID as a request attribute
    * </ul>
    *
-   * <p>If the token is missing, invalid, or does not contain a valid role,
-   * the request is rejected with HTTP 401 Unauthorized.
+   * <p>If the token is missing, invalid, or does not contain a valid role, the request is rejected
+   * with HTTP 401 Unauthorized.
    *
    * @param request current HTTP request
    * @param response current HTTP response
@@ -149,7 +151,8 @@ public class AuthMiddleware extends OncePerRequestFilter {
       request.setAttribute("userId", userId);
       filterChain.doFilter(request, response);
     } catch (Exception e) {
-      // Any JWT parsing, validation, or claim extraction failure is treated as invalid authentication
+      // Any JWT parsing, validation, or claim extraction failure is treated as invalid
+      // authentication
       sendUnauthorized(response);
     }
   }
