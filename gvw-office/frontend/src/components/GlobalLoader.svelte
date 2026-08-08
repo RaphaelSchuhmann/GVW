@@ -1,5 +1,5 @@
 <script>
-    import { isAppReady } from "../stores/appLoading.svelte.js";
+    import {isAppReady} from "../stores/appLoading.svelte.js";
     import WaveLoadingAnimation from "./WaveLoadingAnimation.svelte";
 
     let {
@@ -28,7 +28,9 @@
 
 {#if showLoader}
     <div class="w-dvw h-dvh flex justify-center items-center bg-white z-9999999 absolute top-0 left-0">
-        <WaveLoadingAnimation title={title} subTitle={subTitle} />
+        {#if showLoader}
+            <WaveLoadingAnimation title={title} subTitle={subTitle}/>
+        {/if}
     </div>
 {:else}
     {@render children()}
