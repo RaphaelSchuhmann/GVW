@@ -43,3 +43,6 @@ logging:
                 "[localhost]":
                   "[/]":
                     "[dispatcherServlet]": FATAL
+
+cors:
+  allowed-origins: ${ALLOWED_ORIGINS}
