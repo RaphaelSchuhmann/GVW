@@ -10,9 +10,23 @@
     } = $props();
 
     let isLoading = $derived(!isAppReady() || Boolean(loading));
+    let showLoader = $state(false);
+
+    $effect(() => {
+        if (!isLoading) {
+            showLoader = false;
+            return;
+        }
+
+        const timeout = setTimeout(() => {
+            showLoader = true;
+        }, 200);
+
+        return () => clearTimeout(timeout);
+    })
 </script>
 
-{#if isLoading}
+{#if showLoader}
     <div class="w-dvw h-dvh flex justify-center items-center bg-white z-9999999 absolute top-0 left-0">
         <WaveLoadingAnimation title={title} subTitle={subTitle} />
     </div>

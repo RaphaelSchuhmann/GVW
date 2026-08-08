@@ -43,7 +43,7 @@ public class SecurityConfig {
   private final AuthMiddleware authMiddleware;
   private final EmergencySecurityFilter emergencySecurityFilter;
 
-  @Value("${cors.allowed-origins:http://localhost:5173}")
+  @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:4173,http://office.weppersdorf.de}")
   private List<String> allowedOrigins;
 
   public SecurityConfig(
