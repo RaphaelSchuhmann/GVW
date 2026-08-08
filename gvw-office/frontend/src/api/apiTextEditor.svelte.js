@@ -1,6 +1,6 @@
 import { httpGet, parseBodySafe } from "./http.svelte";
 
-const apiUrl = __API_URL__;
+const apiUrl = import.meta.env.VITE_API_URL;
 
 /**
  * Fetches an image asset associated with a document.

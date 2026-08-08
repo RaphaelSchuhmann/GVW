@@ -1,3 +1,5 @@
+import {generateUUID} from "../services/utils.js";
+
 /**
  * Svelte store for toast notifications
  */
@@ -13,7 +15,7 @@ export const toasts = $state([]);
  * @param {string} [options.typeId] - An optional id that determines the toast type for generic errors
  */
 export function addToast({ title, subTitle = "", type = "info", timeout = 5000, typeId = "" }) {
-    const id = crypto.randomUUID();
+    const id = generateUUID();
 
     toasts.push({ id, title, subTitle, type, typeId });
 

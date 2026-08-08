@@ -4,7 +4,7 @@ import { auth } from "../stores/auth.svelte.js";
 import { logout } from "./userService.svelte.js";
 import { push } from "svelte-spa-router";
 
-const apiUrl = __API_URL__;
+const apiUrl = import.meta.env.VITE_API_URL;
 
 /**
  * Active Server-Sent Events connection instance.
@@ -29,7 +29,7 @@ let eventSource = null;
 export function initSSE() {
     if (eventSource) return;
 
-    eventSource = new EventSourcePolyfill(`${apiUrl}/api/sync/stream`, {
+    eventSource = new EventSourcePolyfill(`${apiUrl}/sync/stream`, {
         headers: {
             "Authorization": `Bearer ${auth.token}`
         }

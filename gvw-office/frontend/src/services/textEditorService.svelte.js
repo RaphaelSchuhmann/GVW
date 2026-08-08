@@ -2,7 +2,7 @@ import { normalizeResponse } from "../api/http.svelte.js";
 import { apiGetDocumentImage, apiResolveURl } from "../api/apiTextEditor.svelte.js";
 import { editorMetadataStore } from "../stores/textEditorStore.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
-import { renameFile, sanitize } from "./utils.js";
+import {generateUUID, renameFile, sanitize} from "./utils.js";
 
 /**
  * Set of valid block types supported by the editor.
@@ -58,7 +58,7 @@ export function addBlock(items, index, content, type, insertAtIndex = false) {
 
     if (!blockTypes.has(type)) return;
 
-    const id = crypto.randomUUID();
+    const id = generateUUID();
 
     const block = {
         id: id,

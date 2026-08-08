@@ -1,7 +1,6 @@
 import { httpDelete, httpGet, httpPatch, httpPost, parseBodySafe } from "./http.svelte";
 
-// @ts-ignore
-const apiUrl = __API_URL__;
+const apiUrl = import.meta.env.VITE_API_URL;
 
 /**
  * Fetches the authenticated user's data

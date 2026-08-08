@@ -22,6 +22,8 @@ spring:
 
 server:
   port: ${GVW_PORT}
+  servlet:
+    context-path: /api
 
 couchdb:
   url: http://localhost:5984

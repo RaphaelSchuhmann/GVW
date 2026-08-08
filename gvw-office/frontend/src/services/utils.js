@@ -54,7 +54,7 @@ export function triggerFileDownload(blob, zipName) {
  * @returns {File} A new File object with the updated name.
  */
 export function renameFile(originalFile, newName) {
-    const fileOptions = { type: originalFile.type };
+    const fileOptions = {type: originalFile.type};
     return new File([originalFile], newName, fileOptions);
 }
 
@@ -114,4 +114,33 @@ export function sanitize(html) {
     clean(doc.body);
 
     return doc.body.innerHTML.trim();
+}
+
+/**
+ * Generates an RFC 4122 version 4 compliant Universally Unique Identifier (UUID).
+ * Uses `crypto.randomUUID()` when available, falling back to a cryptographically
+ * strong pseudo-random number generator via `crypto.getRandomValues()`.
+ *
+ * @returns {string} A 36-character canonical UUID v4 string (e.g., "f47ac10b-58cc-4372-a567-0e02b2c3d479").
+ */
+export function generateUUID() {
+    if (crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, "0"));
+
+    return (
+        hex.slice(0, 4).join("") + "-" +
+        hex.slice(4, 6).join("") + "-" +
+        hex.slice(6, 8).join("") + "-" +
+        hex.slice(8, 10).join("") + "-" +
+        hex.slice(10, 16).join("")
+    );
 }

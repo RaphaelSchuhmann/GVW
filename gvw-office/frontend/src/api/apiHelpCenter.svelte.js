@@ -1,6 +1,6 @@
 import { httpPost, httpDelete, httpPatch, parseBodySafe, httpGet } from "./http.svelte.js";
 
-const apiUrl = __API_URL__;
+const apiUrl = import.meta.env.VITE_API_URL;
 
 /**
  * Sends a request to create a new help center category.
