@@ -146,7 +146,7 @@ def initialize_default_settings():
         )
         sys.exit(1)
 
-    status, response = request(
+    status, _ = request(
         "POST",
         APP_SETTINGS_DB,
         DEFAULT_SETTINGS,
