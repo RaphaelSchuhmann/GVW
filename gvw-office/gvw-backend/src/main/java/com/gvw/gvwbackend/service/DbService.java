@@ -7,7 +7,6 @@ import com.gvw.gvwbackend.exception.DatabaseConnectionException;
 import com.gvw.gvwbackend.exception.DatabaseMappingException;
 import java.net.ConnectException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -58,36 +57,12 @@ public class DbService {
   private final RestTemplate restTemplate;
   private final String baseUrl;
 
-  private final String[] databases = {
-    "users",
-    "members",
-    "events",
-    "reports",
-    "app_settings",
-    "emergency_token",
-    "library",
-    "changelogs",
-    "help_center"
-  };
-  private final String appSettingsDb = "app_settings";
-  private Map<String, Object> DEFAULT_SETTINGS = new HashMap<>();
-
   public DbService(
       @Value("${couchdb.url}") String baseUrl,
       @Qualifier("dbRestTemplate") RestTemplate restTemplate) {
     this.restTemplate = restTemplate;
     this.baseUrl = baseUrl;
 
-    // Default settings
-    DEFAULT_SETTINGS.put("_id", "general");
-    DEFAULT_SETTINGS.put("maxMembers", 10);
-
-    Map<String, String> scoreCategories = new HashMap<>();
-    scoreCategories.put("", "all");
-    scoreCategories.put("all", "Alle Kategorien");
-    scoreCategories.put("Alle Kategorien", "all");
-
-    DEFAULT_SETTINGS.put("scoreCategories", scoreCategories);
     log.info("DB Service initialized");
   }
 
@@ -257,80 +232,6 @@ public class DbService {
       log.error("Failed to map JSON to {}", clazz.getSimpleName(), e);
       throw new DatabaseMappingException("Failed to map JSON to " + clazz.getSimpleName(), e);
     }
-  }
-
-  /**
-   * Initializes the required CouchDB databases.
-   *
-   * <p>This method is executed during application startup and ensures all required databases exist.
-   *
-   * <p>Additionally, this method resets the default application settings document ("general") to
-   * the built-in defaults.
-   *
-   * <p>This behavior is intentional because this method is used for initial installation/setup. It
-   * should not be called during normal runtime.
-   */
-  public void createDatabases() {
-    for (String database : databases) {
-      String url = String.format("%s/%s", baseUrl, database);
-
-      try {
-        ResponseEntity<Void> resp = restTemplate.exchange(url, HttpMethod.PUT, null, Void.class);
-      } catch (ResourceAccessException e) {
-        if (isConnectionRefused(e)) {
-          log.error("DB connection refused {} {}", kv("db", database), kv("error", "ECONNREFUSED"));
-        } else {
-          log.error(
-              "DB network error {} {}",
-              kv("db", database),
-              kv("error", e.getCause().getMessage()),
-              e);
-        }
-        throw new DatabaseConnectionException("DB connection failed", e);
-      } catch (HttpStatusCodeException e) {
-        if (e.getStatusCode() == HttpStatusCode.valueOf(412)) {
-          log.debug("DB already exists {}", kv("db", database));
-          continue;
-        }
-
-        log.error(
-            "DB creation failed {} {}",
-            kv("db", database),
-            kv("status", e.getStatusCode().value()),
-            e);
-        throw new DatabaseConnectionException("DB creation failed", e);
-      } catch (Exception e) {
-        log.error("Unexpected db error {} {}", kv("db", database), kv("error", e.getMessage()), e);
-        throw new DatabaseConnectionException("Unexpected DB error", e);
-      }
-    }
-
-    // Ensure default settings document exists in app_settings
-    // Delete existing default settings document
-    String url = String.format("%s/%s/general", baseUrl, appSettingsDb);
-    ResponseEntity<Map> resp = null;
-    try {
-      resp = restTemplate.getForEntity(url, Map.class);
-    } catch (HttpStatusCodeException e) {
-      if (e.getStatusCode().value() != 404) {
-        throw new DatabaseConnectionException("DB request failed", e);
-      }
-    }
-
-    if (resp != null && resp.getStatusCode().is2xxSuccessful()) {
-      Map<String, Object> existingDoc = resp.getBody();
-      if (existingDoc != null) {
-        delete(appSettingsDb, (String) existingDoc.get("_id"), (String) existingDoc.get("_rev"));
-      }
-    }
-
-    boolean successful = insert(appSettingsDb, DEFAULT_SETTINGS);
-    if (!successful) {
-      log.error("Failed to insert default settings document {}", kv("db", appSettingsDb));
-      return;
-    }
-
-    log.info("Inserted default settings document {}", kv("db", appSettingsDb));
   }
 
   /**
