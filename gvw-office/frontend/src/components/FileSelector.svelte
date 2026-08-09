@@ -90,7 +90,7 @@
             {/if}
 
             {#if files.length > 0}
-                {#each files as file (file.name)}
+                {#each files as file (file.name || file)}
                     <button
                         type="button"
                         {disabled}
