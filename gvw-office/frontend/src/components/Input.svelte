@@ -28,7 +28,7 @@
         currentType = "text";
     }
 
-    let icon = passwordVisible ? "visibility_off" : "visibility";
+    let icon = $derived(passwordVisible ? "visibility_off" : "visibility");
 
     /**
      * Toggles password visibility

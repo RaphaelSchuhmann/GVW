@@ -42,6 +42,7 @@ public class SseService {
     try {
       emitter.send(SseEmitter.event().name("connected").data("success"));
     } catch (Exception ex) {
+      log.error("Failed to send initial SSE connection event", ex);
       emitters.remove(emitter);
     }
 

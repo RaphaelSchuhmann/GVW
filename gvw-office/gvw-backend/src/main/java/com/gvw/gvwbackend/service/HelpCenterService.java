@@ -29,7 +29,7 @@ public class HelpCenterService {
   private final TextEditorService editorService;
   private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(HelpCenterService.class);
-  private static final long MAX_FILE_SIZE = 8 * 1024 * 1024;
+  private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
   public HelpCenterService(
       DbService dbService,

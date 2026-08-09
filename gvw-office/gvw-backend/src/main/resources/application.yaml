@@ -3,7 +3,7 @@ spring:
     name: gvw-backend
   servlet:
     multipart:
-      max-file-size: 8MB
+      max-file-size: 20MB
       max-request-size: 70MB
   mail:
     host: smtp.strato.de

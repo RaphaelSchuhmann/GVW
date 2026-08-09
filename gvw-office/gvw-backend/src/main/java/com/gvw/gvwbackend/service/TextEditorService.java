@@ -41,7 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class TextEditorService {
   private static final Logger log = LoggerFactory.getLogger(TextEditorService.class);
-  private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+  private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
   @Value("${editor.directory:./api-data/editor-assets}")
   private String filesDir;

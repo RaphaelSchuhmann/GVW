@@ -15,6 +15,8 @@ DATABASES = [
     "library",
     "changelogs",
     "help_center",
+    "feedbacks",
+    "bug_reports",
 ]
 
 APP_SETTINGS_DB = "app_settings"
