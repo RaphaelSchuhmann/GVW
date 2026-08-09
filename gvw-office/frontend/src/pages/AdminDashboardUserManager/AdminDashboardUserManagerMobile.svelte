@@ -100,7 +100,7 @@
 
 <Modal bind:this={addUserModal} extraFunction={resetAddInputs} isMobile={true}
        title="Benutzer hinzufügen" subTitle="Erfassen Sie hier die Benutzerdaten">
-    <Input bind:value={userInput.name} title="Name" placeholder="Max" />
+    <Input bind:value={userInput.name} title="Name" placeholder="Max Mustermann" />
     
     <Input bind:value={userInput.email} marginTop="5" title="E-Mail" placeholder="max.mustermann@email.com" />
 

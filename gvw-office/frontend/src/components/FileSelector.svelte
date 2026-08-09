@@ -62,10 +62,9 @@
 
     /**
      * Removes a file from the list
-     * @param {Event} event
+     * @param {File} file
      */
-    function removeFile(event) {
-        const file = event.currentTarget.dataset.file;
+    function removeFile(file) {
         files = files.filter((f) => f !== file);
         onChange?.(files);
     }
@@ -96,8 +95,7 @@
                         type="button"
                         {disabled}
                         class={`group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2 ${!disabled ? "hover:bg-gv-input-bg cursor-pointer" : ""} duration-200`}
-                        data-file={file}
-                        onclick={removeFile}
+                        onclick={() => removeFile(file)}
                     >
                         <div class={`flex items-center gap-2 whitespace-nowrap transition-opacity duration-200 ${!disabled ? "group-hover:opacity-0" : ""}`}>
                             <span class="material-symbols-rounded text-icon-dt-6">

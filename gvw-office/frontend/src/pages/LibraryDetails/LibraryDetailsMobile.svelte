@@ -102,6 +102,7 @@
     }
 
     const REQUIRED_SCORE_FIELDS = ["title", "artist", "type", "voices"];
+    const CHANGE_TRACKED_FIELDS = [...REQUIRED_SCORE_FIELDS, "files"];
 
     const hasChanges = $derived.by(() => {
         if (!draft || !scoreData) return false;
@@ -111,19 +112,22 @@
 
             if (Array.isArray(value)) {
                 return value.length > 0;
-            } else {
-                return value !== null && value !== undefined && String(value).trim() !== "";
             }
+
+            return value !== null && value !== undefined && String(value).trim() !== "";
         });
 
         if (!allFieldsFilled) return false;
 
-        return REQUIRED_SCORE_FIELDS.some(field => {
+        return CHANGE_TRACKED_FIELDS.some(field => {
             const v1 = draft[field];
             const v2 = scoreData[field];
 
             if (Array.isArray(v1) && Array.isArray(v2)) {
-                return v1.length !== v2.length || v1.some((item, index) => item !== v2[index]);
+                return (
+                    v1.length !== v2.length ||
+                    v1.some((item, index) => item !== v2[index])
+                );
             }
 
             return v1 !== v2;

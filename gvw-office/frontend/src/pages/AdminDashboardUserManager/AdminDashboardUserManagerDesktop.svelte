@@ -99,7 +99,7 @@
 <Modal bind:this={addUserModal} extraFunction={resetAddInputs}
        title="Benutzer hinzufügen" subTitle="Erfassen Sie hier die Benutzerdaten">
     <div class="flex items-center gap-4 mt-5">
-        <Input bind:value={userInput.name} title="Vorname" placeholder="Max" />
+        <Input bind:value={userInput.name} title="Name" placeholder="Max Mustermann" />
         
         <Input bind:value={userInput.email} title="E-Mail" placeholder="max.mustermann@email.com" />
     </div>
