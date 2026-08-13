@@ -8,7 +8,7 @@
     import { fetchAndSetRaw, init } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
-    import { scoreExists } from "../../services/libraryService.svelte.js";
+    import {getFullScore, scoreExists} from "../../services/libraryService.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
     import Spinner from "../../components/Spinner.svelte";
     import EventDetailsMobile from "../EventDetails/EventDetailsMobile.svelte";
@@ -22,27 +22,44 @@
 
     let isEditing = $state(params.get("editing") === "true");
 
-    const scoreData = $derived.by(() => {
-        if (!scoreId) return null;
-        return libraryStore.raw.find(item => item.id === scoreId) || null;
-    });
-
+    let scoreData = $state(null);
     let ready = $state(false);
 
     $effect(() => {
         if (!user.loaded) return;
 
-        if (isEditing && (user.role !== "board_member" && user.role !== "admin" && user.role !== "librarian" && user.role !== "conductor")) isEditing = false;
+        async function loadScore() {
+            if (
+                isEditing &&
+                user.role !== "board_member" &&
+                user.role !== "admin" &&
+                user.role !== "librarian" &&
+                user.role !== "conductor"
+            ) {
+                isEditing = false;
+                await push("/dashboard");
+                return;
+            }
 
-        if (!scoreId) {
-            push("/library");
-        } else if (libraryStore.raw.length === 0) {
-            init("library");
-        } else if (!scoreData) {
-            push("/library");
+            if (!scoreId) {
+                await push("/library");
+                return;
+            }
+
+            ready = false;
+
+            const result = await getFullScore(scoreId);
+
+            if (!result) {
+                await push("/library");
+                return;
+            }
+
+            scoreData = result;
+            ready = true;
         }
 
-        ready = true;
+        loadScore();
     });
 
     let isDeleting = $state(false);
@@ -75,13 +92,23 @@
 </script>
 
 <GlobalLoader loading={isLoading}>
-    {#key scoreData.rev}
+    {#if scoreData}
         {#if viewport.width < 800}
-            <LibraryDetailsMobile {scoreData} bind:isEditing bind:isDeleting onChangeIsEditing={updateIsEditing}
-                                  onChangeIsDeleting={updateIsDeleting} />
+            <LibraryDetailsMobile
+                    bind:scoreData={scoreData}
+                    bind:isEditing
+                    bind:isDeleting
+                    onChangeIsEditing={updateIsEditing}
+                    onChangeIsDeleting={updateIsDeleting}
+            />
         {:else}
-            <LibraryDetailsDesktop {scoreData} bind:isEditing bind:isDeleting onChangeIsEditing={updateIsEditing}
-                                   onChangeIsDeleting={updateIsDeleting} />
+            <LibraryDetailsDesktop
+                    bind:scoreData={scoreData}
+                    bind:isEditing
+                    bind:isDeleting
+                    onChangeIsEditing={updateIsEditing}
+                    onChangeIsDeleting={updateIsDeleting}
+            />
         {/if}
-    {/key}
+    {/if}
 </GlobalLoader>

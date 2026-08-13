@@ -2,11 +2,13 @@ package com.gvw.gvwbackend.dto.response;
 
 import java.util.List;
 
-public record ScoreResponseDTO(
+public record FullScoreResponseDTO(
     String id,
+    String rev,
     String scoreId,
     String title,
     String artist,
     String type,
     List<String> voices,
-    int voiceCount) {}
+    int voiceCount,
+    List<String> files) {}
