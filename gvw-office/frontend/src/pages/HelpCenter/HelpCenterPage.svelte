@@ -65,12 +65,7 @@
     });
 </script>
 
-<GlobalLoader loading={!ready}>
-    {#if helpCenterStore.isLoading}
-        <div class="z-999 top-0 left-0 w-dvw h-dvh flex bg-gv-overlay fixed items-center justify-center">
-            <Spinner with="1/5" />
-        </div>
-    {/if}
+<GlobalLoader loading={!ready || helpCenterStore.isLoading}>
     {#if viewport.width <= 800}
         <HelpCenterMobile />
     {:else}
