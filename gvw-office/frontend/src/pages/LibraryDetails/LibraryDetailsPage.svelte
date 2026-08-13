@@ -37,6 +37,8 @@
                 user.role !== "conductor"
             ) {
                 isEditing = false;
+                await push("/dashboard");
+                return;
             }
 
             if (!scoreId) {
@@ -93,7 +95,7 @@
     {#if scoreData}
         {#if viewport.width < 800}
             <LibraryDetailsMobile
-                    {scoreData}
+                    bind:scoreData={scoreData}
                     bind:isEditing
                     bind:isDeleting
                     onChangeIsEditing={updateIsEditing}
@@ -101,7 +103,7 @@
             />
         {:else}
             <LibraryDetailsDesktop
-                    {scoreData}
+                    bind:scoreData={scoreData}
                     bind:isEditing
                     bind:isDeleting
                     onChangeIsEditing={updateIsEditing}

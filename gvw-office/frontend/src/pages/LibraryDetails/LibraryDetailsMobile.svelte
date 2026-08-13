@@ -24,7 +24,7 @@
     import ChipPicker from "../../components/ChipPicker.svelte";
 
     let {
-        scoreData,
+        scoreData = $bindable(),
         isEditing = $bindable(false),
         isDeleting = $bindable(false),
         onChangeIsEditing = () => {},
@@ -101,7 +101,7 @@
             : draft.voices.filter((item) => item !== voiceMap[voice]);
     }
 
-    const REQUIRED_SCORE_FIELDS = ["title", "artist", "type", "voices"];
+    const REQUIRED_SCORE_FIELDS = ["scoreId", "title", "artist", "type", "voices"];
     const CHANGE_TRACKED_FIELDS = [...REQUIRED_SCORE_FIELDS, "files"];
 
     const hasChanges = $derived.by(() => {
