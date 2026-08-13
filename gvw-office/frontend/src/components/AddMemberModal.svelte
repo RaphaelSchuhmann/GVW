@@ -151,7 +151,7 @@
     <div class="w-full h-full flex flex-col items-center justify-start gap-4">
         <div class="flex flex-col w-full md:flex-row md:items-center gap-4">
             <Input bind:value={memberInput.name} title="Vorname" placeholder="Max" />
-            <Input bind:value={memberInput.surname} title="Nachname" placeholder="Mustermann" mdMarginTop="0" />
+            <Input bind:value={memberInput.surname} title="Nachname" placeholder="Mustermann"/>
         </div>
 
         <Input bind:value={memberInput.email} title="E-Mail" placeholder="max.mustermann@email.com" />
@@ -162,14 +162,14 @@
 
         <div class="w-full flex flex-col md:flex-row md:items-center gap-4">
             <Dropdown onChange={updateVoice} title="Stimmlage"
-                      options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass"]} mdMarginTop="0" showDropshadow={true} />
+                      options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass", "Sonstige"]} showDropshadow={true} displayTop={true} />
 
             <Dropdown onChange={updateStatus} title="Status" options={["Aktiv", "Passiv"]}
-                      mdMarginTop="0" showDropshadow={true} />
+                      showDropshadow={true} />
 
             <Dropdown onChange={updateRole} title="Rolle"
                       options={["Mitglied", "Vorstand", "Schriftführer", "Chorleitung", "Notenwart"]} displayTop={true}
-                      mdMarginTop="0" showDropshadow={true} />
+                      showDropshadow={true} />
         </div>
 
         <div class="w-full flex flex-col xl:flex-row xl:items-center gap-4">

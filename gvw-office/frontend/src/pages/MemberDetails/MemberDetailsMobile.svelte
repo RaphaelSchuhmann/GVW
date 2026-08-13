@@ -241,7 +241,7 @@
                     <div class="w-full flex items-center min-[900px]:gap-4 gap-5 max-[900px]:flex-col">
                         <Dropdown onChange={updateVoice} selected={voiceMapI2D[draft.voice] || draft.voice}
                                   title="Stimmlage"
-                                  options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass"]} showDropshadow={true} />
+                                  options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass", "Sonstige"]} showDropshadow={true} />
 
                         <Dropdown onChange={updateStatus}
                                   selected={statusMapI2D[draft.status] || draft.status} title="Status"
