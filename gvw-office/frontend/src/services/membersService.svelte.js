@@ -16,14 +16,16 @@ export const voiceMapI2D = {
     "tenor1": "1. Tenor",
     "tenor2": "2. Tenor",
     "bass1": "1. Bass",
-    "bass2": "2. Bass"
+    "bass2": "2. Bass",
+    "other": "Sonstige"
 };
 
 export const voiceMapD2I = {
     "1. Tenor": "tenor1",
     "2. Tenor": "tenor2",
     "1. Bass": "bass1",
-    "2. Bass": "bass2"
+    "2. Bass": "bass2",
+    "Sonstige": "other"
 }
 
 export const statusMapI2D = {
