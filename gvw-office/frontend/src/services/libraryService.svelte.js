@@ -4,7 +4,7 @@ import {
     apiAddScore,
     apiCheckScore,
     apiDeleteScore,
-    apiDownloadScoreFiles,
+    apiDownloadScoreFiles, apiGetFullScore,
     apiUpdateScore
 } from "../api/apiLibrary.svelte";
 import { normalizeResponse } from "../api/http.svelte";
@@ -37,7 +37,8 @@ let isFetching = {
     newScore: false,
     updateScore: false,
     deleteScore: false,
-    downloadScore: false
+    downloadScore: false,
+    getFullScore: false,
 };
 
 /**
@@ -117,6 +118,48 @@ export function getCategoryCount(category) {
 }
 
 const pendingChecks = new Map();
+
+/**
+ * Retrieves the complete data for a single library score.
+ *
+ * Prevents concurrent requests and validates that the response contains
+ * all required score fields before returning the data.
+ *
+ * @param {string} id - The ID of the score to retrieve.
+ * @returns {Promise<Object|null>} The complete score data, or `null` if the
+ * request is already in progress, the ID is invalid, the request fails,
+ * or the response is missing required fields.
+ */
+export async function getFullScore(id) {
+    if (!id || isFetching.getFullScore) return null;
+
+    isFetching.getFullScore = true;
+
+    try {
+        const { resp, body } = await apiGetFullScore(id);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return null;
+
+        const requiredFields = [
+            "id",
+            "rev",
+            "scoreId",
+            "title",
+            "artist",
+            "type",
+            "voices",
+            "voiceCount",
+            "files"
+        ];
+
+        if (!(body !== null && typeof body === "object" && requiredFields.every(field => field in body))) return null;
+
+        return body;
+    } finally {
+        isFetching.getFullScore = false;
+    }
+}
 
 /**
  * Checks whether a score with the given ID exists in the system.
@@ -361,9 +404,6 @@ export async function updateScore(score) {
  */
 function prepareScoreFormData(score) {
     const formData = new FormData();
-    let rev = null;
-
-    if (score.id) rev = libraryStore.raw.find(s => s.id === score.id).rev;
 
     const scoreData = {
         id: score.id, // Will be undefined for new scores, which is fine
@@ -373,7 +413,7 @@ function prepareScoreFormData(score) {
         type: score.type,
         voices: score.voices,
         voiceCount: score.voiceCount,
-        rev: rev
+        rev: score.rev
     };
 
     formData.append("scoreData", new Blob([JSON.stringify(scoreData)], {
