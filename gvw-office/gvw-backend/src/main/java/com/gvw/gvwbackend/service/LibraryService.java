@@ -2,6 +2,7 @@ package com.gvw.gvwbackend.service;
 
 import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
+import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoresResponseDTO;
 import com.gvw.gvwbackend.exception.*;
@@ -68,19 +69,49 @@ public class LibraryService {
                 m ->
                     new ScoreResponseDTO(
                         m.getId(),
-                        m.getRev(),
                         m.getScoreId(),
                         m.getTitle(),
                         m.getArtist(),
                         m.getType(),
                         m.getVoices(),
-                        m.getVoiceCount(),
-                        m.getFiles() != null
-                            ? m.getFiles().stream().map(File::getOriginalName).toList()
-                            : List.of()))
+                        m.getVoiceCount()))
             .toList();
 
     return new ScoresResponseDTO(responseScores);
+  }
+
+  /**
+   * Retrieves a complete score.
+   *
+   * @param id identifier of the sore
+   * @return complete score information
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if the score does not exist
+   */
+  public FullScoreResponseDTO getFullScore(String id) {
+    if (id == null || id.isBlank()) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.READ_ONE, 400)));
+    }
+
+    Score score = dbService.findById("library", id, Score.class);
+    if (score == null) {
+      throw new NotFoundException(
+          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.READ_ONE, 404)));
+    }
+
+    return new FullScoreResponseDTO(
+        score.getId(),
+        score.getRev(),
+        score.getScoreId(),
+        score.getTitle(),
+        score.getArtist(),
+        score.getType(),
+        score.getVoices(),
+        score.getVoiceCount(),
+        score.getFiles() != null
+            ? score.getFiles().stream().map(File::getOriginalName).toList()
+            : List.of());
   }
 
   /**

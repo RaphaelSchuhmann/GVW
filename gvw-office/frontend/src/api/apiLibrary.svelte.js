@@ -29,6 +29,24 @@ export async function apiGetScores() {
 }
 
 /**
+ * Retrieves a score by its unique identifier.
+ *
+ * Sends a GET request to the library endpoint and returns both
+ * the raw response object and the parsed response body.
+ *
+ * @param {string} id - Unique report identifier.
+ *
+ * @returns {Promise<{resp: Response|null, body: Object|null}>}
+ * The raw response and parsed response body.
+ */
+export async function apiGetFullScore(id) {
+    const resp = await httpGet(`${apiUrl}/library/${id}`);
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}
+
+/**
  * Sends a check request to see whether a score still exists or not
  *
  * Sends a GET request to `/library/check/{id}` endpoint with an Authorization header.

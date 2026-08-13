@@ -17,7 +17,7 @@
     import FileSelector from "../../components/FileSelector.svelte";
     import { appSettings } from "../../stores/appSettings.svelte";
     import {
-        downloadScoreFiles,
+        downloadScoreFiles, getFullScore,
         getLibraryCategories,
         updateScore,
         voiceMap
@@ -137,47 +137,6 @@
     });
 
     /**
-     * Creates a normalized representation of a score object so it can be
-     * reliably compared with another score instance.
-     *
-     * This function removes insignificant differences that would otherwise
-     * break simple equality checks (e.g. via JSON.stringify). In particular:
-     * - String fields are trimmed to avoid whitespace-only differences.
-     * - Missing values are replaced with consistent defaults.
-     * - The `voices` array is sorted so that order differences do not affect
-     *   equality checks.
-     * - `files` is normalized to an empty array if undefined, but its order
-     *   and content are preserved so additions/removals are still detectable.
-     *
-     * The returned object is intended for comparison purposes only and should
-     * not be used as a full replacement for the original score object.
-     *
-     * @param {Object} score - The score object to normalize.
-     * @param {string} [score.scoreId]
-     * @param {string} [score.title]
-     * @param {string} [score.artist]
-     * @param {string} [score.type]
-     * @param {string[]} [score.voices]
-     * @param {Array} [score.files]
-     * @returns {Object|undefined|null} A normalized score object, or the
-     * original value if `score` is null or undefined.
-     */
-    function normalizeScore(score) {
-        if (!score) return score;
-
-        return {
-            scoreId: score.scoreId?.trim() ?? "",
-            title: score.title?.trim() ?? "",
-            artists: score.artist?.trim() ?? "",
-            type: score.type ?? null,
-
-            voices: [...(score.voices ?? [])].sort(),
-
-            files: score.files ?? []
-        };
-    }
-
-    /**
      * Pre-effect that ensures a draft exists when entering edit mode.
      *
      * If editing is enabled but no draft is present,
@@ -209,10 +168,11 @@
 
         try {
             await updateScore(score);
-        } finally {
-            isSubmitting = false;
+            scoreData = await getFullScore(scoreData.id);
             onChangeIsEditing(false);
             draft = null;
+        } finally {
+            isSubmitting = false;
         }
     }
 
