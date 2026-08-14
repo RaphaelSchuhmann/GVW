@@ -1,6 +1,5 @@
 package com.gvw.gvwbackend.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -53,11 +52,15 @@ public class MailService {
    */
   public void sendMail(
       String to, String subject, String templateName, Map<String, Object> variables) {
+
+    log.debug("Preparing email using template '{}'", templateName);
+
     try {
       Context context = new Context();
       context.setVariables(variables);
 
       String htmlContent = templateEngine.process(templateName, context);
+      log.debug("Email template rendered successfully");
 
       MimeMessage mimeMessage = mailSender.createMimeMessage();
       MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
@@ -70,9 +73,11 @@ public class MailService {
       ClassPathResource res = new ClassPathResource("static/images/logo.png");
       helper.addInline("logo-image", res);
 
+      log.debug("Sending email");
       mailSender.send(mimeMessage);
-    } catch (MessagingException e) {
-      log.error("Error sending mail: {}", e.getMessage(), e);
+      log.debug("Email sent successfully");
+    } catch (Exception e) {
+      log.error("Failed to send email using template '{}'", templateName, e);
       throw new RuntimeException("Error sending mail", e);
     }
   }

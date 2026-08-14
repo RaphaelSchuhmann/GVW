@@ -123,7 +123,7 @@ public class EPWRService {
         dbService.findByQuery("users", Map.of("selector", Map.of("role", Role.ADMIN)), User.class);
 
     if (admins.isEmpty()) {
-      log.warn("No admins found during emergency access!");
+      log.error("No admins found during emergency access!");
     }
 
     processAdminPasswordResets(admins);
@@ -160,7 +160,7 @@ public class EPWRService {
     }
 
     if (!hashUtil.compare(token, savedToken.getHashedToken())) {
-      log.warn("Emergency token invalid!");
+      log.warn("Emergency token invalid");
       throw new InvalidCredentialsException("TokenInvalid");
     }
 

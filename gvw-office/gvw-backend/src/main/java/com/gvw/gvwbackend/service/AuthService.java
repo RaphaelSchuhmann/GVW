@@ -9,6 +9,8 @@ import com.gvw.gvwbackend.model.User;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +35,7 @@ public class AuthService {
   private final DbService dbService;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
+  private static final Logger log = LoggerFactory.getLogger(AuthService.class);
   private static final List<String> words =
       List.of(
           "apple",
@@ -100,6 +103,8 @@ public class AuthService {
       if (failedAttempts >= 4) {
         user.setLockUntil(Instant.now().plus(Duration.ofMinutes(15)));
         dbService.update("users", user.getId(), user);
+
+        log.warn("User got locked out");
 
         throw new TooManyRequestsException(
             String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 429)),

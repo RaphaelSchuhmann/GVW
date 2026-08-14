@@ -36,6 +36,7 @@ jwt:
 
 logging:
   level:
+    com.gvw.gvwbackend: DEBUG
     org:
       apache:
         catalina:

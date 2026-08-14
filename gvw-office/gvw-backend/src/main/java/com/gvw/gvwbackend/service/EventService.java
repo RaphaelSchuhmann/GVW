@@ -83,6 +83,7 @@ public class EventService {
         Map<String, Object> resp = dbService.update("events", event.getId(), event);
 
         if (resp == null || !resp.containsKey("rev")) {
+          log.error("Failed to update status of event {}", event.getId());
           event.setStatus("upcoming");
           continue;
         }
@@ -95,8 +96,9 @@ public class EventService {
     if (changed) {
       try {
         sseService.broadcastRefresh("EVENTS");
+        log.debug("EVENTS refresh broadcast sent successfully");
       } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast EVENTS refresh: ", ex);
+        log.warn("Failed to broadcast EVENTS refresh", ex);
       }
     }
 
@@ -163,7 +165,7 @@ public class EventService {
     try {
       sseService.broadcastRefresh("EVENTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh: ", ex);
+      log.warn("Failed to broadcast EVENTS refresh", ex);
     }
   }
 
@@ -193,7 +195,7 @@ public class EventService {
     try {
       sseService.broadcastRefresh("EVENTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh: ", ex);
+      log.warn("Failed to broadcast EVENTS refresh", ex);
     }
   }
 
@@ -229,7 +231,7 @@ public class EventService {
     try {
       sseService.broadcastRefresh("EVENTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh: ", ex);
+      log.warn("Failed to broadcast EVENTS refresh", ex);
     }
 
     if (resp != null && resp.containsKey("rev")) {
@@ -266,7 +268,7 @@ public class EventService {
     try {
       sseService.broadcastRefresh("EVENTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh: ", ex);
+      log.warn("Failed to broadcast EVENTS refresh", ex);
     }
 
     if (resp != null && resp.containsKey("rev")) {

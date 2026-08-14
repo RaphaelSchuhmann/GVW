@@ -171,16 +171,20 @@ public class HelpCenterService {
     startBlock.setData("");
     article.setContents(List.of(startBlock));
 
+    log.debug("Inserting help center article into database");
     dbService.insert("help_center", article);
+    log.debug("Help center article inserted successfully");
 
+    log.debug("Updating help center category article count");
     String rev =
         appSettingsService.updateHelpCenterCategoryArticleCount(
             dto.category(), category.getArticleCount() + 1);
+    log.debug("Help center category article count updated successfully");
 
     try {
       sseService.broadcastRefresh("HELP_CENTER");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER refresh: ", ex);
+      log.warn("Failed to broadcast HELP_CENTER refresh", ex);
     }
 
     return rev;
@@ -290,7 +294,9 @@ public class HelpCenterService {
 
     try {
       if (files != null && !files.isEmpty()) {
+        log.debug("Storing uploaded help center article files");
         newlyUploadedFiles = editorService.processUploadedFiles(files, ErrorAction.UPDATE);
+        log.debug("Help center article files stored successfully");
       }
 
       // Update Image block data to permanent internal filenames
@@ -317,7 +323,9 @@ public class HelpCenterService {
       article.setContents(request.content());
       article.setRev(request.rev());
 
+      log.debug("Updating help center article in database");
       Map<String, Object> resp = dbService.update("help_center", article.getId(), article);
+      log.debug("Help center article updated successfully");
 
       if (resp == null || !resp.containsKey("rev")) {
         throw new RuntimeException(
@@ -329,7 +337,7 @@ public class HelpCenterService {
       try {
         sseService.broadcastRefresh("HELP_CENTER");
       } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast HELP_CENTER refresh: ", ex);
+        log.warn("Failed to broadcast HELP_CENTER refresh", ex);
       }
 
       return (String) resp.get("rev");
@@ -412,18 +420,21 @@ public class HelpCenterService {
             .findFirst()
             .orElse(null);
     if (category != null) {
+      log.debug("Updating help center category article count");
       appSettingsService.updateHelpCenterCategoryArticleCount(
           article.getCategory(), category.getArticleCount() - 1);
     }
 
+    log.debug("Deleting help center article from database");
     dbService.delete("help_center", article.getId(), article.getRev());
+    log.debug("Help center article deleted successfully");
 
     editorService.purgeAllBlockAssets(article.getContents(), ErrorAction.DELETE);
 
     try {
       sseService.broadcastRefresh("HELP_CENTER");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER refresh: ", ex);
+      log.warn("Failed to broadcast HELP_CENTER refresh", ex);
     }
   }
 
