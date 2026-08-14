@@ -422,7 +422,7 @@ public class HelpCenterService {
     if (category != null) {
       log.debug("Updating help center category article count");
       appSettingsService.updateHelpCenterCategoryArticleCount(
-              article.getCategory(), category.getArticleCount() - 1);
+          article.getCategory(), category.getArticleCount() - 1);
     }
 
     log.debug("Deleting help center article from database");

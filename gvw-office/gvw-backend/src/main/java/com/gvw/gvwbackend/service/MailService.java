@@ -1,6 +1,5 @@
 package com.gvw.gvwbackend.service;
 
-import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -77,7 +76,7 @@ public class MailService {
       log.debug("Sending email");
       mailSender.send(mimeMessage);
       log.debug("Email sent successfully");
-    } catch (MessagingException e) {
+    } catch (Exception e) {
       log.error("Failed to send email using template '{}'", templateName, e);
       throw new RuntimeException("Error sending mail", e);
     }

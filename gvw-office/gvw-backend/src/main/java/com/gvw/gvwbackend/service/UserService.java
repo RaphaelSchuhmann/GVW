@@ -222,6 +222,8 @@ public class UserService {
 
     User user = getUserByID(id, ErrorAction.UPDATE);
 
+    log.debug("User retrieved using user id");
+
     return resetPassword(user);
   }
 
@@ -245,6 +247,8 @@ public class UserService {
     log.info("Starting password reset using member id");
 
     User user = getUserByMemberId(memberId, ErrorAction.UPDATE);
+
+    log.debug("User retrieved using member id");
 
     return resetPassword(user);
   }
@@ -457,10 +461,15 @@ public class UserService {
    * @throws NotFoundException if no user with the given identifier exists
    */
   private User getUserByID(String id, ErrorAction action) {
+    log.debug("Looking up user by database ID: {}", id);
+
     User user = dbService.findById("users", id, User.class);
 
-    if (user == null)
+    log.debug("User lookup returned: {}", user != null ? "user found" : "null");
+
+    if (user == null) {
       throw new NotFoundException(String.valueOf(ErrorDomain.USER.createCode(action, 404)));
+    }
 
     return user;
   }

@@ -94,7 +94,8 @@ public class ChangelogService {
    */
   public void deleteChangelog(String id) {
     if (id == null || id.isBlank()) {
-      throw new BadRequestException(String.valueOf(ErrorDomain.CHANGELOG.createCode(ErrorAction.DELETE, 400)));
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.CHANGELOG.createCode(ErrorAction.DELETE, 400)));
     }
 
     Changelog changelog = dbService.findById("changelogs", id, Changelog.class);
