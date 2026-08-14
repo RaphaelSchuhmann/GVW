@@ -132,7 +132,7 @@
 
     function updateStatus(value) { draft.status = value; }
 
-    function updateRole(value) { draft.role = statusMapD2I[value]; }
+    function updateRole(value) { draft.role = roleMapD2I[value]; }
 
     function updateBirthdate(value) { draft.birthdate = value; }
 
