@@ -86,7 +86,7 @@ public class TextEditorService {
               ? "application/octet-stream"
               : contentType);
     } catch (IOException e) {
-      log.error("Failed to read editor asset metadata", e);
+      log.error("Failed to read editor asset metadata: {}", filename, e);
       throw new RuntimeException(
           String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UTILITY, 500)));
     }
@@ -144,7 +144,6 @@ public class TextEditorService {
 
       return new LinkMetadataResponseDTO(title, dataUrl);
     } catch (Exception e) {
-      log.warn("Failed to resolve external URL metadata", e);
       return new LinkMetadataResponseDTO(url, "");
     }
   }
