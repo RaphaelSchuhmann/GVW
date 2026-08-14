@@ -159,7 +159,9 @@ public class LibraryService {
 
     List<File> metaList = new ArrayList<>();
     try {
+      log.debug("Storing score files");
       metaList = storeFiles(files, ErrorAction.CREATE);
+      log.debug("Score files stored successfully");
 
       Score score =
           Score.builder()
@@ -172,12 +174,14 @@ public class LibraryService {
               .files(metaList)
               .build();
 
+      log.debug("Inserting new score into database");
       dbService.insert("library", score);
+      log.debug("Score inserted successfully");
 
       try {
         sseService.broadcastRefresh("SCORES");
       } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast SCORES refresh: ", ex);
+        log.warn("Failed to broadcast SCORES refresh", ex);
       }
     } catch (Exception e) {
       for (File orphan : metaList) {
@@ -219,12 +223,14 @@ public class LibraryService {
       }
     }
 
+    log.debug("Deleting score from database");
     dbService.delete("library", score.getId(), score.getRev());
+    log.debug("Score deleted successfully");
 
     try {
       sseService.broadcastRefresh("SCORES");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SCORES refresh: ", ex);
+      log.warn("Failed to broadcast SCORES refresh", ex);
     }
   }
 
@@ -312,7 +318,10 @@ public class LibraryService {
       }
 
       if (newFiles != null && !newFiles.isEmpty()) {
+        log.debug("Storing new score files");
         newlyStoredFiles = storeFiles(newFiles, ErrorAction.UPDATE);
+        log.debug("New score files stored successfully");
+
         updatedFileList.addAll(newlyStoredFiles);
       }
 
@@ -325,7 +334,9 @@ public class LibraryService {
       score.setVoices(request.voices());
       score.setVoiceCount(request.voiceCount());
 
+      log.debug("Updating score in database");
       Map<String, Object> resp = dbService.update("library", score.getId(), score);
+      log.debug("Score updated successfully");
 
       if (resp == null || !resp.containsKey("rev")) {
         throw new RuntimeException(
@@ -339,7 +350,7 @@ public class LibraryService {
       try {
         sseService.broadcastRefresh("SCORES");
       } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast SCORES refresh: ", ex);
+        log.warn("Failed to broadcast SCORES refresh", ex);
       }
 
       return (String) resp.get("rev");

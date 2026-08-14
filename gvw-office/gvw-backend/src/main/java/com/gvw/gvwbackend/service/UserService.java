@@ -72,6 +72,7 @@ public class UserService {
     if (userId == null || userId.isEmpty()) {
       // This is invalid credentials aka invalid token so logout should be handled via 1004401 (Auth
       // Middleware error)
+      log.error("getUser: Invalid credentials. Responding with unauthorized to trigger logout.");
       throw new InvalidCredentialsException(
           String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 401)));
     }
@@ -85,45 +86,6 @@ public class UserService {
         user.getAddress(),
         user.getPhone(),
         user.getRev());
-  }
-
-  /**
-   * Resets a user's password using the associated member identifier.
-   *
-   * <p>Generates a temporary password, stores its encoded value, marks the account as requiring a
-   * password change, and sends the temporary password to the user's email address.
-   *
-   * @param memberId identifier of the associated member
-   * @return the new database revision of the updated user
-   * @throws BadRequestException if the member identifier is invalid
-   * @throws NotFoundException if no user is linked to the member
-   */
-  public String resetPasswordUsingMemberId(String memberId) {
-    if (memberId == null || memberId.isEmpty()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 400)));
-    }
-
-    User user = getUserByMemberId(memberId, ErrorAction.UPDATE);
-
-    String temporaryPassword = AuthService.generatePassword(3, 2);
-
-    user.setPassword(passwordEncoder.encode(temporaryPassword));
-    user.setChangePassword(true);
-    Map<String, Object> resp = dbService.update("users", user.getId(), user);
-
-    if (resp == null || !resp.containsKey("rev")) {
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
-    }
-
-    mailService.sendMail(
-        user.getEmail(),
-        "GVW-Office: Passwort zurückgesetzt",
-        "resetPassword",
-        Map.of("tempPassword", temporaryPassword));
-
-    return (String) resp.get("rev");
   }
 
   /**
@@ -220,26 +182,30 @@ public class UserService {
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
 
+    log.debug("Inserting new user into database");
     dbService.insert("users", user);
+    log.debug("User inserted successfully");
 
+    log.debug("Sending new user email");
     mailService.sendMail(
         user.getEmail(),
         "GVW-Office: Temporäres Password",
         "newUser",
         Map.of("tempPassword", temporaryPassword));
+    log.debug("New user email sent successfully");
 
     try {
       sseService.broadcastRefresh("USER");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh: ", ex);
+      log.warn("Failed to broadcast USER refresh", ex);
     }
   }
 
   /**
    * Resets a user's password using the user database identifier.
    *
-   * <p>Generates a temporary password, updates the stored password hash, marks the account for
-   * password change, and sends the new password via email.
+   * <p>The user is looked up by their database identifier before the password is reset and the
+   * temporary password is sent to the user's email address.
    *
    * @param id database identifier of the user
    * @return the new database revision of the updated user
@@ -252,24 +218,75 @@ public class UserService {
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 400)));
     }
 
+    log.info("Starting password reset using user id");
+
     User user = getUserByID(id, ErrorAction.UPDATE);
+
+    return resetPassword(user);
+  }
+
+  /**
+   * Resets a user's password using the associated member identifier.
+   *
+   * <p>The user is looked up through the associated member before the password is reset and the
+   * temporary password is sent to the user's email address.
+   *
+   * @param memberId identifier of the associated member
+   * @return the new database revision of the updated user
+   * @throws BadRequestException if the identifier is invalid
+   * @throws NotFoundException if no user is associated with the member
+   */
+  public String resetPasswordUsingMemberId(String memberId) {
+    if (memberId == null || memberId.isEmpty()) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 400)));
+    }
+
+    log.info("Starting password reset using member id");
+
+    User user = getUserByMemberId(memberId, ErrorAction.UPDATE);
+
+    return resetPassword(user);
+  }
+
+  /**
+   * Resets the password of the given user and sends a temporary password to their email address.
+   *
+   * <p>The generated password is encoded before being stored, and the user is marked as requiring a
+   * password change on their next login.
+   *
+   * @param user user whose password should be reset
+   * @return the new database revision of the updated user
+   * @throws RuntimeException if the database update does not return a revision
+   */
+  private String resetPassword(User user) {
+    log.debug("User loaded successfully for password reset");
 
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
     user.setChangePassword(true);
+
+    log.debug("Updating user password in database");
+
     Map<String, Object> resp = dbService.update("users", user.getId(), user);
 
     if (resp == null || !resp.containsKey("rev")) {
+      log.error("Password reset failed: db update did not contain a rev");
       throw new RuntimeException(
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
     }
+
+    log.debug("User password updated successfully");
+    log.debug("Sending password reset email");
 
     mailService.sendMail(
         user.getEmail(),
         "GVW-Office: Passwort zurückgesetzt",
         "resetPassword",
         Map.of("tempPassword", temporaryPassword));
+
+    log.info("Password reset completed successfully");
 
     return (String) resp.get("rev");
   }
@@ -308,20 +325,25 @@ public class UserService {
 
     user.setRev(request.rev());
 
+    log.debug("Updating user in database");
     Map<String, Object> userResult = dbService.update("users", user.getId(), user);
+
+    if (userResult == null || !userResult.containsKey("rev")) {
+      log.error("Database response did not contain a new rev");
+      throw new RuntimeException(
+          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
+    }
+
+    log.debug("User update in database was successful");
 
     try {
       sseService.broadcastRefresh("USER");
+      log.debug("USER refresh broadcast sent successfully");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh: ", ex);
+      log.warn("Failed to broadcast USER refresh", ex);
     }
 
-    if (userResult != null && userResult.containsKey("rev")) {
-      return (String) userResult.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
+    return (String) userResult.get("rev");
   }
 
   /**
@@ -348,12 +370,14 @@ public class UserService {
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.DELETE, 400)));
     }
 
+    log.debug("Deleting user in database");
     dbService.delete("users", user.getId(), user.getRev());
+    log.debug("User deletion was successful");
 
     try {
       sseService.broadcastRefresh("USER");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh: ", ex);
+      log.warn("Failed to broadcast USER refresh", ex);
     }
   }
 
@@ -367,6 +391,7 @@ public class UserService {
    */
   public String resolveUserIdToEmail(String id) {
     if (id == null || id.isBlank()) {
+      log.debug("Resolving user ID to email failed: no ID provided");
       return "";
     }
 
@@ -374,6 +399,7 @@ public class UserService {
         dbService.findByQuery(
             "users", Map.of("selector", Map.of("userId", id), "limit", 1), User.class);
     if (users == null || users.isEmpty()) {
+      log.debug("Resolving user ID to email failed: no matchin user found");
       return "";
     }
 

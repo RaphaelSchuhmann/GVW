@@ -134,12 +134,14 @@ public class ReportService {
     startBlock.setData("");
     report.setContents(List.of(startBlock));
 
+    log.debug("Inserting new report into database");
     dbService.insert("reports", report);
+    log.debug("Report inserted successfully");
 
     try {
       sseService.broadcastRefresh("REPORTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh: ", ex);
+      log.warn("Failed to broadcast REPORTS refresh", ex);
     }
   }
 
@@ -248,8 +250,11 @@ public class ReportService {
           String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.DELETE, 404)));
     }
 
+    log.debug("Deleting report from database");
     dbService.delete("reports", report.getId(), report.getRev());
+    log.debug("Report deleted successfully");
 
+    log.debug("Purging report editor assets");
     editorService.purgeAllBlockAssets(report.getContents(), ErrorAction.DELETE);
 
     List<File> attachments = report.getAttachments();
@@ -270,7 +275,7 @@ public class ReportService {
     try {
       sseService.broadcastRefresh("REPORTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh: ", ex);
+      log.warn("Failed to broadcast REPORTS refresh", ex);
     }
   }
 
@@ -334,12 +339,16 @@ public class ReportService {
           String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 404)));
     }
 
+    log.debug("Starting report update");
+
     List<TextEditorBlock> oldContents = report.getContents();
     Map<String, String> newlyUploadedFiles = new HashMap<>();
 
     try {
       if (files != null && !files.isEmpty()) {
+        log.debug("Processing {} uploaded editor files", files.size());
         newlyUploadedFiles = editorService.processUploadedFiles(files, ErrorAction.UPDATE);
+        log.debug("Editor files processed successfully");
       }
 
       // Update Image block data to permanent internal filenames
@@ -365,20 +374,28 @@ public class ReportService {
       report.setContents(request.content());
       report.setRev(request.rev());
 
+      log.debug("Updating report in database");
       Map<String, Object> resp = dbService.update("reports", report.getId(), report);
 
       if (resp == null || !resp.containsKey("rev")) {
+        log.error("Report update failed: database response did not contain a revision");
         throw new RuntimeException(
             String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 500)));
       }
 
+      log.debug("Report updated successfully");
+
+      log.debug("Synchronizing report editor assets");
       editorService.synchronizeBlockAssets(oldContents, request.content(), ErrorAction.UPDATE);
+      log.debug("Report editor assets synchronized successfully");
 
       try {
         sseService.broadcastRefresh("REPORTS");
       } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast REPORTS refresh: ", ex);
+        log.warn("Failed to broadcast REPORTS refresh", ex);
       }
+
+      log.debug("Report update completed successfully");
 
       return (String) resp.get("rev");
     } catch (Exception e) {
@@ -417,9 +434,12 @@ public class ReportService {
     report.setDescription(description);
     report.setRev(request.rev());
 
+    log.debug("Updating report description in database");
     Map<String, Object> resp = dbService.update("reports", report.getId(), report);
+    log.debug("Report description updated successfully");
 
     if (resp == null || !resp.containsKey("rev")) {
+      log.error("Report description update failed: database response did not contain a revision");
       throw new RuntimeException(
           String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UPDATE, 500)));
     }
@@ -427,7 +447,7 @@ public class ReportService {
     try {
       sseService.broadcastRefresh("REPORTS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh: ", ex);
+      log.warn("Failed to broadcast REPORTS refresh", ex);
     }
 
     return (String) resp.get("rev");
@@ -477,7 +497,9 @@ public class ReportService {
     List<File> newlyWrittenFilesToDisk = new ArrayList<>();
 
     try {
+      log.debug("Storing uploaded report attachments");
       newlyWrittenFilesToDisk = editorService.storeFiles(files, ErrorAction.UPDATE);
+      log.debug("Report attachments stored successfully");
 
       List<File> finalAttachmentList = new ArrayList<>();
 
@@ -512,12 +534,16 @@ public class ReportService {
       report.setAttachments(finalAttachmentList);
       report.setRev(request.rev());
 
+      log.debug("Updating report attachment metadata in database");
       Map<String, Object> resp = dbService.update("reports", report.getId(), report);
 
       if (resp == null || !resp.containsKey("rev") || resp.get("rev").toString().isEmpty()) {
+        log.error("Attachment update failed: database response did not contain a valid revision");
         throw new RuntimeException(
             String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 500)));
       }
+
+      log.debug("Report attachment metadata updated successfully");
 
       for (File deadFile : filesToPurgeFromDisk) {
         try {
@@ -534,7 +560,7 @@ public class ReportService {
       try {
         sseService.broadcastRefresh("REPORTS");
       } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast REPORTS refresh message: ", ex);
+        log.warn("Failed to broadcast REPORTS refresh", ex);
       }
 
       return (String) resp.get("rev");
@@ -594,7 +620,7 @@ public class ReportService {
 
           zip.closeEntry();
         } else {
-          log.warn("File not found on disk, skipping: {}", filePath);
+          log.warn("Attachment file not found on disk, skipping: {}", file.getId());
         }
       }
       zip.finish();

@@ -80,7 +80,7 @@ public class ChangelogService {
     try {
       sseService.broadcastRefresh("CHANGELOGS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast CHANGELOGS refresh: ", ex);
+      log.warn("Failed to broadcast CHANGELOGS refresh", ex);
     }
   }
 
@@ -94,7 +94,7 @@ public class ChangelogService {
    */
   public void deleteChangelog(String id) {
     if (id == null || id.isBlank()) {
-      throw new BadRequestException("InvalidData");
+      throw new BadRequestException(String.valueOf(ErrorDomain.CHANGELOG.createCode(ErrorAction.DELETE, 400)));
     }
 
     Changelog changelog = dbService.findById("changelogs", id, Changelog.class);
@@ -108,7 +108,7 @@ public class ChangelogService {
     try {
       sseService.broadcastRefresh("CHANGELOGS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast CHANGELOGS refresh: ", ex);
+      log.warn("Failed to broadcast CHANGELOGS refresh", ex);
     }
   }
 }

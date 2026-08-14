@@ -86,6 +86,7 @@ public class TextEditorService {
               ? "application/octet-stream"
               : contentType);
     } catch (IOException e) {
+      log.error("Failed to read editor asset metadata", e);
       throw new RuntimeException(
           String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UTILITY, 500)));
     }
@@ -143,6 +144,7 @@ public class TextEditorService {
 
       return new LinkMetadataResponseDTO(title, dataUrl);
     } catch (Exception e) {
+      log.warn("Failed to resolve external URL metadata", e);
       return new LinkMetadataResponseDTO(url, "");
     }
   }
@@ -167,6 +169,8 @@ public class TextEditorService {
     List<Path> physicalPaths = new ArrayList<>();
     Path root = Paths.get(filesDir);
 
+    log.debug("Storing {} uploaded editor files", files.size());
+
     try {
       Files.createDirectories(root);
       for (MultipartFile file : files) {
@@ -187,6 +191,8 @@ public class TextEditorService {
         filenames.put(originalName, id + extension);
         physicalPaths.add(targetPath);
       }
+
+      log.debug("Successfully stored {} editor files", filenames.size());
       return filenames;
     } catch (Exception e) {
       physicalPaths.forEach(
@@ -290,6 +296,7 @@ public class TextEditorService {
     try {
       Files.deleteIfExists(filePath);
     } catch (IOException e) {
+      log.error("Failed to delete editor asset", e);
       throw new RuntimeException(String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(action, 500)));
     }
   }
@@ -330,6 +337,8 @@ public class TextEditorService {
     List<Path> physicalPaths = new ArrayList<>();
     Path root = Paths.get(filesDir);
 
+    log.debug("Storing {} uploaded files", files.size());
+
     try {
       Files.createDirectories(root);
 
@@ -351,6 +360,8 @@ public class TextEditorService {
 
         Files.copy(file.getInputStream(), targetPath);
         physicalPaths.add(targetPath);
+
+        log.debug("Successfully stored {} files", storedFiles.size());
 
         storedFiles.add(
             com.gvw.gvwbackend.model.File.builder()

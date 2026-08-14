@@ -93,7 +93,7 @@ public class AppSettingsService {
     try {
       sseService.broadcastRefresh("SETTINGS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh: ", ex);
+      log.warn("Failed to broadcast SETTINGS refresh", ex);
     }
     return rev;
   }
@@ -146,7 +146,7 @@ public class AppSettingsService {
     try {
       sseService.broadcastRefresh("SETTINGS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh: ", ex);
+      log.warn("Failed to broadcast SETTINGS refresh", ex);
     }
 
     if (resp != null && resp.containsKey("rev")) {
@@ -186,7 +186,7 @@ public class AppSettingsService {
     try {
       sseService.broadcastRefresh("SETTINGS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh: ", ex);
+      log.warn("Failed to broadcast SETTINGS refresh", ex);
     }
 
     if (resp != null && resp.containsKey("rev")) {
@@ -389,7 +389,7 @@ public class AppSettingsService {
     try {
       sseService.broadcastRefresh("SETTINGS");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER or SETTINGS refresh: ", ex);
+      log.warn("Failed to broadcast SETTINGS refresh: ", ex);
     }
 
     if (resp != null && resp.get("rev") instanceof String rev) {

@@ -162,7 +162,7 @@ public class BugReportService {
     try {
       sseService.broadcastRefresh("BUG");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast BUG refresh: ", ex);
+      log.warn("Failed to broadcast BUG refresh", ex);
     }
   }
 
@@ -194,7 +194,7 @@ public class BugReportService {
     try {
       sseService.broadcastRefresh("BUG");
     } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast BUG refresh: ", ex);
+      log.warn("Failed to broadcast BUG refresh", ex);
     }
   }
 }
