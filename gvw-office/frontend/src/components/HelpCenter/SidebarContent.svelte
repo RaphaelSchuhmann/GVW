@@ -117,7 +117,7 @@
     <div class="flex items-center justify-center p-5 border-t border-gv-border-bar w-full">
         <div class="flex flex-col items-start w-full bg-gv-secondary rounded-1 p-5">
             <p class="text-dt-5 text-gv-dark-text text-base/6">Gesangverein<br>Weppersdorf</p>
-            <p class="text-dt-8 text-gv-light-text mt-3">© 2026 GVW Office</p>
+            <p class="text-dt-8 text-gv-light-text mt-3">© {new Date().getFullYear()} GVW Office</p>
         </div>
     </div>
 </div>
