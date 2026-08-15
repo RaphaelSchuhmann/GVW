@@ -6,7 +6,6 @@ import subprocess
 import requests
 
 REPO = os.environ["GITHUB_REPOSITORY"]
-TOKEN = os.environ["GITHUB_TOKEN"]
 BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 
 DEPLOY_SCRIPT = "./deploy.sh"
@@ -15,7 +14,6 @@ DEPLOYED_FILE = "./deployed-commit"
 API_URL = f"https://api.github.com/repos/{REPO}/commits/{BRANCH}"
 
 headers = {
-    "Authorization": f"Bearer {TOKEN}",
     "Accept": "application/vnd.github+json"
 }
 
