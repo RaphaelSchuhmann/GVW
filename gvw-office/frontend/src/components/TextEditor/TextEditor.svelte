@@ -2,7 +2,6 @@
     import ButtonSelect from "./ButtonSelect.svelte";
     import StyleButton from "./StyleButton.svelte";
     import ImageUpload from "./ImageUpload.svelte";
-    import LinkItem from "./LinkItem.svelte";
     import { textEditorConfigs } from "../../lib/textEditorConfig.svelte.js";
     import ContentDisplay from "./ContentDisplay.svelte";
     import { editorSelectionStore } from "../../stores/textEditorStore.svelte.js";
@@ -108,8 +107,7 @@
         changeBlockType("blockquote");
     }
 
-    function handleApplyStyle(e) {
-        const style = e.currentTarget.dataset.style;
+    function handleApplyStyle(e, style) {
         e.preventDefault();
         applyStyleInDOM(style);
     }
@@ -127,14 +125,14 @@
 
             <div class="flex items-center gap-1">
                 <StyleButton icon="format_bold" disabled={activeBlock === null}
-                             bind:isToggled={editorSelectionStore.activeStyles.isBold} {...{ 'data-style': 'strong' }}
-                             onMouseDown={handleApplyStyle} />
+                             bind:isToggled={editorSelectionStore.activeStyles.isBold}
+                             onMouseDown={(e) => handleApplyStyle(e, "strong")} />
                 <StyleButton icon="format_underlined" disabled={activeBlock === null}
-                             bind:isToggled={editorSelectionStore.activeStyles.isUnderline} {...{ 'data-style': 'u' }}
-                             onMouseDown={handleApplyStyle} />
+                             bind:isToggled={editorSelectionStore.activeStyles.isUnderline}
+                             onMouseDown={(e) => handleApplyStyle(e, "u")} />
                 <StyleButton icon="format_italic" disabled={activeBlock === null}
-                             bind:isToggled={editorSelectionStore.activeStyles.isItalic} {...{ 'data-style': 'em' }}
-                             onMouseDown={handleApplyStyle} />
+                             bind:isToggled={editorSelectionStore.activeStyles.isItalic}
+                             onMouseDown={(e) => handleApplyStyle(e, "em")} />
             </div>
 
             <div class="w-0.75 bg-gv-separator h-full rounded-1"></div>

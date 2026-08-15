@@ -101,7 +101,7 @@
                 {#each options as option, i (i)}
                     <button
                         type="button"
-                        class={`flex items-center text-left p-2 pl-4 pr-4 cursor-pointer hover:bg-gv-hover-effect w-full rounded-1 text-nowrap`}
+                        class={`flex items-center gap-4 text-left p-2 pl-4 pr-4 cursor-pointer hover:bg-gv-hover-effect w-full rounded-1 text-nowrap`}
                         data-option={option}
                         onmousedown={handleSelectOption}
                     >
