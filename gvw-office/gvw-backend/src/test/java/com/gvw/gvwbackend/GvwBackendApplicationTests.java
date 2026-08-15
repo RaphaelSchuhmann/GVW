@@ -11,7 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
       "GVW_PORT=3500",
       "GVW_DB_USERNAME=test",
       "GVW_DB_PASSWORD=test",
-      "GVW_JWT=123jwt"
+      "GVW_JWT_SECRET=123jwt"
     })
 class GvwBackendApplicationTests {
 
