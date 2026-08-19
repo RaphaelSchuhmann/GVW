@@ -18,7 +18,7 @@
     "vite": "^7.3.6"
   },
   "dependencies": {
-    "dompurify": "^3.3.3",
+    "dompurify": "^3.4.13",
     "event-source-polyfill": "^1.0.31",
     "fuse.js": "^7.1.0",
     "svelte-spa-router": "^4.0.1"
