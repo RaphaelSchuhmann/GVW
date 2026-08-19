@@ -10,7 +10,7 @@ BACKEND_DIR="/opt/gvw/backend"
 
 echo "Deploying latest commit from $BRANCH"
 
-if [ ! -d "$REPO_DIR/.git" ]; then
+if [[ ! -d "$REPO_DIR/.git" ]]; then
     echo "Repository not found. Cloning..."
     git clone --depth 1 --branch "$BRANCH" "$REPO" "$REPO_DIR"
 else
@@ -25,7 +25,7 @@ echo "Building frontend..."
 cd "$REPO_DIR/gvw-office/frontend"
 
 echo "Installing dependencies..."
-npm install
+npm ci
 
 echo "Removing previous build..."
 rm -rf dist
@@ -50,8 +50,8 @@ echo "Locating generated JAR..."
 
 JAR=$(find target -maxdepth 1 -type f -name 'gvw-backend-*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1)
 
-if [ -z "$JAR" ]; then
-    echo "ERROR: Backend JAR could not be found."
+if [[ -z "$JAR" ]]; then
+    echo "ERROR: Backend JAR could not be found." >&2
     exit 1
 fi
 
