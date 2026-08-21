@@ -78,7 +78,7 @@ public class SecurityConfig {
                 auth.requestMatchers(org.springframework.web.cors.CorsUtils::isPreFlightRequest)
                     .permitAll()
                     .requestMatchers(
-                        "/auth/login", "/auth/changePw", "/settings/get", "/sync/stream")
+                        "/auth/login", "/auth/changePw", "/settings/get", "/sync/stream", "/emergeny/use", "/emergency/new")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

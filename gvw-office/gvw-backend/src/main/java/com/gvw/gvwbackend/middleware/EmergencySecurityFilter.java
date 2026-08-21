@@ -37,7 +37,7 @@ public class EmergencySecurityFilter extends OncePerRequestFilter {
 
       if (!LOCAL_IPS.contains(remoteAddr)) {
         log.warn("Unauthorized external access attempt to emergency endpoint.");
-        response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access Denied: Localhost only");
+        response.sendError(HttpServletResponse.SC_FORBIDDEN);
         return;
       }
     }
