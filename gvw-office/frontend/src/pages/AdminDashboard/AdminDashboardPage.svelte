@@ -8,10 +8,10 @@
 
     import DashboardDesktop from "./AdminDashboardDesktop.svelte";
     import DashboardMobile from "./AdminDashboardMobile.svelte";
-    import Spinner from "../../components/Spinner.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { untrack } from "svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
+    import {loadAdminDashboardData} from "../../services/dashboardService.svelte.js";
 
     let ready = $state(false);
 
@@ -33,11 +33,15 @@
 
     $effect(() => {
         const _triggerChangelogs = lastRefresh.CHANGELOGS;
+        const _triggerUser = lastRefresh.USER;
+        const _triggerFeedback = lastRefresh.FEEDBACK;
+        const _triggerBug = lastRefresh.BUG;
 
         if (!ready) return;
 
         untrack(() => {
             getChangelogs();
+            loadAdminDashboardData();
         });
     });
 </script>

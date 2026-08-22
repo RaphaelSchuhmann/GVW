@@ -1,13 +1,18 @@
-import { apiGetData } from "../api/apiDashboard.js";
-import { normalizeResponse } from "../api/http.svelte.js";
-import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
-import { addToast } from "../stores/toasts.svelte.js";
-import { viewport } from "../stores/viewport.svelte.js";
-import { dashboardStore } from "../stores/dashboard.svelte.js";
-import { formatISODateString } from "./dateTimeUtils.js";
-import { getEventOccurrenceByEvent } from "./eventsService.svelte.js";
+import {apiGetAdminDashboardData, apiGetData} from "../api/apiDashboard.js";
+import {normalizeResponse} from "../api/http.svelte.js";
+import {handleGlobalApiError} from "../api/globalErrorHandler.svelte.js";
+import {addToast} from "../stores/toasts.svelte.js";
+import {viewport} from "../stores/viewport.svelte.js";
+import {dashboardStore} from "../stores/dashboard.svelte.js";
+import {formatISODateString} from "./dateTimeUtils.js";
+import {getEventOccurrenceByEvent} from "./eventsService.svelte.js";
+import {user} from "../stores/user.svelte.js";
+import {adminDashboardStore} from "../stores/adminDashboard.svelte.js";
 
-let isFetching = false;
+let isFetching = {
+    userDashboard: false,
+    adminDashboard: false,
+};
 
 /**
  * Loads and populates dashboard data from the API.
@@ -30,11 +35,11 @@ let isFetching = false;
  */
 export async function loadDashboardData() {
 
-    if (isFetching) return;
-    isFetching = true;
+    if (isFetching.userDashboard) return;
+    isFetching.userDashboard = true;
 
     try {
-        const { resp, body } = await apiGetData();
+        const {resp, body} = await apiGetData();
         const normalizedResponse = normalizeResponse(resp);
 
         if (handleGlobalApiError(normalizedResponse)) return;
@@ -58,7 +63,7 @@ export async function loadDashboardData() {
         dashboardStore.upcomingEvents = body.upcomingEvents;
         dashboardStore.totalScores = body.totalScores;
     } finally {
-        isFetching = false;
+        isFetching.userDashboard = false;
     }
 }
 
@@ -106,4 +111,41 @@ export function getVoiceCounts() {
         bass1: dashboardStore.members.filter(m => m.voice === "bass1").length,
         bass2: dashboardStore.members.filter(m => m.voice === "bass2").length,
     };
+}
+
+export async function loadAdminDashboardData() {
+    if (isFetching.adminDashboard || user.role !== "admin") return;
+    isFetching.adminDashboard = true;
+
+    try {
+        const {resp, body} = await apiGetAdminDashboardData();
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return;
+
+        if (
+            !Number.isFinite(body?.feedbackCount) || body.feedbackCount < 0 ||
+            !Number.isFinite(body?.bugReportCount) || body.bugReportCount < 0 ||
+            !Number.isFinite(body?.averageSentiment) || body.averageSentiment < 0 ||
+            !Number.isFinite(body?.userCount) || body.userCount < 0 ||
+            !Number.isFinite(body?.orphanedUserCount) || body.orphanedUserCount < 0 ||
+            typeof body?.mostUsedHash !== "string"
+        ) {
+            addToast({
+                title: "Fehler beim laden",
+                subTitle: viewport.isMobile ? "" : "Die Dashboard Daten sind unvollständig zurückgekommen.",
+                type: "warning"
+            });
+            return;
+        }
+
+        adminDashboardStore.reportHub.feedbackCount = body.feedbackCount;
+        adminDashboardStore.reportHub.bugReportCount = body.bugReportCount;
+        adminDashboardStore.reportHub.averageSentiment = body.averageSentiment;
+        adminDashboardStore.reportHub.mostUsedHash = body.mostUsedHash || "N/A";
+        adminDashboardStore.userManagement.userCount = body.userCount;
+        adminDashboardStore.userManagement.orphanedUserCount = body.orphanedUserCount;
+    } finally {
+        isFetching.adminDashboard = false;
+    }
 }
