@@ -26,7 +26,7 @@ jobs:
           cache-dependency-path: gvw-office/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build
         run: npm run build
