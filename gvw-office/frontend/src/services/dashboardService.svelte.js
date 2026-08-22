@@ -123,7 +123,14 @@ export async function loadAdminDashboardData() {
 
         if (handleGlobalApiError(normalized)) return;
 
-        if (body?.feedbackCount < 0 || body?.bugReportCount < 0 || body?.averageSentiment < 0 || body?.userCount < 0 || body?.orphanedUserCount < 0 || typeof body?.mostUsedHash !== "string") {
+        if (
+            !Number.isFinite(body?.feedbackCount) || body.feedbackCount < 0 ||
+            !Number.isFinite(body?.bugReportCount) || body.bugReportCount < 0 ||
+            !Number.isFinite(body?.averageSentiment) || body.averageSentiment < 0 ||
+            !Number.isFinite(body?.userCount) || body.userCount < 0 ||
+            !Number.isFinite(body?.orphanedUserCount) || body.orphanedUserCount < 0 ||
+            typeof body?.mostUsedHash !== "string"
+        ) {
             addToast({
                 title: "Fehler beim laden",
                 subTitle: viewport.isMobile ? "" : "Die Dashboard Daten sind unvollständig zurückgekommen.",

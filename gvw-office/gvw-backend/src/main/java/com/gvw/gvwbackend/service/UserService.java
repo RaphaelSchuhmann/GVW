@@ -482,7 +482,7 @@ public class UserService {
    * @param memberId referenced member identifier
    * @return {@code true} if no matching member exists
    */
-  public boolean isOrphan(String memberId) {
+  private boolean isOrphan(String memberId) {
     if (memberId == null || memberId.isBlank()) return true;
 
     Map<String, Object> query = Map.of("selector", Map.of("_id", memberId));

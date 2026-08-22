@@ -28,12 +28,10 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class DashboardService {
   private final DbService dbService;
-  private final UserService userService;
   private final ObjectMapper mapper = new ObjectMapper();
 
-  public DashboardService(DbService dbService, UserService userService) {
+  public DashboardService(DbService dbService) {
     this.dbService = dbService;
-    this.userService = userService;
   }
 
   /**
@@ -139,8 +137,31 @@ public class DashboardService {
     List<Map<String, Object>> usersRaw = dbService.findAll("users");
     List<User> users = usersRaw.stream().map(map -> mapper.convertValue(map, User.class)).toList();
 
+    // Collect non-empty memberIds
+    Set<String> memberIds =
+        users.stream()
+            .map(User::getMemberId)
+            .filter(id -> id != null && !id.isBlank())
+            .collect(Collectors.toSet());
+
+    // One bulk lookup against members
+    Set<String> existingMemberIds =
+        memberIds.isEmpty()
+            ? Set.of()
+            : dbService
+                .findByQuery(
+                    "members",
+                    Map.of("selector", Map.of("_id", Map.of("$in", memberIds))),
+                    Member.class)
+                .stream()
+                .map(Member::getId)
+                .collect(Collectors.toSet());
+
     long totalOrphaned =
-        users.stream().map(User::getMemberId).filter(userService::isOrphan).count();
+        users.stream()
+            .map(User::getMemberId)
+            .filter(m -> m == null || m.isBlank() || !existingMemberIds.contains(m))
+            .count();
 
     return new AdminDashboardResponseDTO(
         feedbacks.size(),
