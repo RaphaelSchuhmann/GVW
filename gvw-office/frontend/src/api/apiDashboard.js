@@ -22,7 +22,14 @@ const apiUrl = import.meta.env.VITE_API_URL;
  * }
  */
 export async function apiGetData() {
-    const resp = await httpGet(`${apiUrl}/dashboard/data`);
+    const resp = await httpGet(`${apiUrl}/dashboard/user`);
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}
+
+export async function apiGetAdminDashboardData() {
+    const resp = await httpGet(`${apiUrl}/dashboard/admin`);
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);
     return { resp, body };

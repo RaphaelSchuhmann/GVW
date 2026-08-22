@@ -1,14 +1,13 @@
 package com.gvw.gvwbackend.service;
 
+import com.gvw.gvwbackend.dto.response.AdminDashboardResponseDTO;
 import com.gvw.gvwbackend.dto.response.DashboardEventSummaryDTO;
 import com.gvw.gvwbackend.dto.response.DashboardMemberSummaryDTO;
 import com.gvw.gvwbackend.dto.response.DashboardResponseDTO;
-import com.gvw.gvwbackend.model.Event;
-import com.gvw.gvwbackend.model.Member;
-import com.gvw.gvwbackend.model.Score;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import com.gvw.gvwbackend.model.*;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
 
@@ -29,10 +28,12 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class DashboardService {
   private final DbService dbService;
+  private final UserService userService;
   private final ObjectMapper mapper = new ObjectMapper();
 
-  public DashboardService(DbService dbService) {
+  public DashboardService(DbService dbService, UserService userService) {
     this.dbService = dbService;
+    this.userService = userService;
   }
 
   /**
@@ -46,7 +47,7 @@ public class DashboardService {
    *
    * @return aggregated dashboard data
    */
-  public DashboardResponseDTO getData() {
+  public DashboardResponseDTO getUserDashboardData() {
     // Load only member fields required for dashboard statistics.
     // Full member data is intentionally not exposed here.
     List<Map<String, Object>> membersRaw = dbService.findAll("members");
@@ -95,5 +96,58 @@ public class DashboardService {
 
     return new DashboardResponseDTO(
         responseMemberData, events.size(), responseUpcomingEventData, scores.size());
+  }
+
+  /**
+   * Loads and aggregates all data required for the admin dashboard view with the exception of
+   * changelogs.
+   *
+   * <p>This method intentionally returns summary information instead of full documents to avoid
+   * sending unnecessary data to the frontend.
+   *
+   * @return aggregated admin dashboard data
+   */
+  public AdminDashboardResponseDTO getAdminDashboardData() {
+    List<Map<String, Object>> feedbacksRaw = dbService.findAll("feedbacks");
+    List<UserFeedback> feedbacks =
+        feedbacksRaw.stream().map(map -> mapper.convertValue(map, UserFeedback.class)).toList();
+
+    double averageSentiment =
+        feedbacks.stream().mapToInt(UserFeedback::getSentiment).average().orElse(0.0);
+
+    List<Map<String, Object>> bugReportsRaw = dbService.findAll("bug_reports");
+    List<BugReport> bugReports =
+        bugReportsRaw.stream().map(map -> mapper.convertValue(map, BugReport.class)).toList();
+
+    Optional<String> mostUsedHashOptional =
+        bugReports.stream()
+            .map(BugReport::getMetaData)
+            .filter(Objects::nonNull)
+            .map(UserReportMetaData::getRoute)
+            .filter(Objects::nonNull)
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+            .entrySet()
+            .stream()
+            .max(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey);
+
+    String mostUsedHash = "";
+    if (mostUsedHashOptional.isPresent()) {
+      mostUsedHash = mostUsedHashOptional.get();
+    }
+
+    List<Map<String, Object>> usersRaw = dbService.findAll("users");
+    List<User> users = usersRaw.stream().map(map -> mapper.convertValue(map, User.class)).toList();
+
+    long totalOrphaned =
+        users.stream().map(User::getMemberId).filter(userService::isOrphan).count();
+
+    return new AdminDashboardResponseDTO(
+        feedbacks.size(),
+        bugReports.size(),
+        averageSentiment,
+        mostUsedHash,
+        users.size(),
+        totalOrphaned);
   }
 }
