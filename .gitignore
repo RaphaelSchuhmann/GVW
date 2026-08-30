@@ -199,3 +199,5 @@ prod/
 .run/
 
 *_extract/
+
+output/
