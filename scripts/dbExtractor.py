@@ -4,54 +4,82 @@ import json
 import io
 import os
 
-def extract_access_direct(db_filename, output_json):
-    # 1. Force the absolute path. 
-    # This ensures mdb-export isn't looking in the wrong folder.
+
+def extract_access_direct(db_filename, output_dir):
+    # Force the absolute path.
     base_dir = os.path.dirname(os.path.abspath(__file__))
     abs_db_path = os.path.join(base_dir, db_filename)
-    
+
     if not os.path.exists(abs_db_path):
         print(f"CRITICAL: Python cannot find the file at {abs_db_path}")
         return
 
     tables = [
-        "Abgaenge", "Ansprechpartner", "Ereignisse", "Funktionen", 
-        "Kathegorieen", "Konfiguration", "Mitgliederdaten", "Noten", 
-        "Noten_Liedart", "OBE_Online", "OversoA0", "OversoAN", 
-        "Programm", "Sitzungen", "SitzungenArt", "SitzungTOP", "Vereinsgruppen"
+        "Abgaenge", "Ansprechpartner", "Ereignisse", "Funktionen",
+        "Kathegorieen", "Konfiguration", "Mitgliederdaten", "Noten",
+        "Noten_Liedart", "OBE_Online", "OversoA0", "OversoAN",
+        "Programm", "Sitzungen", "SitzungenArt", "SitzungTOP",
+        "Vereinsgruppen"
     ]
-    
-    db_content = {}
+
+    output_path = os.path.join(base_dir, output_dir)
+    os.makedirs(output_path, exist_ok=True)
 
     for table in tables:
         print(f"Extracting table: {table}...", end=" ")
-        
-        # 2. Use a list for arguments. This is safer on Linux.
-        # We do NOT use shell=True here to avoid path mangling.
+
         try:
+            # Get raw bytes from mdb-export.
             result = subprocess.run(
                 ['mdb-export', abs_db_path, table],
                 capture_output=True,
-                text=True,
-                encoding='latin-1',
-                check=True # This will raise an error if the command fails
+                check=True
             )
-            
-            # 3. Read the CSV data
-            df = pd.read_csv(io.StringIO(result.stdout))
-            db_content[table] = df.to_dict(orient='records')
-            print("Done.")
-            
+
+            # mdb-export outputs UTF-8.
+            csv_data = result.stdout.decode('utf-8')
+
+            # Keep everything as strings.
+            # Empty fields remain empty strings instead of becoming NaN.
+            df = pd.read_csv(
+                io.StringIO(csv_data),
+                dtype=str,
+                keep_default_na=False,
+                na_filter=False
+            )
+
+            records = df.to_dict(orient='records')
+
+            table_json_path = os.path.join(
+                output_path,
+                f"{table}.json"
+            )
+
+            with open(table_json_path, 'w', encoding='utf-8') as f:
+                json.dump(
+                    records,
+                    f,
+                    indent=4,
+                    ensure_ascii=False
+                )
+
+            print(f"Done -> {table_json_path}")
+
         except subprocess.CalledProcessError as e:
-            print(f"FAILED. Error: {e.stderr.strip()}")
+            error = e.stderr.decode('utf-8', errors='replace')
+            print(f"FAILED. Error: {error.strip()}")
+
+        except UnicodeDecodeError as e:
+            print(f"FAILED. UTF-8 decoding error: {e}")
+
         except Exception as e:
-            print(f"Pandas Error: {e}")
+            print(f"FAILED. {type(e).__name__}: {e}")
 
-    # 4. Save to JSON
-    with open(output_json, 'w', encoding='utf-8') as f:
-        json.dump(db_content, f, indent=4, default=str)
-    
-    print(f"\nFinal check: {output_json} has been written.")
+    print(f"\nExtraction complete.")
+    print(f"JSON files have been written to: {output_path}")
 
-# Make sure 'Weppersdorf.mdv' is in the SAME folder as this .py script
-extract_access_direct("Weppersdorf_v09.mdv", "output.json")
+
+extract_access_direct(
+    "Weppersdorf_v09.mdv",
+    "output"
+)
