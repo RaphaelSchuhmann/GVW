@@ -35,7 +35,10 @@ public class SseService {
 
     emitter.onCompletion(() -> emitters.remove(emitter));
     emitter.onTimeout(() -> emitters.remove(emitter));
-    emitter.onError((e) -> emitters.remove(emitter));
+    emitter.onError(e -> {
+      log.debug("SSE client disconnected: {}", e.getMessage());
+      emitters.remove(emitter);
+    });
 
     emitters.add(emitter);
 
@@ -93,6 +96,7 @@ public class SseService {
           try {
             emitter.send(SseEmitter.event().comment("heartbeat"));
           } catch (Exception ex) {
+            log.debug("SSE client disconnected: {}", ex.getMessage());
             deadEmitters.add(emitter);
           }
         });
