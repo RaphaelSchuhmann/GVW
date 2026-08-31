@@ -70,7 +70,6 @@
                     <span class="material-symbols-rounded text-icon-dt-4">{button.icon}</span>
                     <p class="text-dt-3">{button.title}</p>
                 </div>
-                <p class="text-dt-3 ml-auto">{button.articleCount}</p>
             </SidebarButton>
         {/each}
     </div>
