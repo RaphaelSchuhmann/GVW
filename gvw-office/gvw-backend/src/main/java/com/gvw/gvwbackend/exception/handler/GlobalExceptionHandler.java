@@ -133,6 +133,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(Exception.class)
   @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
   public ResponseEntity<ErrorResponseDTO> handleGeneric(Exception ex) {
+    log.error("Generic Exception thrown: {}", ex.getMessage());
     return generateResponse("0000500", null, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 
