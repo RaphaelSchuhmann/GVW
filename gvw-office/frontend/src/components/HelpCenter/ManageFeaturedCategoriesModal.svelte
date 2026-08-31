@@ -31,7 +31,7 @@
         return count;
     });
 
-    let addDisabled = getEnabledCount < 1 || getEnabledCount > 6;
+    let addDisabled = $derived(getEnabledCount < 1 || getEnabledCount > 6);
 
     function submit() {
         isSubmitting = true;
