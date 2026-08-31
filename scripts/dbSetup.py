@@ -1,9 +1,12 @@
+import base64
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
-import base64
+import bcrypt
+import uuid
+
 
 DATABASES = [
     "users",
@@ -20,6 +23,7 @@ DATABASES = [
 ]
 
 APP_SETTINGS_DB = "app_settings"
+USERS_DB = "users"
 
 DEFAULT_SETTINGS = {
     "_id": "general",
@@ -30,22 +34,29 @@ DEFAULT_SETTINGS = {
         "Alle Kategorien": "all",
     },
     "feedbackCategories": {
-       "_functionality": "Funktionalität",
-       "_ui": "UI/Design",
-       "_general": "Allgemein",
-       "_other": "Sonstiges",
-       "Funktionalität": "_functionality",
-       "UI/Design": "_ui",
-       "Allgemein": "_general",
-       "Sonstiges": "_other"
+        "_functionality": "Funktionalität",
+        "_ui": "UI/Design",
+        "_general": "Allgemein",
+        "_other": "Sonstiges",
+        "Funktionalität": "_functionality",
+        "UI/Design": "_ui",
+        "Allgemein": "_general",
+        "Sonstiges": "_other",
     },
     "appVersion": "v1.0",
     "helpCenterCategories": [],
 }
 
 COUCHDB_URL = os.environ.get("COUCHDB_URL", "http://127.0.0.1:5984").rstrip("/")
+
 COUCHDB_USERNAME = os.environ["COUCHDB_USERNAME"]
 COUCHDB_PASSWORD = os.environ["COUCHDB_PASSWORD"]
+
+ADMIN_EMAIL = os.environ.get("GVW_ADMIN_EMAIL")
+ADMIN_NAME = os.environ.get("GVW_ADMIN_NAME")
+ADMIN_PASSWORD = os.environ.get("GVW_ADMIN_PASSWORD")
+ADMIN_PHONE = os.environ.get("GVW_ADMIN_PHONE", "")
+ADMIN_ADDRESS = os.environ.get("GVW_ADMIN_ADDRESS", "")
 
 def request(method, path, body=None):
     url = f"{COUCHDB_URL}/{path}"
@@ -62,7 +73,7 @@ def request(method, path, body=None):
 
     data = None if body is None else json.dumps(body).encode("utf-8")
 
-    request = urllib.request.Request(
+    req = urllib.request.Request(
         url,
         data=data,
         headers=headers,
@@ -70,7 +81,7 @@ def request(method, path, body=None):
     )
 
     try:
-        with urllib.request.urlopen(request) as response:
+        with urllib.request.urlopen(req) as response:
             response_body = response.read()
 
             if not response_body:
@@ -82,14 +93,17 @@ def request(method, path, body=None):
         response_body = e.read()
 
         try:
-            body = json.loads(response_body)
+            response_body = json.loads(response_body)
         except json.JSONDecodeError:
-            body = None
+            response_body = None
 
-        return e.code, body
+        return e.code, response_body
 
     except urllib.error.URLError as e:
-        print(f"ERROR: Could not connect to CouchDB: {e}", file=sys.stderr)
+        print(
+            f"ERROR: Could not connect to CouchDB: {e}",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
 def create_databases():
@@ -111,6 +125,78 @@ def create_databases():
                 file=sys.stderr,
             )
             sys.exit(1)
+
+def create_admin_user():
+    print("Creating default admin user...")
+
+    if not ADMIN_PASSWORD:
+        print(
+            "  [ERROR] GVW_ADMIN_PASSWORD environment variable "
+            "is not set.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # Check whether an admin user already exists.
+    status, result = request(
+        "POST",
+        f"{USERS_DB}/_find",
+        {
+            "selector": {
+                "role": "ADMIN",
+            },
+            "limit": 1,
+        },
+    )
+
+    if status != 200:
+        print(
+            f"  [ERROR] Failed to check for existing admin user "
+            f"(HTTP {status})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    if result.get("docs"):
+        print("  [OK] Admin user already exists")
+        return
+
+    password_hash = bcrypt.hashpw(
+        ADMIN_PASSWORD.encode("utf-8"),
+        bcrypt.gensalt(),
+    ).decode("utf-8")
+
+    user = {
+        "_id": str(uuid.uuid4()),
+        "email": ADMIN_EMAIL,
+        "name": ADMIN_NAME,
+        "password": password_hash,
+        "phone": ADMIN_PHONE,
+        "address": ADMIN_ADDRESS,
+        "changePassword": False,
+        "firstLogin": True,
+        "userId": str(uuid.uuid4()),
+        "role": "ADMIN",
+        "memberId": "1",
+        "failedLoginAttempts": 0,
+    }
+
+    status, result = request(
+        "POST",
+        USERS_DB,
+        user,
+    )
+
+    if status not in (201, 202):
+        print(
+            f"  [ERROR] Failed to create admin user "
+            f"(HTTP {status})",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    print(f"  [OK] Created admin user: {ADMIN_EMAIL}")
+    print("  [OK] firstLogin is set to true")
 
 
 def initialize_default_settings():
@@ -157,7 +243,7 @@ def initialize_default_settings():
     if status not in (201, 202):
         print(
             f"  [ERROR] Failed to insert default settings "
-            f"document (HTTP {status})",
+            f"(HTTP {status})",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -172,6 +258,10 @@ def main():
 
     create_databases()
     print()
+
+    create_admin_user()
+    print()
+
     initialize_default_settings()
 
     print()
