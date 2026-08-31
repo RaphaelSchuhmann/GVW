@@ -164,6 +164,7 @@
                         {#each hours as hour, i (i)}
                             <button class="snap-item h-12 w-full shrink-0 flex items-center justify-center text-dt-4
                                           {activeHour === hour ? 'text-gv-dark-text font-bold' : 'text-gv-light-text'}"
+                                    data-hour={hour}
                                     onclick={selectHour}>
                                 {hour}
                             </button>

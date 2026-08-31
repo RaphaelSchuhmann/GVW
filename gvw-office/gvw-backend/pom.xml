@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.gvw</groupId>
     <artifactId>gvw-backend</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <name>gvw-backend</name>
     <description>gvw-backend</description>
     <url/>
