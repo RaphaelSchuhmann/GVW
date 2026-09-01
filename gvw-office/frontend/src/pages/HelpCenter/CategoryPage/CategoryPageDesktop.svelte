@@ -54,7 +54,7 @@
 
 <div class="flex flex-col w-full h-full items-start justify-start gap-4 p-10 overflow-y-auto">
     <div class="flex flex-col items-start justify-start gap-8 w-full h-full">
-        <div class="flex flex-col items-start justify-start w-full gap-2 ">
+        <div class="flex flex-col items-start justify-start w-full gap-4">
             <div class="w-full flex items-center justify-start">
                 <button class="group cursor-pointer flex items-center justify-start gap-2 p-2"
                         onclick={clearActiveCategory}>

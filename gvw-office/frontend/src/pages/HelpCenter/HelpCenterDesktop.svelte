@@ -32,11 +32,11 @@
 
 <SearchModal bind:this={searchModalRef} isMobile={false} />
 
-<main class="flex h-screen overflow-hidden">
+<main class="flex flex-col min-h-screen w-full">
     <div class="flex flex-col w-dvw h-dvh overflow-hidden">
         <Header onClickAddCategory={addCategoryModalRef?.showModal} onClickSearchBar={searchModalRef?.openSearch} />
 
-        <div class="flex w-dvw h-full overflow-hidden">
+        <div class="flex h-full w-dvw overflow-hidden">
             <DesktopSidebar buttons={appSettings.helpCenterCategories} />
 
             {#if helpCenterStore.activeCategory === "" && helpCenterStore.activeArticle === null}

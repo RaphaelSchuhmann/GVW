@@ -66,9 +66,9 @@
         {#each buttons as button (button.title)}
             <SidebarButton onclick={selectCategory} data-id={button.id} data-title={button.title}
                            selected={currentCategory === button.title}>
-                <div class="flex items-center justify-start gap-2">
-                    <span class="material-symbols-rounded text-icon-dt-4">{button.icon}</span>
-                    <p class="text-dt-3">{button.title}</p>
+                <div class="flex items-center justify-start gap-2 min-w-0 overflow-hidden">
+                    <span class="material-symbols-rounded text-icon-dt-4 shrink-0">{button.icon}</span>
+                    <p class="text-dt-3 text-left truncate min-w-0 w-full">{button.title}</p>
                 </div>
             </SidebarButton>
         {/each}

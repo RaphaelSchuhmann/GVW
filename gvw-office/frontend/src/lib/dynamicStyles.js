@@ -49,9 +49,9 @@ export const justifyMap = {
 };
 
 export const widthMap = {
-    "1/2": "w-full xl:w-1/2",
+    "1/2": "w-full md:w-2/3 xl:w-1/2",
 
-    "1/3": "w-2/3 xl:w-1/3",
+    "1/3": "w-3/4 min-[1300px]:w-1/3",
     "2/3": "w-full xl:w-2/3",
 
     "1/4": "w-2/4 xl:w-1/4",

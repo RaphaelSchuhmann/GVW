@@ -159,7 +159,7 @@
         </div>
     {/if}
     <div class="flex flex-col w-full flex-1 items-start justify-start min-h-0 overflow-hidden">
-        <div class="flex flex-col items-start justify-start {viewport.width < 1000 ? isMobile ? 'p-0 w-full' : 'p-2 w-full' : viewport.width > 1200 ? 'p-5 max-w-3/5 w-3/5 pl-8 pr-8' : 'p-5 max-w-4/5 w-4/5 pl-8 pr-8'} gap-4 h-full overflow-y-auto min-h-0 mx-auto">
+        <div class="flex flex-col items-start justify-start w-full gap-4 h-full overflow-y-auto min-h-0 mx-auto p-4 pl-5">
             <ContentDisplay reportId={itemData.id} bind:title={data.title} author={data.author}
                             readingTime={data.readingTime} bind:content={data.content} isEditing={isEditing}
                             bind:activeBlock={activeBlock} configKey={page} isMobile={isMobile} />

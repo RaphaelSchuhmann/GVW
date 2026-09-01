@@ -105,12 +105,12 @@
                     bind:this={confirmDeleteArticleModal} />
 
 <div class="flex flex-col w-full h-full items-start justify-start gap-4 p-10 overflow-y-auto">
-    <div class="flex flex-col items-start justify-start gap-8 w-full h-full">
+    <div class="flex flex-col items-start justify-start gap-8 w-full">
         <div class="w-full flex items-center justify-start">
-            <button class="group cursor-pointer flex items-center justify-start gap-2 p-2"
+            <button class="group cursor-pointer flex items-center justify-start gap-2 p-2 max-w-1/2"
                     onclick={clearActiveArticle}>
                 <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_back</span>
-                <span class="text-dt-5 text-gv-dark-text group-hover:underline">{category?.title || "Zurück"}</span>
+                <span class="text-dt-5 text-gv-dark-text min-w-0 flex-1 truncate group-hover:underline">{category?.title || "Zurück"}</span>
             </button>
             {#if user.role === "admin" && !isEditing}
                 <div class="flex items-center gap-4 ml-auto">

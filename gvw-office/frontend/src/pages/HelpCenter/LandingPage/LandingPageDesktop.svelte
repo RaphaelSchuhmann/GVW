@@ -36,7 +36,7 @@
     <SearchBarButton onclick={searchBarButton} />
 
     <div
-        class="w-full h-full flex flex-col items-start justify-start gap-2 p-5 bg-white rounded-1 drop-shadow-[0_0_5px_rgba(0,0,0,0.2)]">
+        class="w-full flex flex-col items-start justify-start gap-2 p-5 bg-white rounded-1 drop-shadow-[0_0_5px_rgba(0,0,0,0.2)]">
         <div class="flex items-center justify-start w-full">
             <p class="text-dt-3 font-bold">Kategorien</p>
             {#if user.role === "admin"}
@@ -60,7 +60,7 @@
                                     {category.icon}
                                 </span>
                                 <div class="flex flex-col items-start justify-start w-full">
-                                    <p class="text-dt-3 text-gv-dark-text">{category.title}</p>
+                                    <p class="text-dt-3 text-left text-gv-dark-text">{category.title}</p>
                                     <p class="text-dt-5 text-left text-gv-light-text text-wrap line-clamp-2 truncate">{category.description}</p>
                                 </div>
                                 <div class="flex items-center justify-start gap-2">
