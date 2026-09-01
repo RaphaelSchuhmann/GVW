@@ -48,7 +48,7 @@
                                     class="rounded-2 bg-gv-bg-bar p-4 text-icon-dt-2 text-gv-primary material-symbols-rounded">
                                     {category.icon}
                                 </span>
-                                <p class="text-dt-3 text-gv-dark-text text-left line-clamp-2">{category.title}</p>
+                                <p class="text-dt-3 text-gv-dark-text text-left line-clamp-2 min-w-0 w-full">{category.title}</p>
                                 <div class="flex items-center justify-start gap-2">
                                     <p class="text-gv-light-text text-dt-5">{category.articleCount} Artikel</p>
                                     <span

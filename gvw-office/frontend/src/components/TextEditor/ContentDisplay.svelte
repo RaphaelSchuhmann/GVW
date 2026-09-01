@@ -293,7 +293,7 @@
 
     {#each content as item, index (item.id)}
         <div
-            class="group flex items-start justify-start gap-2 p-2 rounded transition-all duration-75 w-full {isEditing ? 'touch-none' : ''}"
+            class="group flex items-start justify-start gap-2 p-2 rounded transition-all duration-75 w-full"
             class:opacity-40={draggedIndex === index}
             data-index={index}
             ondragenter={handleDragEnter}
@@ -304,7 +304,7 @@
             {#if isEditing}
                 <span
                     draggable={isEditing}
-                    class="material-symbols-rounded text-gv-light-text cursor-grab active:cursor-grabbing select-none group-hover:opacity-100 opacity-50"
+                    class="material-symbols-rounded text-gv-light-text cursor-grab active:cursor-grabbing select-none group-hover:opacity-100 opacity-50 {isEditing ? 'touch-none' : ''}"
                     data-index={index}
                     ondragstart={handleDragStart}
                     ondragend={handleDragEnd}
