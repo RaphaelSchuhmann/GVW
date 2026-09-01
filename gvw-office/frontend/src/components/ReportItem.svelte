@@ -4,6 +4,7 @@
     import { reportTypeMap, deleteReport, highlight } from "../services/reportService.svelte.js";
     import { push } from "svelte-spa-router";
     import SanitizedHTML from "./SanitizedHTML.svelte";
+    import { viewport } from "../stores/viewport.svelte.js";
 
     let {
         id = "",
@@ -25,13 +26,13 @@
 </script>
 
 <Card>
-    <div class={`items-start w-full ${isMobile ? "flex-col" : "flex"}`}>
+    <div class={`items-start w-full ${viewport.width < 1100 ? "flex-col" : "flex"}`}>
         <button class="flex flex-col items-start gap-4 cursor-pointer w-full" onclick={openReport}>
             <div class="flex items-center gap-2">
                 <span class="material-symbols-rounded text-gv-primary text-icon-dt-4">docs</span>
                 <span class="text-gv-dark-text text-dt-5 w-full text-nowrap truncate text-left">{title}</span>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex {isMobile ? 'flex-col items-start' : 'flex-row'} items-center gap-4">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-rounded text-gv-light-text text-icon-dt-6">calendar_today</span>
                     <span class="text-gv-light-text text-dt-6 w-full text-left text-nowrap truncate">{date}</span>
@@ -49,7 +50,7 @@
                 <span class="text-gv-light-text mt-2 text-dt-6 line-clamp-2 truncate text-left">{additionalText}</span>
             {/if}
         </button>
-        <div class={`flex items-center ${isMobile ? "justify-start mt-4" : "justify-end"} gap-4 ml-auto`}>
+        <div class={`flex items-center ${viewport.width < 1100 ? "justify-start mt-4" : "justify-end"} gap-4 ml-auto`}>
             <Chip text={reportTypeMap[type] || reportTypeMap["other"]} />
 
             <button

@@ -19,7 +19,7 @@
     }
 </script>
 
-<div class="min-[1230px]:max-w-1/4 max-[1230px]:max-w-2/5 h-dvh flex flex-col items-center bg-gv-bg-bar border-r border-gv-border-bar">
+<div class="{!minimized ? 'min-[1230px]:max-w-1/4 max-[1230px]:w-2/5' : ''} self-stretch min-h-full flex flex-col items-center bg-gv-bg-bar border-r border-gv-border-bar">
     <div class="w-full flex items-center border-b border-gv-border-bar p-5">
         {#if !minimized}
             <div class="flex flex-col items-start justify-around h-full">

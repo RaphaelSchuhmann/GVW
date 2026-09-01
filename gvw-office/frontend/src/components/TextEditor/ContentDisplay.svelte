@@ -62,15 +62,9 @@
      */
     function handleDragEnter(event) {
         const index = Number(event.currentTarget.dataset.index);
-
         if (!isEditing || draggedIndex === null || draggedIndex === index) return;
 
-        const updatedItems = [...content];
-        const [draggedItem] = updatedItems.splice(draggedIndex, 1);
-        updatedItems.splice(index, 0, draggedItem);
-
-        draggedIndex = index;
-        content = updatedItems;
+        reorderContent(draggedIndex, index);
     }
 
     /**
@@ -82,6 +76,70 @@
      */
     function handleDragEnd() {
         draggedIndex = null;
+    }
+
+    function reorderContent(fromIndex, toIndex) {
+        const updatedItems = [...content];
+        const [draggedItem] = updatedItems.splice(fromIndex, 1);
+        updatedItems.splice(toIndex, 0, draggedItem);
+
+        draggedIndex = toIndex;
+        content = updatedItems;
+    }
+
+    let isTouchDragging = false;
+    let activePointerHandle = null;
+
+    function handlePointerDown(event) {
+        if (!isEditing || event.pointerType === "mouse") return;
+
+        activePointerHandle = event.currentTarget;
+        const index = Number(activePointerHandle.dataset.index);
+
+        draggedIndex = index;
+        isTouchDragging = true;
+
+        // Capture pointer events to track touch coordinates across the screen
+        activePointerHandle.setPointerCapture(event.pointerId);
+    }
+
+    function handlePointerMove(event) {
+        if (!isTouchDragging || event.pointerType === "mouse" || !activePointerHandle) return;
+
+        // Temporarily hide pointer events on the handle so elementFromPoint looks THROUGH it
+        activePointerHandle.style.pointerEvents = "none";
+        const elementUnderFinger = document.elementFromPoint(event.clientX, event.clientY);
+        activePointerHandle.style.pointerEvents = "";
+
+        const targetBlock = elementUnderFinger?.closest?.("[role='group']");
+
+        if (targetBlock && targetBlock.dataset.index !== undefined) {
+            const targetIndex = Number(targetBlock.dataset.index);
+            if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                reorderContent(draggedIndex, targetIndex);
+            }
+        }
+    }
+
+    function handlePointerUp(event) {
+        if (event.pointerType === "mouse") return;
+
+        if (activePointerHandle) {
+            activePointerHandle.style.pointerEvents = "";
+            if (activePointerHandle.hasPointerCapture(event.pointerId)) {
+                activePointerHandle.releasePointerCapture(event.pointerId);
+            }
+
+            activePointerHandle.blur();
+        }
+
+        isTouchDragging = false;
+        draggedIndex = null;
+        activePointerHandle = null;
+
+        if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+        }
     }
 
     /**
@@ -213,9 +271,9 @@
 
 <div class="h-full flex flex-col items-start justify-start gap-1 w-full overflow-y-auto overflow-x-hidden">
     {#if isEditing}
-        <input type="text" class="text-dt-3 text-gv-dark-text ml-9.5" bind:value={title} placeholder="Berichttitel" />
+        <input type="text" class="text-dt-3 text-gv-dark-text ml-9.5 w-3/4" bind:value={title} placeholder="Berichttitel" />
     {:else}
-        <p class={`text-dt-3 text-gv-dark-text`}>{title}</p>
+        <p class={`text-dt-3 text-gv-dark-text w-full`}>{title}</p>
     {/if}
 
     {#if !isEditing}
@@ -246,10 +304,14 @@
             {#if isEditing}
                 <span
                     draggable={isEditing}
-                    class="material-symbols-rounded text-gv-light-text cursor-grab active:cursor-grabbing select-none group-hover:opacity-100 opacity-0"
+                    class="material-symbols-rounded text-gv-light-text cursor-grab active:cursor-grabbing select-none group-hover:opacity-100 opacity-50 {isEditing ? 'touch-none' : ''}"
                     data-index={index}
                     ondragstart={handleDragStart}
                     ondragend={handleDragEnd}
+                    onpointerdown={handlePointerDown}
+                    onpointermove={handlePointerMove}
+                    onpointerup={handlePointerUp}
+                    onpointercancel={handlePointerUp}
                     aria-label="Drag to reorder"
                     role="presentation"
                 >

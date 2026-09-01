@@ -102,7 +102,7 @@
                         </div>
                     </Card>
                 </div>
-                <div class="w-full h-full gap-4 flex flex-col items-center">
+                <div class="w-full {viewport.width >= 1300 ? 'h-full' : ''} gap-4 flex flex-col items-center">
                     <Card fillHeight={viewport.width > 1300}>
                         <div class="w-full flex items-center justify-start p-2">
                             <p class="font-medium text-gv-dark-text text-dt-3">Berichte Hub</p>
