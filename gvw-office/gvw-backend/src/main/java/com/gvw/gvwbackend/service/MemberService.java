@@ -11,6 +11,7 @@ import com.gvw.gvwbackend.model.Role;
 import com.gvw.gvwbackend.model.User;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -260,37 +261,60 @@ public class MemberService {
     Member member = getMemberById(request.id(), ErrorAction.UPDATE);
     User user = getUserByMemberId(request.id(), ErrorAction.UPDATE);
 
-    boolean statusChanged = !member.getStatus().equals(request.status());
+    boolean statusChanged = !Objects.equals(member.getStatus(), request.status());
+
+    Member originalMember = member;
 
     memberMapper.updateMemberFromDto(request, member);
     memberMapper.updateUserFromDto(request, user);
 
     member.setRev(request.rev());
 
-    log.debug("Updating member in database");
-    Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
-    log.debug("Member updated successfully");
-
     String temporaryPassword = AuthService.generatePassword(3, 2);
+
     if (statusChanged && request.status().equals("active")) {
       user.setPassword(passwordEncoder.encode(temporaryPassword));
       user.setUserActive(true);
       user.setChangePassword(true);
+      member.setStatus("active");
     } else {
       user.setUserActive(false);
+      member.setStatus("inactive");
     }
 
-    log.debug("Updating linked user in database");
-    Map<String, Object> userResult = dbService.update("users", user.getId(), user);
-    log.debug("Linked user updated successfully");
+    log.debug("Updating member in database");
+
+    Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
+
+    Map<String, Object> userResult;
+
+    try {
+      log.debug("Updating linked user in database");
+      userResult = dbService.update("users", user.getId(), user);
+    } catch (RuntimeException ex) {
+      log.error("Linked user update failed, attempting to roll back member update", ex);
+
+      try {
+        originalMember.setRev((String) memberResult.get("rev"));
+        dbService.update("members", originalMember.getId(), originalMember);
+
+        log.debug("Member update rolled back successfully");
+      } catch (RuntimeException rollbackEx) {
+        log.error("Failed to roll back member update", rollbackEx);
+      }
+
+      throw ex;
+    }
 
     if (statusChanged && request.status().equals("active")) {
       log.debug("Sending new user email");
+
       mailService.sendMail(
-              user.getEmail(),
-              "GVW-Office: Temporäres Password",
-              "resetPassword",
-              Map.of("tempPassword", temporaryPassword));
+          user.getEmail(),
+          "GVW-Office: Temporäres Password",
+          "resetPassword",
+          Map.of("tempPassword", temporaryPassword));
+
       log.debug("New user email sent successfully");
     }
 
@@ -356,10 +380,10 @@ public class MemberService {
     if (user.getUserActive()) {
       log.debug("Sending new user email");
       mailService.sendMail(
-              user.getEmail(),
-              "GVW-Office: Temporäres Password",
-              "resetPassword",
-              Map.of("tempPassword", temporaryPassword));
+          user.getEmail(),
+          "GVW-Office: Temporäres Password",
+          "resetPassword",
+          Map.of("tempPassword", temporaryPassword));
       log.debug("New user email sent successfully");
     }
 

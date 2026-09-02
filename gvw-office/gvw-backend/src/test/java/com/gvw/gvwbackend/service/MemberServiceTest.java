@@ -51,8 +51,8 @@ public class MemberServiceTest {
             "phoneNumber",
             "address",
             "t1",
-            "member",
             "active",
+            "member",
             "birthdate",
             "joined");
 
@@ -93,8 +93,8 @@ public class MemberServiceTest {
             "phoneNumber",
             "address",
             "t1",
-            "member",
             "active",
+            "member",
             "birthdate",
             "joined");
 
@@ -120,8 +120,8 @@ public class MemberServiceTest {
             "phoneNumber",
             "address",
             "t1",
-            "member",
             "active",
+            "member",
             "birthdate",
             "joined");
 
@@ -156,8 +156,8 @@ public class MemberServiceTest {
             "phoneNumber",
             "address",
             "t1",
-            "member",
             "active",
+            "member",
             "birthdate",
             "joined");
 
@@ -182,8 +182,8 @@ public class MemberServiceTest {
             "phoneNumber",
             "address",
             "t1",
-            "member",
             "active",
+            "member",
             "birthdate",
             "joined");
 

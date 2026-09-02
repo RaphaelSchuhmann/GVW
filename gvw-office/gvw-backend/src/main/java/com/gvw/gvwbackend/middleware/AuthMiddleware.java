@@ -3,7 +3,9 @@ package com.gvw.gvwbackend.middleware;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.model.Role;
+import com.gvw.gvwbackend.model.User;
 import com.gvw.gvwbackend.service.JwtService;
+import com.gvw.gvwbackend.service.UserService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -49,6 +51,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class AuthMiddleware extends OncePerRequestFilter {
   private final JwtService jwtService;
   private final AntPathMatcher pathMatcher = new AntPathMatcher();
+  private final UserService userService;
 
   private final List<String> EXCLUDED_PATHS =
       List.of(
@@ -59,8 +62,9 @@ public class AuthMiddleware extends OncePerRequestFilter {
           "/settings/get",
           "/auth/changePw");
 
-  public AuthMiddleware(JwtService jwtService) {
+  public AuthMiddleware(JwtService jwtService, UserService userService) {
     this.jwtService = jwtService;
+    this.userService = userService;
   }
 
   /**
@@ -136,6 +140,13 @@ public class AuthMiddleware extends OncePerRequestFilter {
     try {
       String userId = jwtService.extractUserId(token);
       Claims claims = jwtService.extractAllClaims(token);
+
+      User user = userService.getUserByUserId(userId, ErrorAction.AUTH);
+
+      if (!user.getUserActive()) {
+        sendUnauthorized(response);
+        return;
+      }
 
       String roleName = claims.get("role", String.class);
 

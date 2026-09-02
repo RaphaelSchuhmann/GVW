@@ -35,10 +35,11 @@ public class SseService {
 
     emitter.onCompletion(() -> emitters.remove(emitter));
     emitter.onTimeout(() -> emitters.remove(emitter));
-    emitter.onError(e -> {
-      log.debug("SSE client disconnected: {}", e.getMessage());
-      emitters.remove(emitter);
-    });
+    emitter.onError(
+        e -> {
+          log.debug("SSE client disconnected: {}", e.getMessage());
+          emitters.remove(emitter);
+        });
 
     emitters.add(emitter);
 
