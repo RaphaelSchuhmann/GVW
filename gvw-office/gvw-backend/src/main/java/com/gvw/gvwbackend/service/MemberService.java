@@ -163,18 +163,21 @@ public class MemberService {
       Member savedMember = members.getFirst();
       user.setMemberId(savedMember.getId());
       user.setPassword(passwordEncoder.encode(temporaryPassword));
+      user.setUserActive(member.getStatus().equals("active"));
 
       log.debug("Inserting linked user into database");
       dbService.insert("users", user);
       log.debug("Linked user inserted successfully");
 
-      log.debug("Sending new user email");
-      mailService.sendMail(
-          user.getEmail(),
-          "GVW-Office: Temporäres Password",
-          "newUser",
-          Map.of("tempPassword", temporaryPassword));
-      log.debug("New user email sent successfully");
+      if (user.getUserActive()) {
+        log.debug("Sending new user email");
+        mailService.sendMail(
+            user.getEmail(),
+            "GVW-Office: Temporäres Password",
+            "newUser",
+            Map.of("tempPassword", temporaryPassword));
+        log.debug("New user email sent successfully");
+      }
 
       try {
         sseService.broadcastRefresh("MEMBERS");
@@ -257,18 +260,39 @@ public class MemberService {
     Member member = getMemberById(request.id(), ErrorAction.UPDATE);
     User user = getUserByMemberId(request.id(), ErrorAction.UPDATE);
 
+    boolean statusChanged = !member.getStatus().equals(request.status());
+
     memberMapper.updateMemberFromDto(request, member);
     memberMapper.updateUserFromDto(request, user);
 
     member.setRev(request.rev());
 
+    log.debug("Updating member in database");
+    Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
+    log.debug("Member updated successfully");
+
+    String temporaryPassword = AuthService.generatePassword(3, 2);
+    if (statusChanged && request.status().equals("active")) {
+      user.setPassword(passwordEncoder.encode(temporaryPassword));
+      user.setUserActive(true);
+      user.setChangePassword(true);
+    } else {
+      user.setUserActive(false);
+    }
+
     log.debug("Updating linked user in database");
     Map<String, Object> userResult = dbService.update("users", user.getId(), user);
     log.debug("Linked user updated successfully");
 
-    log.debug("Updating member in database");
-    Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
-    log.debug("Member updated successfully");
+    if (statusChanged && request.status().equals("active")) {
+      log.debug("Sending new user email");
+      mailService.sendMail(
+              user.getEmail(),
+              "GVW-Office: Temporäres Password",
+              "resetPassword",
+              Map.of("tempPassword", temporaryPassword));
+      log.debug("New user email sent successfully");
+    }
 
     try {
       sseService.broadcastRefresh("MEMBERS");
@@ -300,20 +324,44 @@ public class MemberService {
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the member does not exist
    */
-  public String updateMemberStatus(String id, String _rev) {
+  public List<String> updateMemberStatus(String id, String _rev) {
     if (id == null || id.isEmpty()) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.UPDATE, 400)));
     }
 
     Member member = getMemberById(id, ErrorAction.UPDATE);
+    User user = getUserByMemberId(id, ErrorAction.UPDATE);
 
     member.setRev(_rev);
     member.setStatus("active".equals(member.getStatus()) ? "inactive" : "active");
 
+    String temporaryPassword = AuthService.generatePassword(3, 2);
+    if (member.getStatus().equals("active")) {
+      user.setPassword(passwordEncoder.encode(temporaryPassword));
+      user.setUserActive(true);
+      user.setChangePassword(true);
+    } else {
+      user.setUserActive(false);
+    }
+
+    log.debug("Updating user active in database");
+    Map<String, Object> userResult = dbService.update("users", user.getId(), user);
+    log.debug("User active updated successfully");
+
     log.debug("Updating member status in database");
     Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
     log.debug("Member status updated successfully");
+
+    if (user.getUserActive()) {
+      log.debug("Sending new user email");
+      mailService.sendMail(
+              user.getEmail(),
+              "GVW-Office: Temporäres Password",
+              "resetPassword",
+              Map.of("tempPassword", temporaryPassword));
+      log.debug("New user email sent successfully");
+    }
 
     try {
       sseService.broadcastRefresh("MEMBERS");
@@ -322,7 +370,7 @@ public class MemberService {
     }
 
     if (memberResult != null && memberResult.containsKey("rev")) {
-      return (String) memberResult.get("rev");
+      return List.of((String) memberResult.get("rev"), (String) userResult.get("rev"));
     }
 
     log.error("Member status update failed: database response did not contain a revision");

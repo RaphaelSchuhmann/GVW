@@ -33,6 +33,8 @@ public class User {
   private String memberId;
   private Integer failedLoginAttempts;
 
+  private Boolean userActive;
+
   private Instant lockUntil;
 
   @Builder.Default private final String type = "user";

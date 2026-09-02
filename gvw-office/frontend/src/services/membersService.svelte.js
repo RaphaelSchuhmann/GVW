@@ -201,6 +201,8 @@ export async function switchMemberStatus(id) {
 
         if (handleGlobalApiError(normalizedResponse)) return;
 
+        Object.assign(user, { rev: body.rev_user });
+
         const index = membersStore.raw.findIndex(m => m.id === id);
         if (index !== -1) {
             membersStore.raw[index] = {

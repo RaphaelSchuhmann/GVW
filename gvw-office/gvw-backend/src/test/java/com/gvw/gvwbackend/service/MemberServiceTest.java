@@ -378,10 +378,11 @@ public class MemberServiceTest {
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
         .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
 
-    String resp = memberService.updateMemberStatus("member-id", "1-rev");
+    List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
 
     assertNotNull(resp);
-    assertFalse(resp.isBlank());
+    assertFalse(resp.getFirst().isBlank());
+    assertFalse(resp.getLast().isBlank());
 
     verify(dbService).update("members", savedMemberActive.getId(), savedMemberActive);
 
@@ -399,10 +400,11 @@ public class MemberServiceTest {
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
         .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
 
-    String resp = memberService.updateMemberStatus("member-id", "1-rev");
+    List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
 
     assertNotNull(resp);
-    assertFalse(resp.isBlank());
+    assertFalse(resp.getFirst().isBlank());
+    assertFalse(resp.getLast().isBlank());
 
     verify(dbService).update("members", savedMemberActive.getId(), savedMemberActive);
 
@@ -420,10 +422,11 @@ public class MemberServiceTest {
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
         .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
 
-    String resp = memberService.updateMemberStatus("member-id", "1-rev");
+    List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
 
     assertNotNull(resp);
-    assertFalse(resp.isBlank());
+    assertFalse(resp.getFirst().isBlank());
+    assertFalse(resp.getLast().isBlank());
 
     verify(dbService).update("members", savedMemberActive.getId(), savedMemberActive);
 

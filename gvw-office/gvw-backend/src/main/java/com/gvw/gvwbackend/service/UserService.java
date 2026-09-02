@@ -181,6 +181,7 @@ public class UserService {
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
+    user.setUserActive(true);
 
     log.debug("Inserting new user into database");
     dbService.insert("users", user);

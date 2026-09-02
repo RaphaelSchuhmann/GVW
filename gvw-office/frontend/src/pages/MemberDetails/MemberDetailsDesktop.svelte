@@ -130,7 +130,7 @@
 
     function updateVoice(value) { draft.voice = voiceMapD2I[value]; }
 
-    function updateStatus(value) { draft.status = value; }
+    function updateStatus(value) { draft.status = statusMapD2I[value]; }
 
     function updateRole(value) { draft.role = roleMapD2I[value]; }
 

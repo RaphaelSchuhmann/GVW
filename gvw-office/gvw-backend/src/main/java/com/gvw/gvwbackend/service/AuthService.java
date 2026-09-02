@@ -80,7 +80,7 @@ public class AuthService {
    * @throws TooManyRequestsException if the account is temporarily locked
    */
   public LoginResponseDTO login(LoginRequestDTO requestDTO) {
-    Map<String, Object> query = Map.of("selector", Map.of("email", requestDTO.email()), "limit", 1);
+    Map<String, Object> query = Map.of("selector", Map.of("email", requestDTO.email(), "userActive", true), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
 
     if (users.isEmpty())
@@ -202,7 +202,7 @@ public class AuthService {
           String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 401)));
     }
 
-    Map<String, Object> query = Map.of("selector", Map.of("userId", id), "limit", 1);
+    Map<String, Object> query = Map.of("selector", Map.of("userId", id, "userActive", true), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
     if (users == null || users.isEmpty()) {
       throw new InvalidCredentialsException(

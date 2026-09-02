@@ -77,7 +77,7 @@ public class MemberController {
       resource = ErrorResource.NONE)
   public Map<String, Object> updateMemberStatus(
       @PathVariable String id, @Valid @RequestBody UpdateMemberStatusRequestDTO request) {
-    String rev = memberService.updateMemberStatus(id, request.rev());
-    return Map.of("rev", rev);
+    List<String> revisions = memberService.updateMemberStatus(id, request.rev());
+    return Map.of("rev_member", revisions.get(0), "rev_user", revisions.get(1));
   }
 }
