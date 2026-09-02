@@ -6,9 +6,17 @@ import com.gvw.gvwbackend.dto.response.AutoLoginResponseDTO;
 import com.gvw.gvwbackend.dto.response.LoginResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.User;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,20 +44,8 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private static final Logger log = LoggerFactory.getLogger(AuthService.class);
-  private static final List<String> words =
-      List.of(
-          "apple",
-          "banana",
-          "chorus",
-          "melody",
-          "note",
-          "voice",
-          "sing",
-          "harmony",
-          "music",
-          "choir",
-          "pineapple",
-          "gvw");
+  private static final SecureRandom random = new SecureRandom();
+  private static final List<String> words = loadWords();
 
   public AuthService(DbService dbService, PasswordEncoder passwordEncoder, JwtService jwtService) {
     this.dbService = dbService;
@@ -80,7 +76,8 @@ public class AuthService {
    * @throws TooManyRequestsException if the account is temporarily locked
    */
   public LoginResponseDTO login(LoginRequestDTO requestDTO) {
-    Map<String, Object> query = Map.of("selector", Map.of("email", requestDTO.email()), "limit", 1);
+    Map<String, Object> query =
+        Map.of("selector", Map.of("email", requestDTO.email(), "userActive", true), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
 
     if (users.isEmpty())
@@ -202,7 +199,8 @@ public class AuthService {
           String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 401)));
     }
 
-    Map<String, Object> query = Map.of("selector", Map.of("userId", id), "limit", 1);
+    Map<String, Object> query =
+        Map.of("selector", Map.of("userId", id, "userActive", true), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
     if (users == null || users.isEmpty()) {
       throw new InvalidCredentialsException(
@@ -231,23 +229,30 @@ public class AuthService {
    * @return generated temporary password
    */
   public static String generatePassword(int wordCount, int numberCount) {
-    java.security.SecureRandom random = new java.security.SecureRandom();
+    if (wordCount > words.size() || numberCount > 10)
+      throw new IndexOutOfBoundsException("Invalid word or number count");
 
-    List<String> chosenWords = new ArrayList<>();
-    for (int i = 0; i < wordCount; i++) {
-      String word = words.get(random.nextInt(words.size()));
-      String capitalizedWord = word.substring(0, 1).toUpperCase() + word.substring(1);
-      chosenWords.add(capitalizedWord);
-    }
-
-    List<String> digits = new ArrayList<>();
-    for (int i = 0; i < numberCount; i++) {
-      digits.add(Integer.toString(random.nextInt(10)));
-    }
+    List<String> shuffledWords = new ArrayList<>(words);
+    Collections.shuffle(shuffledWords, random);
 
     List<String> combined = new ArrayList<>();
-    combined.addAll(chosenWords);
-    combined.addAll(digits);
+
+    for (int i = 0; i < wordCount; i++) {
+      String word = shuffledWords.get(i);
+      String capitalizedWord = word.substring(0, 1).toUpperCase() + word.substring(1);
+      combined.add(capitalizedWord);
+    }
+
+    List<String> digits =
+        IntStream.range(0, 10)
+            .mapToObj(String::valueOf)
+            .collect(Collectors.toCollection(ArrayList::new));
+
+    Collections.shuffle(digits, random);
+
+    for (int i = 0; i < numberCount; i++) {
+      combined.add(digits.get(i));
+    }
 
     Collections.shuffle(combined, random);
 
@@ -257,5 +262,24 @@ public class AuthService {
     }
 
     return result.toString();
+  }
+
+  private static List<String> loadWords() {
+    try (InputStream input =
+        AuthService.class.getClassLoader().getResourceAsStream("tempPassword-words.txt")) {
+
+      if (input == null) {
+        throw new IllegalStateException("tempPassword-words.txt could not be found");
+      }
+
+      try (BufferedReader reader =
+          new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8))) {
+
+        return reader.lines().map(String::trim).filter(line -> !line.isEmpty()).toList();
+      }
+
+    } catch (IOException e) {
+      throw new IllegalStateException("Failed to load password word list", e);
+    }
   }
 }

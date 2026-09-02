@@ -181,6 +181,7 @@ public class UserService {
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
+    user.setUserActive(true);
 
     log.debug("Inserting new user into database");
     dbService.insert("users", user);
@@ -439,7 +440,7 @@ public class UserService {
    * @return the matching user entity
    * @throws NotFoundException if no user with the given identifier exists
    */
-  private User getUserByUserId(String userId, ErrorAction action) {
+  public User getUserByUserId(String userId, ErrorAction action) {
     Map<String, Object> query = Map.of("selector", Map.of("userId", userId), "limit", 1);
     List<User> users = dbService.findByQuery("users", query, User.class);
 

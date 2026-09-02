@@ -205,7 +205,7 @@ export async function switchMemberStatus(id) {
         if (index !== -1) {
             membersStore.raw[index] = {
                 ...membersStore.raw[index],
-                rev: body.rev
+                rev: body.rev_member
             };
         }
 

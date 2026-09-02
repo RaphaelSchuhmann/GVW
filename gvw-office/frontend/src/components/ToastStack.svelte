@@ -16,7 +16,7 @@
         {/each}
     </div>
 {:else}
-    <div class="absolute z-9999 bottom-0 right-0 flex flex-col-reverse items-center w-full h-auto max-h-1/3 p-2">
+    <div class="fixed z-9999 top-0 right-0 flex flex-col-reverse items-center w-full h-auto max-h-1/3 p-2">
         {#each toasts as toast (toast.id)}
             <Toast id={toast.id} type={toast.type} title={toast.title} subTitle={toast.subTitle} onClose={removeToast}
                    marginTop="5" isMobile={isMobile}/>

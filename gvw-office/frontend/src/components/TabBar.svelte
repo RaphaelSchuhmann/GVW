@@ -1,7 +1,5 @@
 <script>
     import { marginMap } from "../lib/dynamicStyles";
-    import { crossfade } from 'svelte/transition';
-    import { cubicOut } from 'svelte/easing';
 
     let {
         contents = [],
@@ -23,36 +21,37 @@
         }
     });
 
-    const [send, receive] = crossfade({
-        duration: 300,
-        easing: cubicOut
-    });
+    const selectedIndex = $derived(contents.findIndex(tab => tab === selected));
 
-    function handleSelect(e) { selected = e.currentTarget.dataset.title; }
+    function handleSelect(e) {
+        if (disabled) return;
+        selected = e.currentTarget.dataset.title;
+    }
 </script>
 
-<div class={`flex p-1 rounded-full bg-gv-input-bg gap-2 ${marginMap[marginTop]} overflow-x-auto w-full min-h-min`}>
+<div
+        class={`relative grid w-full p-1 rounded-full bg-gv-input-bg ${marginMap[marginTop]} gap-2`}
+        style={`grid-template-columns: repeat(${contents.length}, minmax(0, 1fr));`}
+        {...restProps}
+>
+    {#if selectedIndex >= 0}
+        <div
+                class="absolute top-1 bottom-1 left-1 rounded-full bg-white shadow-sm transition-transform duration-300 ease-out z-0"
+                style={`width: calc((100% - 0.5rem - (${contents.length - 1} * 0.5rem)) / ${contents.length}); transform: translateX(calc(${selectedIndex * 100}% + ${selectedIndex * 0.5}rem));`}
+        ></div>
+    {/if}
+
     {#each contents as title, i (i)}
         <button
-            type="button"
-            disabled={disabled}
-            class={`relative flex-1 p-2 rounded-full text-center z-10 text-dt-6 text-gv-dark transition-colors duration-150 disabled:cursor-not-allowed ${
-                disabled ? 'cursor-default' : 'cursor-pointer hover:bg-gv-hover-effect/50'
+                type="button"
+                {disabled}
+                class={`relative z-10 w-full p-1 rounded-full text-center text-dt-5 text-gv-dark transition-colors duration-150 ${
+                disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-gv-hover-effect/50'
             }`}
-            data-title={title}
-            onclick={handleSelect}
+                data-title={title}
+                onclick={handleSelect}
         >
-            <span class="relative z-20">
-                {title}
-            </span>
-
-            {#if selected === title}
-                <div
-                    class="absolute inset-0 bg-white rounded-full shadow-sm z-10"
-                    in:receive={{ key: 'active-tab' }}
-                    out:send={{ key: 'active-tab' }}
-                ></div>
-            {/if}
+            <span class="truncate block w-full">{title}</span>
         </button>
     {/each}
 </div>
