@@ -15,7 +15,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing calendar events.
@@ -28,7 +27,6 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Service
 public class EventService {
-  private final ObjectMapper mapper = new ObjectMapper();
   private final DbService dbService;
   private final EventMapper eventMapper;
   private final SseService sseService;
@@ -51,11 +49,8 @@ public class EventService {
    * @return all events formatted for the API response
    */
   public List<EventResponseDTO> allEvents() {
-    List<Map<String, Object>> eventsRaw = dbService.findAll("events");
+    List<Event> events = dbService.findAll("events", Event.class);
     boolean changed = false;
-
-    List<Event> events =
-        eventsRaw.stream().map(map -> mapper.convertValue(map, Event.class)).toList();
 
     if (events.isEmpty()) {
       return List.of();
@@ -102,21 +97,21 @@ public class EventService {
     }
 
     return events.stream()
-            .map(
-                    m ->
-                            new EventResponseDTO(
-                                    m.getId(),
-                                    m.getRev(),
-                                    m.getTitle(),
-                                    m.getType(),
-                                    m.getDate(),
-                                    m.getTime(),
-                                    m.getLocation(),
-                                    m.getDescription(),
-                                    m.getMode(),
-                                    m.getStatus(),
-                                    m.getRecurrence()))
-            .toList();
+        .map(
+            m ->
+                new EventResponseDTO(
+                    m.getId(),
+                    m.getRev(),
+                    m.getTitle(),
+                    m.getType(),
+                    m.getDate(),
+                    m.getTime(),
+                    m.getLocation(),
+                    m.getDescription(),
+                    m.getMode(),
+                    m.getStatus(),
+                    m.getRecurrence()))
+        .toList();
   }
 
   /**

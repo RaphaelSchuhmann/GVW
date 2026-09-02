@@ -16,7 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing members and their linked user accounts.
@@ -32,7 +31,6 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class MemberService {
   private final DbService dbService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private final MemberMapper memberMapper;
   private final PasswordEncoder passwordEncoder;
   private final MailService mailService;
@@ -70,32 +68,29 @@ public class MemberService {
    * @return list of all members
    */
   public List<MemberResponseDTO> getMembers() {
-    List<Map<String, Object>> membersRaw = dbService.findAll("members");
-
-    List<Member> members =
-        membersRaw.stream().map(map -> mapper.convertValue(map, Member.class)).toList();
+    List<Member> members = dbService.findAll("members", Member.class);
 
     if (members.isEmpty()) {
       return List.of();
     }
 
-      return members.stream()
-          .map(
-              m ->
-                  new MemberResponseDTO(
-                      m.getId(),
-                      m.getRev(),
-                      m.getName(),
-                      m.getSurname(),
-                      m.getEmail(),
-                      m.getPhone(),
-                      m.getAddress(),
-                      m.getVoice(),
-                      m.getStatus(),
-                      m.getRole().getValue(),
-                      m.getBirthdate(),
-                      m.getJoined()))
-          .toList();
+    return members.stream()
+        .map(
+            m ->
+                new MemberResponseDTO(
+                    m.getId(),
+                    m.getRev(),
+                    m.getName(),
+                    m.getSurname(),
+                    m.getEmail(),
+                    m.getPhone(),
+                    m.getAddress(),
+                    m.getVoice(),
+                    m.getStatus(),
+                    m.getRole().getValue(),
+                    m.getBirthdate(),
+                    m.getJoined()))
+        .toList();
   }
 
   /**

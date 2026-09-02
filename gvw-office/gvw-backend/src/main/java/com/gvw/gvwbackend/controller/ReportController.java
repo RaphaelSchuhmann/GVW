@@ -69,7 +69,8 @@ public class ReportController {
 
   @GetMapping("/search")
   @PreAuthorize("hasAnyRole('ADMIN', 'BOARD_MEMBER', 'SECRETARY')")
-  public Map<String, List<ReportSearchResponseDTO>> reportsDeepSearch(@RequestParam("q") String input) {
+  public Map<String, List<ReportSearchResponseDTO>> reportsDeepSearch(
+      @RequestParam("q") String input) {
     List<ReportSearchResponseDTO> reports = reportService.reportDeepSearch(input);
     return Map.of("data", reports);
   }

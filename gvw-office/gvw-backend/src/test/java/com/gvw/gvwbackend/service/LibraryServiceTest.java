@@ -46,18 +46,19 @@ public class LibraryServiceTest {
 
   @Test
   void testGetAllScoresReturnsMappedDTOs() {
-    Map<String, Object> raw =
-        Map.of(
-            "id", "1",
-            "scoreId", "S1",
-            "title", "Title",
-            "artist", "Artist",
-            "type", "PDF",
-            "voices", List.of("S", "A"),
-            "voiceCount", 2,
-            "files", List.of());
+    Score score =
+        Score.builder()
+            .id("1")
+            .scoreId("S1")
+            .title("Title")
+            .artist("Artist")
+            .type("Type")
+            .voices(List.of("S", "A"))
+            .voiceCount(2)
+            .files(List.of())
+            .build();
 
-    when(dbService.findAll("library")).thenReturn(List.of(raw));
+    when(dbService.findAll("library", Score.class)).thenReturn(List.of(score));
 
     List<ScoreResponseDTO> result = libraryService.getAllScores();
 
@@ -68,7 +69,7 @@ public class LibraryServiceTest {
   @Test
   void testCreateScoreSuccess() throws Exception {
     AddScoreRequestDTO request =
-        new AddScoreRequestDTO("S1", "Title", "Artist", "PDF", List.of("S"), 1);
+        new AddScoreRequestDTO("S1", "Title", "Artist", "Type", List.of("S"), 1);
 
     MultipartFile file = mock(MultipartFile.class);
     when(file.getOriginalFilename()).thenReturn("test.pdf");
@@ -84,7 +85,7 @@ public class LibraryServiceTest {
   @Test
   void testCreateScoreThrowsConflictWhenExists() {
     AddScoreRequestDTO request =
-        new AddScoreRequestDTO("S1", "Title", "Artist", "PDF", List.of("t1"), 1);
+        new AddScoreRequestDTO("S1", "Title", "Artist", "Type", List.of("t1"), 1);
 
     when(dbService.findByQuery(any(), any(), eq(Score.class))).thenReturn(List.of(new Score()));
 
@@ -125,7 +126,7 @@ public class LibraryServiceTest {
 
     UpdateScoreRequestDTO request =
         new UpdateScoreRequestDTO(
-            "1", "S1", "NewTitle", "Artist", "PDF", List.of("t1"), 1, "1-rev");
+            "1", "S1", "NewTitle", "Artist", "Type", List.of("t1"), 1, "1-rev");
 
     libraryService.updateScore(request, List.of(), List.of());
 

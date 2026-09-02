@@ -11,11 +11,9 @@ import com.gvw.gvwbackend.model.UserFeedback;
 import com.gvw.gvwbackend.model.UserReportMetaData;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing user feedback submissions.
@@ -30,7 +28,6 @@ import tools.jackson.databind.ObjectMapper;
 public class FeedbackService {
   private final DbService dbService;
   private final SseService sseService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private final UserService userService;
   private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
 
@@ -48,18 +45,15 @@ public class FeedbackService {
    * @return response containing all available feedback summaries
    */
   public List<FeedbackResponseDTO> getFeedbacks() {
-    List<Map<String, Object>> rawFeedbacks = dbService.findAll("feedbacks");
-
-    List<UserFeedback> feedbacks =
-        rawFeedbacks.stream().map(map -> mapper.convertValue(map, UserFeedback.class)).toList();
+    List<UserFeedback> feedbacks = dbService.findAll("feedbacks", UserFeedback.class);
 
     if (feedbacks.isEmpty()) {
       return List.of();
     }
 
-      return feedbacks.stream()
-          .map(m -> new FeedbackResponseDTO(m.getId(), m.getTitle(), m.getCategory()))
-          .toList();
+    return feedbacks.stream()
+        .map(m -> new FeedbackResponseDTO(m.getId(), m.getTitle(), m.getCategory()))
+        .toList();
   }
 
   /**

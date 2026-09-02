@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing reports.
@@ -40,7 +39,6 @@ public class ReportService {
   private final DbService dbService;
   private final SseService sseService;
   private final TextEditorService editorService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(ReportService.class);
 
   /**
@@ -66,26 +64,23 @@ public class ReportService {
    * @return list of available reports
    */
   public List<ReportResponseDTO> getReports() {
-    List<Map<String, Object>> rawReports = dbService.findAll("reports");
-
-    List<Report> reports =
-        rawReports.stream().map(map -> mapper.convertValue(map, Report.class)).toList();
+    List<Report> reports = dbService.findAll("reports", Report.class);
 
     if (reports.isEmpty()) {
       return List.of();
     }
 
-      return reports.stream()
-          .map(
-              m ->
-                  new ReportResponseDTO(
-                      m.getId(),
-                      m.getTitle(),
-                      m.getAuthor(),
-                      m.getType(),
-                      m.getDescription(),
-                      m.getCreatedAt()))
-          .toList();
+    return reports.stream()
+        .map(
+            m ->
+                new ReportResponseDTO(
+                    m.getId(),
+                    m.getTitle(),
+                    m.getAuthor(),
+                    m.getType(),
+                    m.getDescription(),
+                    m.getCreatedAt()))
+        .toList();
   }
 
   /**
@@ -290,10 +285,7 @@ public class ReportService {
       return List.of();
     }
 
-    List<Map<String, Object>> rawReports = dbService.findAll("reports");
-
-    List<Report> reports =
-        rawReports.stream().map(map -> mapper.convertValue(map, Report.class)).toList();
+    List<Report> reports = dbService.findAll("reports", Report.class);
 
     if (reports.isEmpty()) {
       return List.of();
@@ -301,17 +293,17 @@ public class ReportService {
 
     List<TextDocumentSearchResult<Report>> results = editorService.deepSearch(reports, input);
 
-      return results.stream()
-          .map(
-              m ->
-                  new ReportSearchResponseDTO(
-                      m.getDocument().getId(),
-                      m.getDocument().getTitle(),
-                      m.getDocument().getAuthor(),
-                      m.getDocument().getType(),
-                      m.getSnippet(),
-                      m.getDocument().getCreatedAt()))
-          .toList();
+    return results.stream()
+        .map(
+            m ->
+                new ReportSearchResponseDTO(
+                    m.getDocument().getId(),
+                    m.getDocument().getTitle(),
+                    m.getDocument().getAuthor(),
+                    m.getDocument().getType(),
+                    m.getSnippet(),
+                    m.getDocument().getCreatedAt()))
+        .toList();
   }
 
   /**

@@ -44,7 +44,7 @@ public class EventServiceTest {
 
   @Test
   void testAllEventsShouldReturnEmptyListWhenNoEventsFound() {
-    when(dbService.findAll("events")).thenReturn(List.of());
+    when(dbService.findAll("events", Event.class)).thenReturn(List.of());
 
     List<EventResponseDTO> response = eventService.allEvents();
 
@@ -60,14 +60,15 @@ public class EventServiceTest {
     pastEvent.setStatus("upcoming");
     pastEvent.setMode("Single");
 
-    Map<String, Object> eventMap =
-        Map.of(
-            "id", "past-id",
-            "date", "2025-01-01T00:00:00.000Z",
-            "status", "upcoming",
-            "mode", "Single");
+    Event event =
+        Event.builder()
+            .id("past-id")
+            .date("2025-01-01T00:00:00.000Z")
+            .status("upcoming")
+            .mode("single")
+            .build();
 
-    when(dbService.findAll("events")).thenReturn(List.of(eventMap));
+    when(dbService.findAll("events", Event.class)).thenReturn(List.of(event));
     when(dbService.update(eq("events"), any(), any(Event.class)))
         .thenReturn(Map.of("rev", "rev-3"));
 

@@ -53,6 +53,7 @@ import tools.jackson.databind.ObjectMapper;
 public class DbService {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(DbService.class);
+  private final ObjectMapper mapper = new ObjectMapper();
 
   private final RestTemplate restTemplate;
   private final String baseUrl;
@@ -151,7 +152,7 @@ public class DbService {
    * @param db target CouchDB database
    * @return list of raw CouchDB documents
    */
-  public List<Map<String, Object>> findAll(String db) {
+  public <T> List<T> findAll(String db, Class<T> clazz) {
     String url = String.format("%s/%s/_all_docs?include_docs=true", baseUrl, db);
     Map<String, Object> resp = safeExecute(() -> restTemplate.getForObject(url, Map.class), db);
 
@@ -159,15 +160,15 @@ public class DbService {
       return List.of();
     }
 
-    List<Map<String, Object>> docs = new ArrayList<>();
+    List<Map<String, Object>> docsRaw = new ArrayList<>();
     List<Map<String, Object>> rows = (List<Map<String, Object>>) resp.get("rows");
 
     for (Map<String, Object> row : rows) {
       Map<String, Object> doc = (Map<String, Object>) row.get("doc");
-      if (doc != null) docs.add(doc);
+      if (doc != null) docsRaw.add(doc);
     }
 
-    return docs;
+    return docsRaw.stream().map(map -> mapper.convertValue(map, clazz)).toList();
   }
 
   /**

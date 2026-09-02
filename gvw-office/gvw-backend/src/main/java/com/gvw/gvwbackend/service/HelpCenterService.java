@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing the GVW Office help center.
@@ -27,9 +26,7 @@ public class HelpCenterService {
   private final SseService sseService;
   private final AppSettingsService appSettingsService;
   private final TextEditorService editorService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(HelpCenterService.class);
-  private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
   public HelpCenterService(
       DbService dbService,
@@ -218,12 +215,9 @@ public class HelpCenterService {
       return List.of();
     }
 
-      return articles.stream()
-          .map(
-              m ->
-                  new ArticleResponseDTO(
-                      m.getId(), m.getTitle(), m.getDescription(), m.getTags()))
-          .toList();
+    return articles.stream()
+        .map(m -> new ArticleResponseDTO(m.getId(), m.getTitle(), m.getDescription(), m.getTags()))
+        .toList();
   }
 
   /**
@@ -453,10 +447,7 @@ public class HelpCenterService {
    * @return matching articles with metadata or search snippets
    */
   public List<ArticlesSearchResponseDTO> searchArticles(String searchTerm) {
-    List<Map<String, Object>> rawArticles = dbService.findAll("help_center");
-
-    List<HelpCenterArticle> articles =
-        rawArticles.stream().map(map -> mapper.convertValue(map, HelpCenterArticle.class)).toList();
+    List<HelpCenterArticle> articles = dbService.findAll("help_center", HelpCenterArticle.class);
 
     if (articles.isEmpty()) {
       return List.of();

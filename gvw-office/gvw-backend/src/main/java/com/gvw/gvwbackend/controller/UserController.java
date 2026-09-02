@@ -10,7 +10,6 @@ import com.gvw.gvwbackend.exception.ErrorResource;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
 import com.gvw.gvwbackend.service.UserService;
 import jakarta.validation.Valid;
-
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;

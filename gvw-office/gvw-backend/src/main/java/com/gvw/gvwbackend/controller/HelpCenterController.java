@@ -91,7 +91,8 @@ public class HelpCenterController {
   }
 
   @GetMapping("/article/get")
-  public Map<String, List<ArticleResponseDTO>> getArticlesOfCategory(@RequestParam("category") String category) {
+  public Map<String, List<ArticleResponseDTO>> getArticlesOfCategory(
+      @RequestParam("category") String category) {
     List<ArticleResponseDTO> articles = helpCenterService.getArticles(category);
     return Map.of("articles", articles);
   }

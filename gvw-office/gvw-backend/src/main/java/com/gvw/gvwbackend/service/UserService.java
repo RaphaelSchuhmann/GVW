@@ -18,7 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing application users.
@@ -32,7 +31,6 @@ public class UserService {
   private final DbService dbService;
   private final PasswordEncoder passwordEncoder;
   private final MailService mailService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private final SseService sseService;
   private final UserMapper userMapper;
   private static final Logger log = LoggerFactory.getLogger(UserService.class);
@@ -96,9 +94,7 @@ public class UserService {
    * @return collection of users formatted for administration views
    */
   public List<UserManagerResponseDTO> getUsers() {
-    List<Map<String, Object>> usersRaw = dbService.findAll("users");
-    List<User> users = usersRaw.stream().map(map -> mapper.convertValue(map, User.class)).toList();
-    if (users.isEmpty()) return List.of();
+    List<User> users = dbService.findAll("users", User.class);
 
     // Collect non-empty memberIds
     Set<String> memberIds =
@@ -120,21 +116,21 @@ public class UserService {
                 .map(Member::getId)
                 .collect(Collectors.toSet());
 
-      return users.stream()
-          .map(
-              m ->
-                  new UserManagerResponseDTO(
-                      m.getId(),
-                      m.getRev(),
-                      m.getName(),
-                      m.getEmail(),
-                      m.getPhone(),
-                      m.getAddress(),
-                      m.getRole().getValue(),
-                      m.getMemberId() == null
-                          || m.getMemberId().isBlank()
-                          || !existingMemberIds.contains(m.getMemberId())))
-          .toList();
+    return users.stream()
+        .map(
+            m ->
+                new UserManagerResponseDTO(
+                    m.getId(),
+                    m.getRev(),
+                    m.getName(),
+                    m.getEmail(),
+                    m.getPhone(),
+                    m.getAddress(),
+                    m.getRole().getValue(),
+                    m.getMemberId() == null
+                        || m.getMemberId().isBlank()
+                        || !existingMemberIds.contains(m.getMemberId())))
+        .toList();
   }
 
   /**

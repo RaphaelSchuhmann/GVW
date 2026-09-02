@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing the score library.
@@ -31,7 +30,6 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class LibraryService {
   private final DbService dbService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(LibraryService.class);
   private final SseService sseService;
   private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
@@ -53,27 +51,24 @@ public class LibraryService {
    * @return response object containing all available scores
    */
   public List<ScoreResponseDTO> getAllScores() {
-    List<Map<String, Object>> scoresRaw = dbService.findAll("library");
-
-    List<Score> scores =
-        scoresRaw.stream().map(map -> mapper.convertValue(map, Score.class)).toList();
+    List<Score> scores = dbService.findAll("library", Score.class);
 
     if (scores.isEmpty()) {
       return List.of();
     }
 
-      return scores.stream()
-          .map(
-              m ->
-                  new ScoreResponseDTO(
-                      m.getId(),
-                      m.getScoreId(),
-                      m.getTitle(),
-                      m.getArtist(),
-                      m.getType(),
-                      m.getVoices(),
-                      m.getVoiceCount()))
-          .toList();
+    return scores.stream()
+        .map(
+            m ->
+                new ScoreResponseDTO(
+                    m.getId(),
+                    m.getScoreId(),
+                    m.getTitle(),
+                    m.getArtist(),
+                    m.getType(),
+                    m.getVoices(),
+                    m.getVoiceCount()))
+        .toList();
   }
 
   /**
