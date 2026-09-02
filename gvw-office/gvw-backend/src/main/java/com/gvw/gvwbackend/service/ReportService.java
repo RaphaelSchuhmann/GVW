@@ -65,30 +65,27 @@ public class ReportService {
    *
    * @return list of available reports
    */
-  public ReportsResponseDTO getReports() {
+  public List<ReportResponseDTO> getReports() {
     List<Map<String, Object>> rawReports = dbService.findAll("reports");
 
     List<Report> reports =
         rawReports.stream().map(map -> mapper.convertValue(map, Report.class)).toList();
 
     if (reports.isEmpty()) {
-      return new ReportsResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ReportResponseDTO> responseDTOS =
-        reports.stream()
-            .map(
-                m ->
-                    new ReportResponseDTO(
-                        m.getId(),
-                        m.getTitle(),
-                        m.getAuthor(),
-                        m.getType(),
-                        m.getDescription(),
-                        m.getCreatedAt()))
-            .toList();
-
-    return new ReportsResponseDTO(responseDTOS);
+      return reports.stream()
+          .map(
+              m ->
+                  new ReportResponseDTO(
+                      m.getId(),
+                      m.getTitle(),
+                      m.getAuthor(),
+                      m.getType(),
+                      m.getDescription(),
+                      m.getCreatedAt()))
+          .toList();
   }
 
   /**
@@ -288,9 +285,9 @@ public class ReportService {
    * @param input search term
    * @return matching reports with search context
    */
-  public ReportsSearchResponseDTO reportDeepSearch(String input) {
+  public List<ReportSearchResponseDTO> reportDeepSearch(String input) {
     if (input == null || input.isBlank()) {
-      return new ReportsSearchResponseDTO(List.of());
+      return List.of();
     }
 
     List<Map<String, Object>> rawReports = dbService.findAll("reports");
@@ -299,25 +296,22 @@ public class ReportService {
         rawReports.stream().map(map -> mapper.convertValue(map, Report.class)).toList();
 
     if (reports.isEmpty()) {
-      return new ReportsSearchResponseDTO(List.of());
+      return List.of();
     }
 
     List<TextDocumentSearchResult<Report>> results = editorService.deepSearch(reports, input);
 
-    List<ReportSearchResponseDTO> responseDTOS =
-        results.stream()
-            .map(
-                m ->
-                    new ReportSearchResponseDTO(
-                        m.getDocument().getId(),
-                        m.getDocument().getTitle(),
-                        m.getDocument().getAuthor(),
-                        m.getDocument().getType(),
-                        m.getSnippet(),
-                        m.getDocument().getCreatedAt()))
-            .toList();
-
-    return new ReportsSearchResponseDTO(responseDTOS);
+      return results.stream()
+          .map(
+              m ->
+                  new ReportSearchResponseDTO(
+                      m.getDocument().getId(),
+                      m.getDocument().getTitle(),
+                      m.getDocument().getAuthor(),
+                      m.getDocument().getType(),
+                      m.getSnippet(),
+                      m.getDocument().getCreatedAt()))
+          .toList();
   }
 
   /**

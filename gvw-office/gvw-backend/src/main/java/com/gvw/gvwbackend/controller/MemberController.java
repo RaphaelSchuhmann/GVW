@@ -3,7 +3,7 @@ package com.gvw.gvwbackend.controller;
 import com.gvw.gvwbackend.dto.request.AddMemberRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateMemberRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateMemberStatusRequestDTO;
-import com.gvw.gvwbackend.dto.response.MembersResponseDTO;
+import com.gvw.gvwbackend.dto.response.MemberResponseDTO;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.ErrorResource;
@@ -27,8 +27,9 @@ public class MemberController {
 
   @GetMapping("/all")
   @PreAuthorize("hasAnyRole('ADMIN', 'BOARD_MEMBER')")
-  public MembersResponseDTO getAllMembers() {
-    return memberService.getMembers();
+  public Map<String, List<MemberResponseDTO>> getAllMembers() {
+    List<MemberResponseDTO> members = memberService.getMembers();
+    return Map.of("data", members);
   }
 
   @GetMapping("/check/{id}")

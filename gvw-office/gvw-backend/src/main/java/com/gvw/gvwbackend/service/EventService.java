@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddEventRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateEventRequestDTO;
 import com.gvw.gvwbackend.dto.response.EventResponseDTO;
-import com.gvw.gvwbackend.dto.response.EventsResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -51,7 +50,7 @@ public class EventService {
    *
    * @return all events formatted for the API response
    */
-  public EventsResponseDTO allEvents() {
+  public List<EventResponseDTO> allEvents() {
     List<Map<String, Object>> eventsRaw = dbService.findAll("events");
     boolean changed = false;
 
@@ -59,7 +58,7 @@ public class EventService {
         eventsRaw.stream().map(map -> mapper.convertValue(map, Event.class)).toList();
 
     if (events.isEmpty()) {
-      return new EventsResponseDTO(List.of());
+      return List.of();
     }
 
     for (Event event : events) {
@@ -102,25 +101,22 @@ public class EventService {
       }
     }
 
-    List<EventResponseDTO> responseEvents =
-        events.stream()
+    return events.stream()
             .map(
-                m ->
-                    new EventResponseDTO(
-                        m.getId(),
-                        m.getRev(),
-                        m.getTitle(),
-                        m.getType(),
-                        m.getDate(),
-                        m.getTime(),
-                        m.getLocation(),
-                        m.getDescription(),
-                        m.getMode(),
-                        m.getStatus(),
-                        m.getRecurrence()))
+                    m ->
+                            new EventResponseDTO(
+                                    m.getId(),
+                                    m.getRev(),
+                                    m.getTitle(),
+                                    m.getType(),
+                                    m.getDate(),
+                                    m.getTime(),
+                                    m.getLocation(),
+                                    m.getDescription(),
+                                    m.getMode(),
+                                    m.getStatus(),
+                                    m.getRecurrence()))
             .toList();
-
-    return new EventsResponseDTO(responseEvents);
   }
 
   /**

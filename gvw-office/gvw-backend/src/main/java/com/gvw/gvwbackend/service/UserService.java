@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddUserAdminRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateUserAdminRequestDTO;
 import com.gvw.gvwbackend.dto.response.UserManagerResponseDTO;
-import com.gvw.gvwbackend.dto.response.UserManagerResponsesDTO;
 import com.gvw.gvwbackend.dto.response.UserResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.mapper.UserMapper;
@@ -96,10 +95,10 @@ public class UserService {
    *
    * @return collection of users formatted for administration views
    */
-  public UserManagerResponsesDTO getUsers() {
+  public List<UserManagerResponseDTO> getUsers() {
     List<Map<String, Object>> usersRaw = dbService.findAll("users");
     List<User> users = usersRaw.stream().map(map -> mapper.convertValue(map, User.class)).toList();
-    if (users.isEmpty()) return new UserManagerResponsesDTO(List.of());
+    if (users.isEmpty()) return List.of();
 
     // Collect non-empty memberIds
     Set<String> memberIds =
@@ -121,24 +120,21 @@ public class UserService {
                 .map(Member::getId)
                 .collect(Collectors.toSet());
 
-    List<UserManagerResponseDTO> dtos =
-        users.stream()
-            .map(
-                m ->
-                    new UserManagerResponseDTO(
-                        m.getId(),
-                        m.getRev(),
-                        m.getName(),
-                        m.getEmail(),
-                        m.getPhone(),
-                        m.getAddress(),
-                        m.getRole().getValue(),
-                        m.getMemberId() == null
-                            || m.getMemberId().isBlank()
-                            || !existingMemberIds.contains(m.getMemberId())))
-            .toList();
-
-    return new UserManagerResponsesDTO(dtos);
+      return users.stream()
+          .map(
+              m ->
+                  new UserManagerResponseDTO(
+                      m.getId(),
+                      m.getRev(),
+                      m.getName(),
+                      m.getEmail(),
+                      m.getPhone(),
+                      m.getAddress(),
+                      m.getRole().getValue(),
+                      m.getMemberId() == null
+                          || m.getMemberId().isBlank()
+                          || !existingMemberIds.contains(m.getMemberId())))
+          .toList();
   }
 
   /**

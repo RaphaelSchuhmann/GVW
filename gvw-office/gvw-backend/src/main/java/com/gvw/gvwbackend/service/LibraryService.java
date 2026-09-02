@@ -4,7 +4,6 @@ import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
 import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
-import com.gvw.gvwbackend.dto.response.ScoresResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.Score;
@@ -53,31 +52,28 @@ public class LibraryService {
    *
    * @return response object containing all available scores
    */
-  public ScoresResponseDTO getAllScores() {
+  public List<ScoreResponseDTO> getAllScores() {
     List<Map<String, Object>> scoresRaw = dbService.findAll("library");
 
     List<Score> scores =
         scoresRaw.stream().map(map -> mapper.convertValue(map, Score.class)).toList();
 
     if (scores.isEmpty()) {
-      return new ScoresResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ScoreResponseDTO> responseScores =
-        scores.stream()
-            .map(
-                m ->
-                    new ScoreResponseDTO(
-                        m.getId(),
-                        m.getScoreId(),
-                        m.getTitle(),
-                        m.getArtist(),
-                        m.getType(),
-                        m.getVoices(),
-                        m.getVoiceCount()))
-            .toList();
-
-    return new ScoresResponseDTO(responseScores);
+      return scores.stream()
+          .map(
+              m ->
+                  new ScoreResponseDTO(
+                      m.getId(),
+                      m.getScoreId(),
+                      m.getTitle(),
+                      m.getArtist(),
+                      m.getType(),
+                      m.getVoices(),
+                      m.getVoiceCount()))
+          .toList();
   }
 
   /**

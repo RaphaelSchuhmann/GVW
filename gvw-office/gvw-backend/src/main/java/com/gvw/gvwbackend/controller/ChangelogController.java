@@ -1,7 +1,7 @@
 package com.gvw.gvwbackend.controller;
 
 import com.gvw.gvwbackend.dto.request.AddChangelogRequestDTO;
-import com.gvw.gvwbackend.dto.response.ChangelogsResponseDTO;
+import com.gvw.gvwbackend.dto.response.ChangelogResponseDTO;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.ErrorResource;
@@ -11,6 +11,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/changelogs")
@@ -22,8 +25,9 @@ public class ChangelogController {
   }
 
   @GetMapping("/all")
-  public ChangelogsResponseDTO getChangelogs() {
-    return changelogService.getChangelogs();
+  public Map<String, List<ChangelogResponseDTO>> getChangelogs() {
+    List<ChangelogResponseDTO> changelogs = changelogService.getChangelogs();
+    return Map.of("changelogs", changelogs);
   }
 
   @PostMapping("/add")

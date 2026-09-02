@@ -200,7 +200,7 @@ public class HelpCenterService {
    * @return list of articles in the requested category
    * @throws BadRequestException if the category identifier is missing
    */
-  public ArticlesResponseDTO getArticles(String category) {
+  public List<ArticleResponseDTO> getArticles(String category) {
     if (category == null || category.isBlank()) {
       throw new BadRequestException(
           String.valueOf(
@@ -215,17 +215,15 @@ public class HelpCenterService {
             HelpCenterArticle.class);
 
     if (articles == null || articles.isEmpty()) {
-      return new ArticlesResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ArticleResponseDTO> responseDTOs =
-        articles.stream()
-            .map(
-                m ->
-                    new ArticleResponseDTO(
-                        m.getId(), m.getTitle(), m.getDescription(), m.getTags()))
-            .toList();
-    return new ArticlesResponseDTO(responseDTOs);
+      return articles.stream()
+          .map(
+              m ->
+                  new ArticleResponseDTO(
+                      m.getId(), m.getTitle(), m.getDescription(), m.getTags()))
+          .toList();
   }
 
   /**

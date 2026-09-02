@@ -6,7 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.dto.request.AddEventRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateEventRequestDTO;
-import com.gvw.gvwbackend.dto.response.EventsResponseDTO;
+import com.gvw.gvwbackend.dto.response.EventResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.mapper.EventMapper;
@@ -46,9 +46,9 @@ public class EventServiceTest {
   void testAllEventsShouldReturnEmptyListWhenNoEventsFound() {
     when(dbService.findAll("events")).thenReturn(List.of());
 
-    EventsResponseDTO response = eventService.allEvents();
+    List<EventResponseDTO> response = eventService.allEvents();
 
-    assertTrue(response.data().isEmpty());
+    assertTrue(response.isEmpty());
     verify(dbService, never()).update(anyString(), any(), any());
   }
 
@@ -71,9 +71,9 @@ public class EventServiceTest {
     when(dbService.update(eq("events"), any(), any(Event.class)))
         .thenReturn(Map.of("rev", "rev-3"));
 
-    EventsResponseDTO response = eventService.allEvents();
+    List<EventResponseDTO> response = eventService.allEvents();
 
-    assertEquals("finished", response.data().getFirst().status());
+    assertEquals("finished", response.getFirst().status());
   }
 
   @Test

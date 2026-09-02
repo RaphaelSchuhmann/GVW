@@ -1,6 +1,5 @@
 package com.gvw.gvwbackend.service;
 
-import com.gvw.gvwbackend.dto.response.NewEmergencyTokenDTO;
 import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.EPWRToken;
@@ -60,7 +59,7 @@ public class EPWRService {
    *
    * @return newly generated plaintext emergency token
    */
-  public NewEmergencyTokenDTO getNewEmergencyToken() {
+  public String getNewEmergencyToken() {
     String token = TokenUtils.generateToken();
     String hashedToken = hashUtil.createHash(token);
 
@@ -93,7 +92,7 @@ public class EPWRService {
     }
 
     log.info("Emergency token manually regenerated");
-    return new NewEmergencyTokenDTO(token);
+    return token;
   }
 
   /**
@@ -110,7 +109,7 @@ public class EPWRService {
    * @throws InvalidCredentialsException if the token is invalid, expired, or already used
    * @throws NotFoundException if no emergency token exists
    */
-  public NewEmergencyTokenDTO useEmergencyToken(String token) {
+  public String useEmergencyToken(String token) {
     EPWRToken savedToken = fetchAndValidateEmergencyToken(token);
 
     String newToken = TokenUtils.generateToken();
@@ -131,7 +130,7 @@ public class EPWRService {
     processAdminPasswordResets(admins);
     notifyAdminsOfUsage(admins);
 
-    return new NewEmergencyTokenDTO(newToken);
+    return newToken;
   }
 
   /**

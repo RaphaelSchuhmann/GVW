@@ -1,7 +1,7 @@
 package com.gvw.gvwbackend.controller;
 
 import com.gvw.gvwbackend.dto.request.*;
-import com.gvw.gvwbackend.dto.response.ArticlesResponseDTO;
+import com.gvw.gvwbackend.dto.response.ArticleResponseDTO;
 import com.gvw.gvwbackend.dto.response.ArticlesSearchResponseDTO;
 import com.gvw.gvwbackend.dto.response.FullArticleResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
@@ -91,8 +91,9 @@ public class HelpCenterController {
   }
 
   @GetMapping("/article/get")
-  public ArticlesResponseDTO getArticlesOfCategory(@RequestParam("category") String category) {
-    return helpCenterService.getArticles(category);
+  public Map<String, List<ArticleResponseDTO>> getArticlesOfCategory(@RequestParam("category") String category) {
+    List<ArticleResponseDTO> articles = helpCenterService.getArticles(category);
+    return Map.of("articles", articles);
   }
 
   @GetMapping("/article/check/{id}")

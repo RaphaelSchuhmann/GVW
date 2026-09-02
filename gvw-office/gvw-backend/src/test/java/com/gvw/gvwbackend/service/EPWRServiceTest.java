@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-import com.gvw.gvwbackend.dto.response.NewEmergencyTokenDTO;
 import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.EPWRToken;
@@ -39,9 +38,9 @@ public class EPWRServiceTest {
     when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of());
     when(dbService.insert(eq("emergency_token"), any(EPWRToken.class))).thenReturn(true);
 
-    NewEmergencyTokenDTO result = epwrService.getNewEmergencyToken();
+    String token = epwrService.getNewEmergencyToken();
 
-    assertNotNull(result.token());
+    assertNotNull(token);
 
     verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
   }
@@ -58,9 +57,9 @@ public class EPWRServiceTest {
     when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of(epwrToken));
     when(dbService.insert(eq("emergency_token"), any(EPWRToken.class))).thenReturn(true);
 
-    NewEmergencyTokenDTO result = epwrService.getNewEmergencyToken();
+    String token = epwrService.getNewEmergencyToken();
 
-    assertNotNull(result.token());
+    assertNotNull(token);
 
     verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
   }
@@ -94,10 +93,9 @@ public class EPWRServiceTest {
 
     when(dbService.insert(eq("users"), any(User.class))).thenReturn(true);
 
-    NewEmergencyTokenDTO result = epwrService.useEmergencyToken(rawToken);
+    String token = epwrService.useEmergencyToken(rawToken);
 
-    assertNotNull(result);
-    assertNotNull(result.token());
+    assertNotNull(token);
 
     verify(dbService, times(2)).insert(eq("users"), any(User.class));
 

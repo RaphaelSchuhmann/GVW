@@ -2,7 +2,6 @@ package com.gvw.gvwbackend.service;
 
 import com.gvw.gvwbackend.dto.request.AddChangelogRequestDTO;
 import com.gvw.gvwbackend.dto.response.ChangelogResponseDTO;
-import com.gvw.gvwbackend.dto.response.ChangelogsResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -36,7 +35,7 @@ public class ChangelogService {
    *
    * @return all available changelog entries sorted by creation date
    */
-  public ChangelogsResponseDTO getChangelogs() {
+  public List<ChangelogResponseDTO> getChangelogs() {
     List<Map<String, Object>> changelogsRaw = dbService.findAll("changelogs");
 
     List<Changelog> changelogs =
@@ -46,18 +45,15 @@ public class ChangelogService {
             .toList();
 
     if (changelogs.isEmpty()) {
-      return new ChangelogsResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ChangelogResponseDTO> responseChangelogs =
-        changelogs.stream()
-            .map(
-                m ->
-                    new ChangelogResponseDTO(
-                        m.getId(), m.getTitle(), m.getVersion(), m.getContent(), m.getTimestamp()))
-            .toList();
-
-    return new ChangelogsResponseDTO(responseChangelogs);
+    return changelogs.stream()
+          .map(
+              m ->
+                  new ChangelogResponseDTO(
+                      m.getId(), m.getTitle(), m.getVersion(), m.getContent(), m.getTimestamp()))
+          .toList();
   }
 
   /**

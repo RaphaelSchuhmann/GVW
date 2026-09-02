@@ -2,7 +2,7 @@ package com.gvw.gvwbackend.controller;
 
 import com.gvw.gvwbackend.dto.request.AddUserAdminRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateUserAdminRequestDTO;
-import com.gvw.gvwbackend.dto.response.UserManagerResponsesDTO;
+import com.gvw.gvwbackend.dto.response.UserManagerResponseDTO;
 import com.gvw.gvwbackend.dto.response.UserResponseDTO;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -10,6 +10,8 @@ import com.gvw.gvwbackend.exception.ErrorResource;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
 import com.gvw.gvwbackend.service.UserService;
 import jakarta.validation.Valid;
+
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,8 +41,9 @@ public class UserController {
 
   @GetMapping("/admin/users")
   @PreAuthorize("hasAnyRole('ADMIN')")
-  public UserManagerResponsesDTO getUsers() {
-    return userService.getUsers();
+  public Map<String, List<UserManagerResponseDTO>> getUsers() {
+    List<UserManagerResponseDTO> users = userService.getUsers();
+    return Map.of("data", users);
   }
 
   @PostMapping("/admin/addUser")

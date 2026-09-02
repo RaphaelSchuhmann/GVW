@@ -3,13 +3,15 @@ package com.gvw.gvwbackend.controller;
 import com.gvw.gvwbackend.dto.request.AddEventRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateEventRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateEventStatusRequestDTO;
-import com.gvw.gvwbackend.dto.response.EventsResponseDTO;
+import com.gvw.gvwbackend.dto.response.EventResponseDTO;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.ErrorResource;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
 import com.gvw.gvwbackend.service.EventService;
 import jakarta.validation.Valid;
+
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,8 +27,9 @@ public class EventController {
   }
 
   @GetMapping("/all")
-  public EventsResponseDTO allEvents() {
-    return eventService.allEvents();
+  public Map<String, List<EventResponseDTO>> allEvents() {
+    List<EventResponseDTO> events = eventService.allEvents();
+    return Map.of("data", events);
   }
 
   @PostMapping("/add")

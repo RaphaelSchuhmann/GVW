@@ -3,7 +3,7 @@ package com.gvw.gvwbackend.controller;
 import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
 import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
-import com.gvw.gvwbackend.dto.response.ScoresResponseDTO;
+import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
 import com.gvw.gvwbackend.model.Score;
@@ -37,8 +37,9 @@ public class LibraryController {
   }
 
   @GetMapping("/all")
-  public ScoresResponseDTO getAllScores() {
-    return libraryService.getAllScores();
+  public Map<String, List<ScoreResponseDTO>> getAllScores() {
+    List<ScoreResponseDTO> scores = libraryService.getAllScores();
+    return Map.of("data", scores);
   }
 
   @GetMapping("/{id}")
@@ -65,7 +66,6 @@ public class LibraryController {
     if (files != null) {
       for (MultipartFile file : files) {
         if (!fileValidator.isSafe(file)) {
-          // 1399400
           throw new BadRequestException(
               String.valueOf(ErrorDomain.FILE_VALIDATOR.createCode(ErrorAction.UTILITY, 400)));
         }

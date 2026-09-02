@@ -8,7 +8,7 @@ import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
-import com.gvw.gvwbackend.dto.response.ScoresResponseDTO;
+import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.exception.ConflictException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.File;
@@ -59,10 +59,10 @@ public class LibraryServiceTest {
 
     when(dbService.findAll("library")).thenReturn(List.of(raw));
 
-    ScoresResponseDTO result = libraryService.getAllScores();
+    List<ScoreResponseDTO> result = libraryService.getAllScores();
 
-    assertThat(result.data().size()).isEqualTo(1);
-    assertThat(result.data().getFirst().title()).isEqualTo("Title");
+    assertThat(result.size()).isEqualTo(1);
+    assertThat(result.getFirst().title()).isEqualTo("Title");
   }
 
   @Test

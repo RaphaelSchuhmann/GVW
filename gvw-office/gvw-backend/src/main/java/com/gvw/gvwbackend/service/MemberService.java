@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddMemberRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateMemberRequestDTO;
 import com.gvw.gvwbackend.dto.response.MemberResponseDTO;
-import com.gvw.gvwbackend.dto.response.MembersResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.mapper.MemberMapper;
 import com.gvw.gvwbackend.model.Member;
@@ -70,36 +69,33 @@ public class MemberService {
    *
    * @return list of all members
    */
-  public MembersResponseDTO getMembers() {
+  public List<MemberResponseDTO> getMembers() {
     List<Map<String, Object>> membersRaw = dbService.findAll("members");
 
     List<Member> members =
         membersRaw.stream().map(map -> mapper.convertValue(map, Member.class)).toList();
 
     if (members.isEmpty()) {
-      return new MembersResponseDTO(List.of());
+      return List.of();
     }
 
-    List<MemberResponseDTO> responseMembers =
-        members.stream()
-            .map(
-                m ->
-                    new MemberResponseDTO(
-                        m.getId(),
-                        m.getRev(),
-                        m.getName(),
-                        m.getSurname(),
-                        m.getEmail(),
-                        m.getPhone(),
-                        m.getAddress(),
-                        m.getVoice(),
-                        m.getStatus(),
-                        m.getRole().getValue(),
-                        m.getBirthdate(),
-                        m.getJoined()))
-            .toList();
-
-    return new MembersResponseDTO(responseMembers);
+      return members.stream()
+          .map(
+              m ->
+                  new MemberResponseDTO(
+                      m.getId(),
+                      m.getRev(),
+                      m.getName(),
+                      m.getSurname(),
+                      m.getEmail(),
+                      m.getPhone(),
+                      m.getAddress(),
+                      m.getVoice(),
+                      m.getStatus(),
+                      m.getRole().getValue(),
+                      m.getBirthdate(),
+                      m.getJoined()))
+          .toList();
   }
 
   /**

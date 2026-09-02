@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddBugReportRequestDTO;
 import com.gvw.gvwbackend.dto.response.BugReportDetailsResponseDTO;
 import com.gvw.gvwbackend.dto.response.BugReportResponseDTO;
-import com.gvw.gvwbackend.dto.response.BugReportsResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -56,22 +55,19 @@ public class BugReportService {
    *
    * @return list of bug report summaries
    */
-  public BugReportsResponseDTO getBugReports() {
+  public List<BugReportResponseDTO> getBugReports() {
     List<Map<String, Object>> rawBugReports = dbService.findAll("bug_reports");
 
     List<BugReport> bugReports =
         rawBugReports.stream().map(map -> mapper.convertValue(map, BugReport.class)).toList();
 
     if (bugReports.isEmpty()) {
-      return new BugReportsResponseDTO(List.of());
+      return List.of();
     }
 
-    List<BugReportResponseDTO> bugReportResponseDTOS =
-        bugReports.stream()
-            .map(m -> new BugReportResponseDTO(m.getId(), m.getTitle(), m.getSeverity()))
-            .toList();
-
-    return new BugReportsResponseDTO(bugReportResponseDTOS);
+      return bugReports.stream()
+          .map(m -> new BugReportResponseDTO(m.getId(), m.getTitle(), m.getSeverity()))
+          .toList();
   }
 
   /**

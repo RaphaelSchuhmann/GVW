@@ -2,10 +2,7 @@ package com.gvw.gvwbackend.controller;
 
 import com.gvw.gvwbackend.dto.request.AddBugReportRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddFeedbackRequestDTO;
-import com.gvw.gvwbackend.dto.response.BugReportDetailsResponseDTO;
-import com.gvw.gvwbackend.dto.response.BugReportsResponseDTO;
-import com.gvw.gvwbackend.dto.response.FeedbackDetailsResponseDTO;
-import com.gvw.gvwbackend.dto.response.FeedbacksResponseDTO;
+import com.gvw.gvwbackend.dto.response.*;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.ErrorResource;
@@ -16,6 +13,9 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/support")
@@ -30,14 +30,16 @@ public class SupportController {
 
   @GetMapping("/feedback/all")
   @PreAuthorize("hasAnyRole('ADMIN')")
-  public FeedbacksResponseDTO getFeedbacks() {
-    return feedbackService.getFeedbacks();
+  public Map<String, List<FeedbackResponseDTO>> getFeedbacks() {
+    List<FeedbackResponseDTO> feedbacks = feedbackService.getFeedbacks();
+    return Map.of("feedbacks", feedbacks);
   }
 
   @GetMapping("/bugs/all")
   @PreAuthorize("hasAnyRole('ADMIN')")
-  public BugReportsResponseDTO getBugReports() {
-    return bugReportService.getBugReports();
+  public Map<String, List<BugReportResponseDTO>> getBugReports() {
+    List<BugReportResponseDTO> reports = bugReportService.getBugReports();
+    return Map.of("reports", reports);
   }
 
   @GetMapping("/feedback/details/{id}")

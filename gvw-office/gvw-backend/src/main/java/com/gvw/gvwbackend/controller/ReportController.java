@@ -5,8 +5,8 @@ import com.gvw.gvwbackend.dto.request.UpdateDocumentAttachmentsDTO;
 import com.gvw.gvwbackend.dto.request.UpdateReportDescriptionRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateReportRequestDTO;
 import com.gvw.gvwbackend.dto.response.FullReportResponseDTO;
-import com.gvw.gvwbackend.dto.response.ReportsResponseDTO;
-import com.gvw.gvwbackend.dto.response.ReportsSearchResponseDTO;
+import com.gvw.gvwbackend.dto.response.ReportResponseDTO;
+import com.gvw.gvwbackend.dto.response.ReportSearchResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
 import com.gvw.gvwbackend.model.Report;
@@ -38,8 +38,9 @@ public class ReportController {
 
   @GetMapping("/all")
   @PreAuthorize("hasAnyRole('ADMIN', 'BOARD_MEMBER', 'SECRETARY')")
-  public ReportsResponseDTO getReports() {
-    return reportService.getReports();
+  public Map<String, List<ReportResponseDTO>> getReports() {
+    List<ReportResponseDTO> reports = reportService.getReports();
+    return Map.of("data", reports);
   }
 
   @GetMapping("/check/{id}")
@@ -68,8 +69,9 @@ public class ReportController {
 
   @GetMapping("/search")
   @PreAuthorize("hasAnyRole('ADMIN', 'BOARD_MEMBER', 'SECRETARY')")
-  public ReportsSearchResponseDTO reportsDeepSearch(@RequestParam("q") String input) {
-    return reportService.reportDeepSearch(input);
+  public Map<String, List<ReportSearchResponseDTO>> reportsDeepSearch(@RequestParam("q") String input) {
+    List<ReportSearchResponseDTO> reports = reportService.reportDeepSearch(input);
+    return Map.of("data", reports);
   }
 
   @DeleteMapping("/delete/{id}")

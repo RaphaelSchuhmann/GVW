@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddFeedbackRequestDTO;
 import com.gvw.gvwbackend.dto.response.FeedbackDetailsResponseDTO;
 import com.gvw.gvwbackend.dto.response.FeedbackResponseDTO;
-import com.gvw.gvwbackend.dto.response.FeedbacksResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -48,22 +47,19 @@ public class FeedbackService {
    *
    * @return response containing all available feedback summaries
    */
-  public FeedbacksResponseDTO getFeedbacks() {
+  public List<FeedbackResponseDTO> getFeedbacks() {
     List<Map<String, Object>> rawFeedbacks = dbService.findAll("feedbacks");
 
     List<UserFeedback> feedbacks =
         rawFeedbacks.stream().map(map -> mapper.convertValue(map, UserFeedback.class)).toList();
 
     if (feedbacks.isEmpty()) {
-      return new FeedbacksResponseDTO(List.of());
+      return List.of();
     }
 
-    List<FeedbackResponseDTO> feedbackResponseDTOS =
-        feedbacks.stream()
-            .map(m -> new FeedbackResponseDTO(m.getId(), m.getTitle(), m.getCategory()))
-            .toList();
-
-    return new FeedbacksResponseDTO(feedbackResponseDTOS);
+      return feedbacks.stream()
+          .map(m -> new FeedbackResponseDTO(m.getId(), m.getTitle(), m.getCategory()))
+          .toList();
   }
 
   /**
