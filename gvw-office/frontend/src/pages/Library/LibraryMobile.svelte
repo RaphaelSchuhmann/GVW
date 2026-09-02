@@ -271,8 +271,8 @@
 
 <MobileSidebar currentPage="library" bind:isOpen={sidebarOpen} />
 
-<main class="flex overflow-hidden">
-    <div class="flex flex-col w-full h-dvh overflow-hidden p-7 min-h-0">
+<main class="flex">
+    <div class="flex flex-col w-full min-h-dvh p-7">
         <div class="w-full flex items-center justify-start">
             <button class="flex items-center justify-center" onclick={openSidebar}>
                 <span class="material-symbols-rounded text-icon-dt-4 text-gv-dark-text">menu</span>
@@ -302,10 +302,9 @@
             </div>
         </div>
 
-        <div class="flex-1 min-h-0 overflow-y-auto mt-5">
+        <div class="mt-5 w-full h-fit overflow-visible">
             {#if libraryStore.display.length > 0}
-                <div
-                    class="min-[1470px]:grid min-[1470px]:grid-cols-2 flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
+                <div class="flex flex-col gap-4 w-full h-fit">
                     {#each libraryStore.display as score (score.id)}
                         <button onclick={async () => await push(`/library/details?id=${score.id}&editing=false`)}>
                             <Card>
