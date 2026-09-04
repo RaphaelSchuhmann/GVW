@@ -75,13 +75,19 @@ public class DbService {
    *
    * @param db target CouchDB database
    * @param doc document object to store
-   * @return true if CouchDB confirms the operation succeeded
    */
-  public <T> boolean insert(String db, T doc) {
+  public <T> void insert(String db, T doc) {
+    log.debug("Inserting new document in database {}", db);
+
     String url = String.format("%s/%s", baseUrl, db);
     Map<String, Object> resp =
         safeExecute(() -> restTemplate.postForObject(url, doc, Map.class), db);
-    return resp != null && Boolean.TRUE.equals(resp.get("ok"));
+
+    if (resp == null || !Boolean.TRUE.equals(resp.get("ok"))) {
+      throw new RuntimeException("0000500");
+    }
+
+    log.debug("Document inserted successfully into database {}", db);
   }
 
   /**
@@ -95,27 +101,36 @@ public class DbService {
    * @param doc updated document contents
    * @return CouchDB response containing the new revision
    */
-  public <T> Map<String, Object> update(String db, String id, T doc) {
+  public <T> String update(String db, String id, T doc) {
+    log.debug("Updating document {} in database {}", id, db);
     String url = String.format("%s/%s/%s", baseUrl, db, id);
 
     HttpEntity<T> requestEntity = new HttpEntity<>(doc);
 
-    return safeExecute(
-        () -> {
-          try {
-            ResponseEntity<Map> response =
-                restTemplate.exchange(url, HttpMethod.PUT, requestEntity, Map.class);
+    Map<String, Object> resp =
+        safeExecute(
+            () -> {
+              try {
+                ResponseEntity<Map> response =
+                    restTemplate.exchange(url, HttpMethod.PUT, requestEntity, Map.class);
 
-            Map body = response.getBody();
-            if (body == null) {
-              throw new DatabaseConnectionException("UpdateReturnedEmptyResponse");
-            }
-            return body;
-          } catch (HttpClientErrorException.Conflict e) {
-            throw new ConflictException("RevisionMismatch");
-          }
-        },
-        db);
+                Map body = response.getBody();
+                if (body == null) {
+                  throw new DatabaseConnectionException("UpdateReturnedEmptyResponse");
+                }
+                return body;
+              } catch (HttpClientErrorException.Conflict e) {
+                throw new ConflictException("RevisionMismatch");
+              }
+            },
+            db);
+
+    if (resp != null && resp.get("rev") instanceof String rev) {
+      log.debug("Document {} updated successfully in database {}", id, db);
+      return rev;
+    }
+
+    throw new RuntimeException("0000500");
   }
 
   /**
@@ -130,14 +145,19 @@ public class DbService {
    * @param db target CouchDB database
    * @param id document ID
    * @param rev current CouchDB document revision
-   * @return true if CouchDB confirms deletion
    */
-  public boolean delete(String db, String id, String rev) {
+  public void delete(String db, String id, String rev) {
+    log.debug("Deleting document {} from database {}", id, db);
     String url = String.format("%s/%s/%s?rev=%s", baseUrl, db, id, rev);
     Map<String, Object> resp =
         safeExecute(
             () -> restTemplate.exchange(url, HttpMethod.DELETE, null, Map.class).getBody(), db);
-    return resp != null && Boolean.TRUE.equals(resp.get("ok"));
+
+    if (resp == null || !Boolean.TRUE.equals(resp.get("ok"))) {
+      throw new RuntimeException("0000500");
+    }
+
+    log.debug("Document {} deleted successfully from database {}", id, db);
   }
 
   /**

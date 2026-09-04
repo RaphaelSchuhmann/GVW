@@ -37,7 +37,6 @@ public class EPWRServiceTest {
     when(hashUtil.createHash(any())).thenReturn("hashedToken");
 
     when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of());
-    when(dbService.insert(eq("emergency_token"), any(EPWRToken.class))).thenReturn(true);
 
     String token = epwrService.getNewEmergencyToken();
 
@@ -56,7 +55,6 @@ public class EPWRServiceTest {
     when(hashUtil.createHash(any())).thenReturn("newHashedToken");
 
     when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of(epwrToken));
-    when(dbService.insert(eq("emergency_token"), any(EPWRToken.class))).thenReturn(true);
 
     String token = epwrService.getNewEmergencyToken();
 
@@ -88,11 +86,8 @@ public class EPWRServiceTest {
     when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(admins);
 
     when(hashUtil.compare(rawToken, storedHash)).thenReturn(true);
-    when(dbService.insert(eq("emergency_token"), any(EPWRToken.class))).thenReturn(true);
 
     when(passwordEncoder.encode(any())).thenReturn("encoded-password");
-
-    when(dbService.insert(eq("users"), any(User.class))).thenReturn(true);
 
     String token = epwrService.useEmergencyToken(rawToken);
 

@@ -126,15 +126,9 @@ public class ReportService {
     startBlock.setData("");
     report.setContents(List.of(startBlock));
 
-    log.debug("Inserting new report into database");
     dbService.insert("reports", report);
-    log.debug("Report inserted successfully");
 
-    try {
-      sseService.broadcastRefresh("REPORTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh", ex);
-    }
+    sseService.sendRefresh("REPORTS");
   }
 
   /**
@@ -242,9 +236,7 @@ public class ReportService {
           String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.DELETE, 404)));
     }
 
-    log.debug("Deleting report from database");
     dbService.delete("reports", report.getId(), report.getRev());
-    log.debug("Report deleted successfully");
 
     log.debug("Purging report editor assets");
     editorService.purgeAllBlockAssets(report.getContents());
@@ -264,11 +256,7 @@ public class ReportService {
       }
     }
 
-    try {
-      sseService.broadcastRefresh("REPORTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh", ex);
-    }
+    sseService.sendRefresh("REPORTS");
   }
 
   /**
@@ -360,30 +348,17 @@ public class ReportService {
       report.setContents(request.content());
       report.setRev(request.rev());
 
-      log.debug("Updating report in database");
-      Map<String, Object> resp = dbService.update("reports", report.getId(), report);
-
-      if (resp == null || !resp.containsKey("rev")) {
-        log.error("Report update failed: database response did not contain a revision");
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 500)));
-      }
-
-      log.debug("Report updated successfully");
+      String rev = dbService.update("reports", report.getId(), report);
 
       log.debug("Synchronizing report editor assets");
       editorService.synchronizeBlockAssets(oldContents, request.content(), ErrorAction.UPDATE);
       log.debug("Report editor assets synchronized successfully");
 
-      try {
-        sseService.broadcastRefresh("REPORTS");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast REPORTS refresh", ex);
-      }
+      sseService.sendRefresh("REPORTS");
 
       log.debug("Report update completed successfully");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error("Update failed for report ID: {}", request.id(), e);
 
@@ -420,23 +395,11 @@ public class ReportService {
     report.setDescription(description);
     report.setRev(request.rev());
 
-    log.debug("Updating report description in database");
-    Map<String, Object> resp = dbService.update("reports", report.getId(), report);
-    log.debug("Report description updated successfully");
+    String rev = dbService.update("reports", report.getId(), report);
 
-    if (resp == null || !resp.containsKey("rev")) {
-      log.error("Report description update failed: database response did not contain a revision");
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UPDATE, 500)));
-    }
+    sseService.sendRefresh("REPORTS");
 
-    try {
-      sseService.broadcastRefresh("REPORTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh", ex);
-    }
-
-    return (String) resp.get("rev");
+    return rev;
   }
 
   /**
@@ -522,16 +485,7 @@ public class ReportService {
       report.setAttachments(finalAttachmentList);
       report.setRev(request.rev());
 
-      log.debug("Updating report attachment metadata in database");
-      Map<String, Object> resp = dbService.update("reports", report.getId(), report);
-
-      if (resp == null || !resp.containsKey("rev") || resp.get("rev").toString().isEmpty()) {
-        log.error("Attachment update failed: database response did not contain a valid revision");
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 500)));
-      }
-
-      log.debug("Report attachment metadata updated successfully");
+      String rev = dbService.update("reports", report.getId(), report);
 
       for (File deadFile : filesToPurgeFromDisk) {
         try {
@@ -545,13 +499,9 @@ public class ReportService {
         }
       }
 
-      try {
-        sseService.broadcastRefresh("REPORTS");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast REPORTS refresh", ex);
-      }
+      sseService.sendRefresh("REPORTS");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error(
           "Attachment update transaction failed for report ID: {}. Triggering system rollback",

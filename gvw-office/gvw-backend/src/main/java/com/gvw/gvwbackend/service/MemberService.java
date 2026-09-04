@@ -136,9 +136,7 @@ public class MemberService {
     User user = createUserFromRequest(request);
 
     try {
-      log.debug("Inserting new member into database");
       dbService.insert("members", member);
-      log.debug("Member inserted successfully");
 
       Map<String, Object> query = Map.of("selector", Map.of("email", request.email()), "limit", 1);
       List<Member> members = dbService.findByQuery("members", query, Member.class);
@@ -157,9 +155,7 @@ public class MemberService {
       user.setPassword(passwordEncoder.encode(temporaryPassword));
       user.setUserActive(member.getStatus().equals("active"));
 
-      log.debug("Inserting linked user into database");
       dbService.insert("users", user);
-      log.debug("Linked user inserted successfully");
 
       if (user.getUserActive()) {
         log.debug("Sending new user email");
@@ -171,11 +167,7 @@ public class MemberService {
         log.debug("New user email sent successfully");
       }
 
-      try {
-        sseService.broadcastRefresh("MEMBERS");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast MEMBERS refresh", ex);
-      }
+      sseService.sendRefresh("MEMBERS");
     } catch (Exception e) {
       log.error("Failed to create member and linked user. Starting rollback", e);
 
@@ -222,19 +214,16 @@ public class MemberService {
     Member member = getMemberById(id, ErrorAction.DELETE);
     User user = getUserByMemberId(id, ErrorAction.DELETE);
 
-    log.debug("Deleting member from database");
     dbService.delete("members", member.getId(), member.getRev());
-    log.debug("Member deleted successfully");
-
-    log.debug("Deleting linked user from database");
-    dbService.delete("users", user.getId(), user.getRev());
-    log.debug("Linked user deleted successfully");
 
     try {
-      sseService.broadcastRefresh("MEMBERS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast MEMBERS refresh", ex);
+      dbService.delete("users", user.getId(), user.getRev());
+    } catch (Exception e) {
+      log.warn("User with doc id {} could not be deleted and is now orphaned!", user.getId());
+      throw e;
     }
+
+    sseService.sendRefresh("MEMBERS");
   }
 
   /**
@@ -275,18 +264,17 @@ public class MemberService {
 
     log.debug("Updating member in database");
 
-    Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
+    String memberRev = dbService.update("members", member.getId(), member);
 
-    Map<String, Object> userResult;
+    String userRev;
 
     try {
-      log.debug("Updating linked user in database");
-      userResult = dbService.update("users", user.getId(), user);
+      userRev = dbService.update("users", user.getId(), user);
     } catch (RuntimeException ex) {
       log.error("Linked user update failed, attempting to roll back member update", ex);
 
       try {
-        originalMember.setRev((String) memberResult.get("rev"));
+        originalMember.setRev(memberRev);
         dbService.update("members", originalMember.getId(), originalMember);
 
         log.debug("Member update rolled back successfully");
@@ -309,22 +297,9 @@ public class MemberService {
       log.debug("New user email sent successfully");
     }
 
-    try {
-      sseService.broadcastRefresh("MEMBERS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast MEMBERS refresh", ex);
-    }
+    sseService.sendRefresh("MEMBERS");
 
-    if (memberResult != null
-        && memberResult.containsKey("rev")
-        && userResult != null
-        && userResult.containsKey("rev")) {
-      return List.of((String) memberResult.get("rev"), (String) userResult.get("rev"));
-    }
-
-    log.error("Member update failed: database response did not contain valid revisions");
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.UPDATE, 500)));
+    return List.of(memberRev, userRev);
   }
 
   /**
@@ -360,13 +335,9 @@ public class MemberService {
       user.setUserActive(false);
     }
 
-    log.debug("Updating user active in database");
-    Map<String, Object> userResult = dbService.update("users", user.getId(), user);
-    log.debug("User active updated successfully");
+    String userRev = dbService.update("users", user.getId(), user);
 
-    log.debug("Updating member status in database");
-    Map<String, Object> memberResult = dbService.update("members", member.getId(), member);
-    log.debug("Member status updated successfully");
+    String memberRev = dbService.update("members", member.getId(), member);
 
     if (user.getUserActive()) {
       log.debug("Sending new user email");
@@ -378,19 +349,9 @@ public class MemberService {
       log.debug("New user email sent successfully");
     }
 
-    try {
-      sseService.broadcastRefresh("MEMBERS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast MEMBERS refresh", ex);
-    }
+    sseService.sendRefresh("MEMBERS");
 
-    if (memberResult != null && memberResult.containsKey("rev")) {
-      return List.of((String) memberResult.get("rev"), (String) userResult.get("rev"));
-    }
-
-    log.error("Member status update failed: database response did not contain a revision");
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.UPDATE, 500)));
+    return List.of(memberRev, userRev);
   }
 
   /**

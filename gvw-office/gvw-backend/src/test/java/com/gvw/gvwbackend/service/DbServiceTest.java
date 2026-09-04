@@ -38,8 +38,7 @@ public class DbServiceTest {
         .when(restTemplate.postForObject(anyString(), any(), eq(Map.class)))
         .thenReturn(response);
 
-    boolean result = dbService.insert("test_db", Map.of("name", "test"));
-    assertTrue(result);
+    assertDoesNotThrow(() -> dbService.insert("test_db", Map.of("name", "test")));
   }
 
   @Test
@@ -48,8 +47,7 @@ public class DbServiceTest {
         .when(restTemplate.postForObject(anyString(), any(), eq(Map.class)))
         .thenReturn(Map.of("ok", false));
 
-    boolean result = dbService.insert("test_db", Map.of("name", "John"));
-    assertFalse(result);
+    assertThrows(RuntimeException.class, () -> dbService.insert("test_db", Map.of("name", "John")));
   }
 
   @Test
@@ -63,11 +61,10 @@ public class DbServiceTest {
                 anyString(), eq(HttpMethod.PUT), any(HttpEntity.class), eq(Map.class)))
         .thenReturn(responseEntity);
 
-    Map<String, Object> result = dbService.update("test_db", "test-id", Map.of("name", "newName"));
+    String result = dbService.update("test_db", "test-id", Map.of("name", "newName"));
 
     assertNotNull(result);
-    assertEquals("2-newrev", result.get("rev"));
-    assertTrue((Boolean) result.get("ok"));
+    assertEquals("2-newrev", result);
   }
 
   @Test
@@ -95,8 +92,7 @@ public class DbServiceTest {
                 anyString(), eq(org.springframework.http.HttpMethod.DELETE), any(), eq(Map.class)))
         .thenReturn(ResponseEntity.ok(response));
 
-    boolean result = dbService.delete("test_db", "doc_id", "rev");
-    assertTrue(result);
+    assertDoesNotThrow(() -> dbService.delete("test_db", "doc_id", "rev"));
   }
 
   @Test
@@ -107,8 +103,7 @@ public class DbServiceTest {
                 anyString(), eq(org.springframework.http.HttpMethod.DELETE), any(), eq(Map.class)))
         .thenReturn(ResponseEntity.ok(Map.of("ok", false)));
 
-    boolean result = dbService.delete("test_db", "doc_id", "rev");
-    assertFalse(result);
+    assertThrows(RuntimeException.class, () -> dbService.delete("test_db", "doc_id", "rev"));
   }
 
   @Test

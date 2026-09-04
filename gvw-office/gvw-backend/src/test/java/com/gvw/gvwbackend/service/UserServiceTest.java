@@ -9,7 +9,6 @@ import com.gvw.gvwbackend.mapper.UserMapper;
 import com.gvw.gvwbackend.model.Role;
 import com.gvw.gvwbackend.model.User;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,8 +48,7 @@ public class UserServiceTest {
 
     when(passwordEncoder.encode(any())).thenReturn("hashedPw");
 
-    when(dbService.update(eq("users"), eq("321"), any(User.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("users"), eq("321"), any(User.class))).thenReturn("2-newrev");
 
     userService.resetPasswordUsingMemberId("123");
 

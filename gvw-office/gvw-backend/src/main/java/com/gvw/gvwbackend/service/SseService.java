@@ -61,7 +61,7 @@ public class SseService {
    *
    * @param entityType type of entity that has changed and requires refreshing
    */
-  public void broadcastRefresh(String entityType) {
+  private void broadcastRefresh(String entityType) {
     List<SseEmitter> deadEmitters = new ArrayList<>();
 
     emitters.forEach(
@@ -75,6 +75,22 @@ public class SseService {
         });
 
     emitters.removeAll(deadEmitters);
+  }
+
+  /**
+   * Triggers a non-blocking refresh broadcast for the specified entity type.
+   *
+   * <p>Delegates to {@link #broadcastRefresh(String)} and catches any unchecked runtime exceptions
+   * to prevent SSE notification failures from disrupting the main execution flow.
+   *
+   * @param entityType type of entity that changed and requires client-side refreshing
+   */
+  public void sendRefresh(String entityType) {
+    try {
+      broadcastRefresh(entityType);
+    } catch (RuntimeException ex) {
+      log.warn("Failed to broadcast {}", entityType, ex);
+    }
   }
 
   /**

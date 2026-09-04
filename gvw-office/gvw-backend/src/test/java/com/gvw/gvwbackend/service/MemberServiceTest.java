@@ -134,10 +134,7 @@ public class MemberServiceTest {
     when(dbService.findByQuery(eq("members"), any(), eq(Member.class)))
         .thenReturn(List.of(savedMember));
 
-    when(dbService.insert(eq("members"), any(Member.class))).thenReturn(true);
-
-    when(dbService.insert(eq("users"), any(User.class)))
-        .thenThrow(new RuntimeException("DB error"));
+    doThrow(RuntimeException.class).when(dbService).insert(eq("users"), any(User.class));
 
     assertThrows(RuntimeException.class, () -> memberService.addMember(request));
 
@@ -286,9 +283,8 @@ public class MemberServiceTest {
         .thenReturn(List.of(existingUser));
 
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
-    when(dbService.update(eq("users"), eq("user-id"), any(User.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+        .thenReturn("2-newrev");
+    when(dbService.update(eq("users"), eq("user-id"), any(User.class))).thenReturn("2-newrev");
 
     List<String> resp = memberService.updateMember(request);
 
@@ -376,7 +372,7 @@ public class MemberServiceTest {
 
     when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMemberActive);
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+        .thenReturn("2-newrev");
 
     List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
 
@@ -398,7 +394,7 @@ public class MemberServiceTest {
 
     when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMemberActive);
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+        .thenReturn("2-newrev");
 
     List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
 
@@ -420,7 +416,7 @@ public class MemberServiceTest {
 
     when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMemberActive);
     when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+        .thenReturn("2-newrev");
 
     List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
 

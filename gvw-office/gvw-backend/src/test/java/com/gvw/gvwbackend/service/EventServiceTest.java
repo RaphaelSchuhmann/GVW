@@ -13,7 +13,6 @@ import com.gvw.gvwbackend.mapper.EventMapper;
 import com.gvw.gvwbackend.model.Event;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,8 +68,7 @@ public class EventServiceTest {
             .build();
 
     when(dbService.findAll("events", Event.class)).thenReturn(List.of(event));
-    when(dbService.update(eq("events"), any(), any(Event.class)))
-        .thenReturn(Map.of("rev", "rev-3"));
+    when(dbService.update(eq("events"), any(), any(Event.class))).thenReturn("rev-3");
 
     List<EventResponseDTO> response = eventService.allEvents();
 
@@ -151,8 +149,7 @@ public class EventServiceTest {
   @Test
   void testUpdateEventStatusShouldToggleFromUpcomingToFinished() {
     when(dbService.findById("events", "event-123", Event.class)).thenReturn(validEvent);
-    when(dbService.update(eq("events"), eq("event-123"), any(Event.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("events"), eq("event-123"), any(Event.class))).thenReturn("2-newrev");
 
     String rev = eventService.updateEventStatus("event-123", "1-rev");
 
@@ -167,8 +164,7 @@ public class EventServiceTest {
   void testUpdateEventStatusShouldToggleFromFinishedToUpcoming() {
     validEvent.setStatus("finished");
     when(dbService.findById("events", "event-123", Event.class)).thenReturn(validEvent);
-    when(dbService.update(eq("events"), eq("event-123"), any(Event.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("events"), eq("event-123"), any(Event.class))).thenReturn("2-newrev");
 
     String rev = eventService.updateEventStatus("event-123", "1-rev");
 
@@ -195,8 +191,7 @@ public class EventServiceTest {
             null,
             "1-rev");
     when(dbService.findById("events", "event-123", Event.class)).thenReturn(validEvent);
-    when(dbService.update(eq("events"), eq("event-123"), any(Event.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("events"), eq("event-123"), any(Event.class))).thenReturn("2-newrev");
 
     String rev = eventService.updateEvent(updateDto);
 

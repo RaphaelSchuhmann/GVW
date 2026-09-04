@@ -168,9 +168,7 @@ public class HelpCenterService {
     startBlock.setData("");
     article.setContents(List.of(startBlock));
 
-    log.debug("Inserting help center article into database");
     dbService.insert("help_center", article);
-    log.debug("Help center article inserted successfully");
 
     log.debug("Updating help center category article count");
     String rev =
@@ -178,11 +176,7 @@ public class HelpCenterService {
             dto.category(), category.getArticleCount() + 1);
     log.debug("Help center category article count updated successfully");
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER refresh", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
 
     return rev;
   }
@@ -315,24 +309,13 @@ public class HelpCenterService {
       article.setContents(request.content());
       article.setRev(request.rev());
 
-      log.debug("Updating help center article in database");
-      Map<String, Object> resp = dbService.update("help_center", article.getId(), article);
-      log.debug("Help center article updated successfully");
-
-      if (resp == null || !resp.containsKey("rev")) {
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.HELP_CENTER.createCode(ErrorAction.UPDATE, 500)));
-      }
+      String rev = dbService.update("help_center", article.getId(), article);
 
       editorService.synchronizeBlockAssets(oldContents, request.content(), ErrorAction.UPDATE);
 
-      try {
-        sseService.broadcastRefresh("HELP_CENTER");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast HELP_CENTER refresh", ex);
-      }
+      sseService.sendRefresh("HELP_CENTER");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error("Update failed for article ID: {}", request.id(), e);
 
@@ -417,17 +400,11 @@ public class HelpCenterService {
           article.getCategory(), category.getArticleCount() - 1);
     }
 
-    log.debug("Deleting help center article from database");
     dbService.delete("help_center", article.getId(), article.getRev());
-    log.debug("Help center article deleted successfully");
 
     editorService.purgeAllBlockAssets(article.getContents());
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER refresh", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
   }
 
   /**

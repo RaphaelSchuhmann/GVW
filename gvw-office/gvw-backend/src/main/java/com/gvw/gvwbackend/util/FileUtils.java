@@ -22,9 +22,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * Utility component for handling file operations including storing, deleting, resolving, and
+ * streaming files as ZIP archives.
+ */
 @Component
 public class FileUtils {
   private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
+
+  /** The maximum allowed file size for uploads in bytes (20 MB). */
   public static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
   /**
@@ -37,9 +43,11 @@ public class FileUtils {
    *
    * @param files uploaded files
    * @param filesDir directory in which the uploaded files should be stored
+   * @param domain error domain used for generating error codes
    * @param action action context used for generating error codes
-   * @return metadata of successfully stored files
+   * @return metadata list of successfully stored files
    * @throws BadRequestException if a file exceeds the maximum allowed size
+   * @throws RuntimeException if an I/O or unexpected error occurs during file storage
    */
   public List<File> storeFiles(
       List<MultipartFile> files, String filesDir, ErrorDomain domain, ErrorAction action) {
@@ -80,6 +88,18 @@ public class FileUtils {
     return storedFiles;
   }
 
+  /**
+   * Stores a single uploaded file on the file system and generates a unique identifier.
+   *
+   * @param file the multipart file to be stored
+   * @param filesDir directory where the file should be saved
+   * @param domain error domain used for generating error codes
+   * @param action action context used for generating error codes
+   * @return an {@link Optional} containing {@link StoredFile} with file metadata if successful, or
+   *     {@link Optional#empty()} if the file or its original filename is null/blank
+   * @throws BadRequestException if the file exceeds {@link #MAX_FILE_SIZE}
+   * @throws RuntimeException if an I/O or unexpected error occurs during storage
+   */
   public Optional<StoredFile> storeFile(
       MultipartFile file, String filesDir, ErrorDomain domain, ErrorAction action) {
     if (file == null) return Optional.empty();
@@ -116,6 +136,13 @@ public class FileUtils {
     }
   }
 
+  /**
+   * Deletes a file from the specified directory by its filename. Logs an error if the deletion
+   * fails due to an I/O exception.
+   *
+   * @param fileName the name of the file to delete
+   * @param filesDir the directory where the file is stored
+   */
   public void deleteFile(String fileName, String filesDir) {
     Path filePath = Paths.get(filesDir, fileName);
     try {
@@ -125,6 +152,12 @@ public class FileUtils {
     }
   }
 
+  /**
+   * Deletes a file at the specified path location. Logs an error if the deletion fails due to an
+   * I/O exception.
+   *
+   * @param filePath the {@link Path} of the file to delete
+   */
   public void deleteFile(Path filePath) {
     try {
       Files.deleteIfExists(filePath);
@@ -133,6 +166,16 @@ public class FileUtils {
     }
   }
 
+  /**
+   * Compresses a list of files into a ZIP archive and streams it directly to an {@link
+   * OutputStream}. Sanitizes entry filenames to avoid path traversal issues.
+   *
+   * @param files list of {@link File} objects representing the metadata of files to be zipped
+   * @param filesDir directory where the physical files are located
+   * @param out the target output stream to write the ZIP archive to
+   * @param domain error domain used for generating error codes on failure
+   * @throws RuntimeException if an I/O error occurs while creating the ZIP archive
+   */
   public void streamFilesAsZip(
       List<File> files, String filesDir, OutputStream out, ErrorDomain domain) {
     Path root = Paths.get(filesDir);
@@ -166,6 +209,17 @@ public class FileUtils {
     }
   }
 
+  /**
+   * Resolves a file path while guarding against path traversal attacks.
+   *
+   * @param filename the name of the file to resolve
+   * @param filesDir the base directory path
+   * @param domain error domain used for generating error codes
+   * @param action action context used for generating error codes
+   * @param resource optional error resource context used for detailed error codes
+   * @return normalized {@link Path} object targeting the file
+   * @throws BadRequestException if the filename is invalid or attempts path traversal
+   */
   public Path resolveFile(
       String filename,
       String filesDir,
@@ -194,6 +248,12 @@ public class FileUtils {
     return file;
   }
 
+  /**
+   * Helper method to clean up created files when an error occurs during processing.
+   *
+   * @param paths list of file {@link Path} instances to be deleted
+   * @param e the exception that triggered the cleanup process
+   */
   private void cleanUp(List<Path> paths, Exception e) {
     log.error("Internal file storage failed. Cleaning up partial uploads...", e);
     for (Path path : paths) {

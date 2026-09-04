@@ -63,11 +63,7 @@ public class ChangelogService {
 
     dbService.insert("changelogs", changelog);
 
-    try {
-      sseService.broadcastRefresh("CHANGELOGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast CHANGELOGS refresh", ex);
-    }
+    sseService.sendRefresh("CHANGELOGS");
   }
 
   /**
@@ -92,10 +88,6 @@ public class ChangelogService {
 
     dbService.delete("changelogs", changelog.getId(), changelog.getRev());
 
-    try {
-      sseService.broadcastRefresh("CHANGELOGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast CHANGELOGS refresh", ex);
-    }
+    sseService.sendRefresh("CHANGELOGS");
   }
 }

@@ -175,9 +175,7 @@ public class UserService {
     user.setPassword(passwordEncoder.encode(temporaryPassword));
     user.setUserActive(true);
 
-    log.debug("Inserting new user into database");
     dbService.insert("users", user);
-    log.debug("User inserted successfully");
 
     log.debug("Sending new user email");
     mailService.sendMail(
@@ -187,11 +185,7 @@ public class UserService {
         Map.of("tempPassword", temporaryPassword));
     log.debug("New user email sent successfully");
 
-    try {
-      sseService.broadcastRefresh("USER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh", ex);
-    }
+    sseService.sendRefresh("USER");
   }
 
   /**
@@ -257,35 +251,24 @@ public class UserService {
    * @throws RuntimeException if the database update does not return a revision
    */
   private String resetPassword(User user) {
-    log.debug("User loaded successfully for password reset");
-
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
     user.setChangePassword(true);
 
     log.debug("Updating user password in database");
-
-    Map<String, Object> resp = dbService.update("users", user.getId(), user);
-
-    if (resp == null || !resp.containsKey("rev")) {
-      log.error("Password reset failed: db update did not contain a rev");
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
-    }
-
+    String rev = dbService.update("users", user.getId(), user);
     log.debug("User password updated successfully");
-    log.debug("Sending password reset email");
 
+    log.debug("Sending password reset email");
     mailService.sendMail(
         user.getEmail(),
         "GVW-Office: Passwort zurückgesetzt",
         "resetPassword",
         Map.of("tempPassword", temporaryPassword));
-
     log.info("Password reset completed successfully");
 
-    return (String) resp.get("rev");
+    return rev;
   }
 
   /**
@@ -322,25 +305,11 @@ public class UserService {
 
     user.setRev(request.rev());
 
-    log.debug("Updating user in database");
-    Map<String, Object> userResult = dbService.update("users", user.getId(), user);
+    String rev = dbService.update("users", user.getId(), user);
 
-    if (userResult == null || !userResult.containsKey("rev")) {
-      log.error("Database response did not contain a new rev");
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
-    }
+    sseService.sendRefresh("USER");
 
-    log.debug("User update in database was successful");
-
-    try {
-      sseService.broadcastRefresh("USER");
-      log.debug("USER refresh broadcast sent successfully");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh", ex);
-    }
-
-    return (String) userResult.get("rev");
+    return rev;
   }
 
   /**
@@ -367,15 +336,9 @@ public class UserService {
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.DELETE, 400)));
     }
 
-    log.debug("Deleting user in database");
     dbService.delete("users", user.getId(), user.getRev());
-    log.debug("User deletion was successful");
 
-    try {
-      sseService.broadcastRefresh("USER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh", ex);
-    }
+    sseService.sendRefresh("USER");
   }
 
   /**
@@ -455,9 +418,7 @@ public class UserService {
    */
   private User getUserByID(String id, ErrorAction action) {
     log.debug("Looking up user by database ID: {}", id);
-
     User user = dbService.findById("users", id, User.class);
-
     log.debug("User lookup returned: {}", user != null ? "user found" : "null");
 
     if (user == null) {

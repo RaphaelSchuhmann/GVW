@@ -11,7 +11,6 @@ import com.gvw.gvwbackend.mapper.EventMapper;
 import com.gvw.gvwbackend.model.Event;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -74,26 +73,15 @@ public class EventService {
           && event.getStatus().equals("upcoming")
           && event.getMode().equalsIgnoreCase("single")) {
         event.setStatus("finished");
-        Map<String, Object> resp = dbService.update("events", event.getId(), event);
+        String rev = dbService.update("events", event.getId(), event);
 
-        if (resp == null || !resp.containsKey("rev")) {
-          log.error("Failed to update status of event {}", event.getId());
-          event.setStatus("upcoming");
-          continue;
-        }
-
-        event.setRev((String) resp.get("rev"));
+        event.setRev(rev);
         changed = true;
       }
     }
 
     if (changed) {
-      try {
-        sseService.broadcastRefresh("EVENTS");
-        log.debug("EVENTS refresh broadcast sent successfully");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast EVENTS refresh", ex);
-      }
+      sseService.sendRefresh("EVENTS");
     }
 
     return events.stream()
@@ -153,11 +141,7 @@ public class EventService {
 
     dbService.insert("events", event);
 
-    try {
-      sseService.broadcastRefresh("EVENTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh", ex);
-    }
+    sseService.sendRefresh("EVENTS");
   }
 
   /**
@@ -183,11 +167,7 @@ public class EventService {
 
     dbService.delete("events", event.getId(), event.getRev());
 
-    try {
-      sseService.broadcastRefresh("EVENTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh", ex);
-    }
+    sseService.sendRefresh("EVENTS");
   }
 
   /**
@@ -217,20 +197,11 @@ public class EventService {
       event.setStatus("upcoming");
     }
 
-    Map<String, Object> resp = dbService.update("events", event.getId(), event);
+    String rev = dbService.update("events", event.getId(), event);
 
-    try {
-      sseService.broadcastRefresh("EVENTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh", ex);
-    }
+    sseService.sendRefresh("EVENTS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.EVENTS.createCode(ErrorAction.UPDATE, 500)));
+    return rev;
   }
 
   /**
@@ -254,20 +225,11 @@ public class EventService {
 
     event.setRev(request.rev());
 
-    Map<String, Object> resp = dbService.update("events", event.getId(), event);
+    String rev = dbService.update("events", event.getId(), event);
 
-    try {
-      sseService.broadcastRefresh("EVENTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast EVENTS refresh", ex);
-    }
+    sseService.sendRefresh("EVENTS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.EVENTS.createCode(ErrorAction.UPDATE, 500)));
+    return rev;
   }
 
   /**

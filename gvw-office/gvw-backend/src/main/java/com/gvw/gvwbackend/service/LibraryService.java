@@ -161,15 +161,9 @@ public class LibraryService {
               .files(metaList)
               .build();
 
-      log.debug("Inserting new score into database");
       dbService.insert("library", score);
-      log.debug("Score inserted successfully");
 
-      try {
-        sseService.broadcastRefresh("SCORES");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast SCORES refresh", ex);
-      }
+      sseService.sendRefresh("SCORES");
     } catch (Exception e) {
       for (File orphan : metaList) {
         fileUtils.deleteFile(orphan.getId() + "." + orphan.getExtension(), scoresDir);
@@ -210,15 +204,9 @@ public class LibraryService {
       }
     }
 
-    log.debug("Deleting score from database");
     dbService.delete("library", score.getId(), score.getRev());
-    log.debug("Score deleted successfully");
 
-    try {
-      sseService.broadcastRefresh("SCORES");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SCORES refresh", ex);
-    }
+    sseService.sendRefresh("SCORES");
   }
 
   /**
@@ -293,26 +281,15 @@ public class LibraryService {
       score.setVoices(request.voices());
       score.setVoiceCount(request.voiceCount());
 
-      log.debug("Updating score in database");
-      Map<String, Object> resp = dbService.update("library", score.getId(), score);
-      log.debug("Score updated successfully");
-
-      if (resp == null || !resp.containsKey("rev")) {
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 500)));
-      }
+      String rev = dbService.update("library", score.getId(), score);
 
       for (File oldFile : filesToPhysicallyDelete) {
         fileUtils.deleteFile(oldFile.getId() + "." + oldFile.getExtension(), scoresDir);
       }
 
-      try {
-        sseService.broadcastRefresh("SCORES");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast SCORES refresh", ex);
-      }
+      sseService.sendRefresh("SCORES");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error("Update failed. Rolling back new uploads.", e);
       for (File newFile : newlyStoredFiles) {

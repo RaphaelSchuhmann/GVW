@@ -19,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -121,8 +120,7 @@ public class LibraryServiceTest {
     existing.setFiles(new ArrayList<>());
 
     when(dbService.findById("library", "1", Score.class)).thenReturn(existing);
-    when(dbService.update(eq("library"), eq("1"), any(Score.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("library"), eq("1"), any(Score.class))).thenReturn("2-newrev");
 
     UpdateScoreRequestDTO request =
         new UpdateScoreRequestDTO(

@@ -75,7 +75,9 @@ public class EPWRService {
       epwrToken.setCreatedAt(Instant.now());
       epwrToken.setExpiresAt(Instant.now().plus(Duration.ofDays(30)));
 
-      if (!dbService.insert("emergency_token", epwrToken)) {
+      try {
+        dbService.insert("emergency_token", epwrToken);
+      } catch (Exception e) {
         log.error("EPWR [new]: unable to insert emergency token into database");
         throw new RuntimeException("Failed to insert emergency token");
       }
@@ -87,7 +89,9 @@ public class EPWRService {
 
       // DbService.insert() replaces the existing CouchDB document when an ID is present.
       // This is intentionally used instead of a separate update operation.
-      if (!dbService.insert("emergency_token", savedToken)) {
+      try {
+        dbService.insert("emergency_token", savedToken);
+      } catch (Exception e) {
         log.error("EPWR [new]: unable to replace emergency token in database");
         throw new RuntimeException("Failed to update emergency token");
       }
@@ -184,7 +188,9 @@ public class EPWRService {
       admin.setPassword(passwordEncoder.encode(tempPw));
       admin.setChangePassword(true);
 
-      if (!dbService.insert("users", admin)) {
+      try {
+        dbService.insert("users", admin);
+      } catch (Exception e) {
         log.error("Failed to update admin password");
         throw new RuntimeException("Failed to update admin password");
       }
@@ -213,7 +219,10 @@ public class EPWRService {
     savedToken.setCreatedAt(Instant.now());
     savedToken.setExpiresAt(Instant.now().plus(Duration.ofDays(30)));
 
-    return dbService.insert("emergency_token", savedToken);
+    // Note that if replacement / insertion fails it throws
+    dbService.insert("emergency_token", savedToken);
+
+    return true;
   }
 
   /**

@@ -16,7 +16,6 @@ import com.gvw.gvwbackend.model.User;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -53,8 +52,7 @@ public class AuthServiceTest {
     when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
 
     when(passwordEncoder.matches("plainPw", "hashedPw")).thenReturn(true);
-    when(dbService.update(eq("users"), eq("123"), any(User.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
 
     when(jwtService.generateToken(eq("123"), anyMap())).thenReturn("mocked-jwt");
 
@@ -134,8 +132,7 @@ public class AuthServiceTest {
     user.setLockUntil(null);
 
     when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-    when(dbService.update(eq("users"), eq("123"), any(User.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
 
     when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
@@ -163,8 +160,7 @@ public class AuthServiceTest {
     user.setLockUntil(null);
 
     when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-    when(dbService.update(eq("users"), eq("123"), any(User.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
 
     when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
@@ -199,8 +195,7 @@ public class AuthServiceTest {
     user.setFirstLogin(true);
 
     when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-    when(dbService.update(eq("users"), eq("123"), any(User.class)))
-        .thenReturn(Map.of("ok", true, "rev", "2-newrev"));
+    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
 
     when(passwordEncoder.matches(any(), any())).thenReturn(false).thenReturn(true);
 

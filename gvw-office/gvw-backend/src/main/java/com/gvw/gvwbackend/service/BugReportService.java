@@ -150,11 +150,7 @@ public class BugReportService {
       }
     }
 
-    try {
-      sseService.broadcastRefresh("BUG");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast BUG refresh", ex);
-    }
+    sseService.sendRefresh("BUG");
   }
 
   /**
@@ -176,16 +172,8 @@ public class BugReportService {
           String.valueOf(ErrorDomain.BUG_REPORT.createCode(ErrorAction.DELETE, 404)));
     }
 
-    boolean deleted = dbService.delete("bug_reports", bugReport.getId(), bugReport.getRev());
-    if (!deleted) {
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.BUG_REPORT.createCode(ErrorAction.DELETE, 500)));
-    }
+    dbService.delete("bug_reports", bugReport.getId(), bugReport.getRev());
 
-    try {
-      sseService.broadcastRefresh("BUG");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast BUG refresh", ex);
-    }
+    sseService.sendRefresh("BUG");
   }
 }

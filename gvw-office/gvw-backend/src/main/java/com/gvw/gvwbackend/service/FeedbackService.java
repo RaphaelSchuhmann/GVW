@@ -121,12 +121,7 @@ public class FeedbackService {
 
     dbService.insert("feedbacks", feedback);
 
-    try {
-      sseService.broadcastRefresh("FEEDBACK");
-      log.debug("FEEDBACK refresh broadcast sent successfully");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast FEEDBACK refresh", ex);
-    }
+    sseService.sendRefresh("FEEDBACK");
   }
 
   /**
@@ -150,17 +145,8 @@ public class FeedbackService {
           String.valueOf(ErrorDomain.FEEDBACK.createCode(ErrorAction.DELETE, 404)));
     }
 
-    boolean deleted = dbService.delete("feedbacks", feedback.getId(), feedback.getRev());
-    if (!deleted) {
-      log.error("Failed to delete feedback with ID {}", feedback.getId());
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.FEEDBACK.createCode(ErrorAction.DELETE, 500)));
-    }
+    dbService.delete("feedbacks", feedback.getId(), feedback.getRev());
 
-    try {
-      sseService.broadcastRefresh("FEEDBACK");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast FEEDBACK refresh", ex);
-    }
+    sseService.sendRefresh("FEEDBACK");
   }
 }
