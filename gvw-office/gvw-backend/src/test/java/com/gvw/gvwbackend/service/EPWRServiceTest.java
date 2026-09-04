@@ -10,6 +10,7 @@ import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.EPWRToken;
 import com.gvw.gvwbackend.model.User;
+import com.gvw.gvwbackend.util.HashUtil;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.gvw.gvwbackend.service;
+package com.gvw.gvwbackend.util;
 
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -1,4 +1,4 @@
-package com.gvw.gvwbackend.service;
+package com.gvw.gvwbackend.util;
 
 import java.security.SecureRandom;
 import java.util.Base64;

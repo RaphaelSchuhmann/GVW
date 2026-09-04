@@ -421,7 +421,7 @@ public class HelpCenterService {
     dbService.delete("help_center", article.getId(), article.getRev());
     log.debug("Help center article deleted successfully");
 
-    editorService.purgeAllBlockAssets(article.getContents(), ErrorAction.DELETE);
+    editorService.purgeAllBlockAssets(article.getContents());
 
     try {
       sseService.broadcastRefresh("HELP_CENTER");

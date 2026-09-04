@@ -10,15 +10,10 @@ import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.*;
-import java.io.IOException;
+import com.gvw.gvwbackend.util.FileUtils;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,6 +34,7 @@ public class ReportService {
   private final DbService dbService;
   private final SseService sseService;
   private final TextEditorService editorService;
+  private final FileUtils fileUtils;
   private static final Logger log = LoggerFactory.getLogger(ReportService.class);
 
   /**
@@ -49,10 +45,14 @@ public class ReportService {
    * @param editorService service used for managing editor content and assets
    */
   public ReportService(
-      DbService dbService, SseService sseService, TextEditorService editorService) {
+      DbService dbService,
+      SseService sseService,
+      TextEditorService editorService,
+      FileUtils fileUtils) {
     this.dbService = dbService;
     this.sseService = sseService;
     this.editorService = editorService;
+    this.fileUtils = fileUtils;
   }
 
   /**
@@ -247,14 +247,14 @@ public class ReportService {
     log.debug("Report deleted successfully");
 
     log.debug("Purging report editor assets");
-    editorService.purgeAllBlockAssets(report.getContents(), ErrorAction.DELETE);
+    editorService.purgeAllBlockAssets(report.getContents());
 
     List<File> attachments = report.getAttachments();
     if (!attachments.isEmpty()) {
       for (File file : attachments) {
         try {
-          editorService.deleteAssetFromDisk(
-              file.getId() + "." + file.getExtension(), ErrorAction.UPDATE);
+          fileUtils.deleteFile(
+              file.getId() + "." + file.getExtension(), editorService.getEditorAssetsDir());
         } catch (Exception ex) {
           log.error(
               "Failed to purge unlinked attachment asset from file system: {}",
@@ -484,7 +484,9 @@ public class ReportService {
 
     try {
       log.debug("Storing uploaded report attachments");
-      newlyWrittenFilesToDisk = editorService.storeFiles(files, ErrorAction.UPDATE);
+      newlyWrittenFilesToDisk =
+          fileUtils.storeFiles(
+              files, editorService.getEditorAssetsDir(), ErrorDomain.REPORT, ErrorAction.UPDATE);
       log.debug("Report attachments stored successfully");
 
       List<File> finalAttachmentList = new ArrayList<>();
@@ -533,8 +535,8 @@ public class ReportService {
 
       for (File deadFile : filesToPurgeFromDisk) {
         try {
-          editorService.deleteAssetFromDisk(
-              deadFile.getId() + "." + deadFile.getExtension(), ErrorAction.UPDATE);
+          fileUtils.deleteFile(
+              deadFile.getId() + "." + deadFile.getExtension(), editorService.getEditorAssetsDir());
         } catch (Exception ex) {
           log.error(
               "Failed to purge unlinked attachment asset from file system: {}",
@@ -558,8 +560,9 @@ public class ReportService {
 
       for (File failedFile : newlyWrittenFilesToDisk) {
         try {
-          editorService.deleteAssetFromDisk(
-              failedFile.getId() + "." + failedFile.getExtension(), ErrorAction.UPDATE);
+          fileUtils.deleteFile(
+              failedFile.getId() + "." + failedFile.getExtension(),
+              editorService.getEditorAssetsDir());
         } catch (Exception rollbackEx) {
           log.error(
               "Critical: Failed to remove orphaned file during transaction rollback: {}",
@@ -585,35 +588,6 @@ public class ReportService {
    * @throws RuntimeException if archive creation fails
    */
   public void streamFilesAsZip(List<File> files, OutputStream out) {
-    Path root = Paths.get(editorService.getFilesDir());
-
-    try (ZipOutputStream zip = new ZipOutputStream(out)) {
-      for (File file : files) {
-        Path filePath = root.resolve(file.getId() + "." + file.getExtension());
-
-        if (Files.exists(filePath)) {
-          String entryName =
-              file.getOriginalName()
-                  .replaceAll("[\r\n]", "_")
-                  .replaceAll("\\.\\./", "")
-                  .replaceAll("\\.\\.\\\\", "");
-          entryName = Paths.get(entryName).getFileName().toString();
-
-          ZipEntry entry = new ZipEntry(entryName);
-          zip.putNextEntry(entry);
-
-          Files.copy(filePath, zip);
-
-          zip.closeEntry();
-        } else {
-          log.warn("Attachment file not found on disk, skipping: {}", file.getId());
-        }
-      }
-      zip.finish();
-    } catch (IOException e) {
-      log.error("Error creating ZIP archive", e);
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UTILITY, 500)), e);
-    }
+    fileUtils.streamFilesAsZip(files, editorService.getEditorAssetsDir(), out, ErrorDomain.REPORT);
   }
 }
