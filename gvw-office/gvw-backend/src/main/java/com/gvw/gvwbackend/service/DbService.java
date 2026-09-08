@@ -306,7 +306,7 @@ public class DbService {
    * @param e exception to inspect
    * @return true if the root cause is a refused connection
    */
-  private boolean isConnectionRefused(Throwable e) {
+  boolean isConnectionRefused(Throwable e) {
     while (e != null) {
       if (e instanceof ConnectException) return true;
       e = e.getCause();

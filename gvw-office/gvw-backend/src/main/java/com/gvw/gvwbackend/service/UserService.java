@@ -1,6 +1,7 @@
 package com.gvw.gvwbackend.service;
 
-import com.gvw.gvwbackend.dto.request.AddUserAdminRequestDTO;
+import com.gvw.gvwbackend.dto.request.AddMemberRequestDTO;
+import com.gvw.gvwbackend.dto.request.AddUserRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateUserAdminRequestDTO;
 import com.gvw.gvwbackend.dto.response.UserManagerResponseDTO;
 import com.gvw.gvwbackend.dto.response.UserResponseDTO;
@@ -152,13 +153,43 @@ public class UserService {
   /**
    * Creates a new user account.
    *
+   * @param request data required to create the user
+   */
+  public void addOrphanedUser(AddUserRequestDTO request) {
+    addUser(request, null);
+  }
+
+  /**
+   * Creates a new user account.
+   *
+   * @param originalRequest data required to create the user
+   * @param memberId the required memberId for the linked user
+   */
+  public void addLinkedUser(AddMemberRequestDTO originalRequest, String memberId) {
+    if (memberId == null || memberId.isBlank()) {
+      throw new IllegalArgumentException("memberId must not be blank");
+    }
+    AddUserRequestDTO request =
+        new AddUserRequestDTO(
+            originalRequest.name() + " " + originalRequest.surname(),
+            originalRequest.email(),
+            originalRequest.phone(),
+            originalRequest.address(),
+            originalRequest.role());
+    addUser(request, memberId);
+  }
+
+  /**
+   * Creates a new user account.
+   *
    * <p>Generates a temporary password, stores the user, sends the password via email, and
    * broadcasts a user refresh event.
    *
-   * @param request data required to create the user
+   * @param request data required to create an orphaned user
+   * @param memberId the required memberId for a linked user
    * @throws ConflictException if another user already uses the requested email
    */
-  public void addUser(AddUserAdminRequestDTO request) {
+  private void addUser(AddUserRequestDTO request, String memberId) {
     List<User> usersWithRequestMail =
         dbService.findByQuery(
             "users", Map.of("selector", Map.of("email", request.email())), User.class);
@@ -169,6 +200,10 @@ public class UserService {
     }
 
     User user = createUserFromRequest(request);
+
+    if (memberId != null) {
+      user.setMemberId(memberId);
+    }
 
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
@@ -199,7 +234,7 @@ public class UserService {
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the user does not exist
    */
-  public String resetPasswordUsingUserId(String id) {
+  public String resetPasswordUsingId(String id) {
     if (id == null || id.isEmpty()) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 400)));
@@ -256,9 +291,7 @@ public class UserService {
     user.setPassword(passwordEncoder.encode(temporaryPassword));
     user.setChangePassword(true);
 
-    log.debug("Updating user password in database");
     String rev = dbService.update("users", user.getId(), user);
-    log.debug("User password updated successfully");
 
     log.debug("Sending password reset email");
     mailService.sendMail(
@@ -454,7 +487,7 @@ public class UserService {
    * @param request user creation request
    * @return initialized user entity
    */
-  private User createUserFromRequest(AddUserAdminRequestDTO request) {
+  private User createUserFromRequest(AddUserRequestDTO request) {
     User user = new User();
     user.setEmail(request.email());
     user.setName(request.name());

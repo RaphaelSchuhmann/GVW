@@ -1,6 +1,6 @@
 package com.gvw.gvwbackend.controller;
 
-import com.gvw.gvwbackend.dto.request.AddUserAdminRequestDTO;
+import com.gvw.gvwbackend.dto.request.AddUserRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateUserAdminRequestDTO;
 import com.gvw.gvwbackend.dto.response.UserManagerResponseDTO;
 import com.gvw.gvwbackend.dto.response.UserResponseDTO;
@@ -52,8 +52,8 @@ public class UserController {
       domain = ErrorDomain.USER,
       action = ErrorAction.CREATE,
       resource = ErrorResource.NONE)
-  public void addUser(@Valid @RequestBody AddUserAdminRequestDTO request) {
-    userService.addUser(request);
+  public void addUser(@Valid @RequestBody AddUserRequestDTO request) {
+    userService.addOrphanedUser(request);
   }
 
   @GetMapping("/admin/check/{id}")
@@ -67,7 +67,7 @@ public class UserController {
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasAnyRole('ADMIN')")
   public Map<String, Object> adminResetPassword(@PathVariable String id) {
-    String rev = userService.resetPasswordUsingUserId(id);
+    String rev = userService.resetPasswordUsingId(id);
     return Map.of("rev", rev);
   }
 
