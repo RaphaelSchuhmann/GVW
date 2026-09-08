@@ -75,6 +75,8 @@ export function resetPageState() {
     }
     currentPageKey = "";
     entry = null;
+    currentPageKey = "";
+    entry = null;
 }
 
 /**
@@ -133,6 +135,10 @@ export async function fetchAndSetRaw() {
 
     try {
         const { resp, body } = await entry.fetch();
+
+        console.log("FETCH RESULT IN SERVICE:", resp);
+        console.log("ENTRY BEFORE ASSIGNMENT:", entry);
+
         const normalizedResponse = normalizeResponse(resp);
 
         if (handleGlobalApiError(normalizedResponse)) return;

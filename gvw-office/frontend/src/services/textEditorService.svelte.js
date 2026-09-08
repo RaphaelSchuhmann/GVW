@@ -127,11 +127,11 @@ export function deleteBlock(items, blockId, isImage = false) {
         const blockData = block.data;
 
         if (previewUrls.has(blockData)) {
-            previewUrls.delete(blockId);
+            previewUrls.delete(blockData);
         }
 
         if (pendingImages.has(blockData)) {
-            pendingImages.delete(blockId);
+            pendingImages.delete(blockData);
         }
     }
 

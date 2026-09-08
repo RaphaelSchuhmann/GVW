@@ -7,15 +7,19 @@
     "build": "vite build",
     "preview": "vite preview",
     "doctor": "svelte-doctor check",
-    "doctor:fix": "svelte-doctor fix"
+    "doctor:fix": "svelte-doctor fix",
+    "test": "vitest"
   },
   "type": "module",
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "@tailwindcss/vite": "^4.1.18",
+    "@vitest/coverage-v8": "^5.0.0",
+    "jsdom": "^30.0.1",
     "svelte": "^5.43.8",
     "tailwindcss": "^4.1.18",
-    "vite": "^7.3.6"
+    "vite": "^7.3.6",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "dompurify": "^3.4.13",
