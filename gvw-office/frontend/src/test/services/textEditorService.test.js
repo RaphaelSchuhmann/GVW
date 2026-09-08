@@ -27,16 +27,19 @@ vi.mock('../../services/utils.js', () => ({
 }));
 
 describe('textEditorService.svelte.js', () => {
+    const originalCreateObjectURL = URL.createObjectURL;
+
     beforeEach(() => {
-        // Clear the maps before each test
+        vi.clearAllMocks();
+
         pendingImages.clear();
         previewUrls.clear();
-        vi.clearAllMocks();
+
+        URL.createObjectURL = vi.fn(() => 'blob:test-url');
     });
 
     afterEach(() => {
-        pendingImages.clear();
-        previewUrls.clear();
+        URL.createObjectURL = originalCreateObjectURL;
     });
 
     describe('addBlock', () => {
@@ -110,60 +113,42 @@ describe('textEditorService.svelte.js', () => {
         });
     });
 
+    const createItems = (type = 'text') => [
+        { id: '1', type, data: 'content' }
+    ];
+
     describe('updateBlockType', () => {
         it('updates block type for valid type', () => {
-            const items = [{ id: '1', type: 'text', data: 'content' }];
+            const items = createItems();
             const id = updateBlockType('1', 'h1', items);
-            
+
             expect(items[0].type).toBe('h1');
             expect(id).toBe('1');
         });
 
         it('toggles blockquote back to text if already blockquote', () => {
-            const items = [{ id: '1', type: 'blockquote', data: 'content' }];
+            const items = createItems('blockquote');
             const id = updateBlockType('1', 'blockquote', items);
-            
+
             expect(items[0].type).toBe('text');
             expect(id).toBe('1');
         });
 
-        it('returns undefined for invalid type', () => {
-            const items = [{ id: '1', type: 'text', data: 'content' }];
-            const id = updateBlockType('1', 'invalid', items);
-            
-            expect(items[0].type).toBe('text');
-            expect(id).toBeUndefined();
-        });
+        it.each([
+            ['invalid type', 'invalid', '1'],
+            ['empty type', '', '1'],
+            ['empty blockId', 'h1', ''],
+            ['block not found', 'h1', 'nonexistent'],
+        ])('returns undefined for %s', (_, type, blockId) => {
+            const items = createItems();
+            const id = updateBlockType(blockId, type, items);
 
-        it('returns undefined for empty type', () => {
-            const items = [{ id: '1', type: 'text', data: 'content' }];
-            const id = updateBlockType('1', '', items);
-            
-            expect(items[0].type).toBe('text');
-            expect(id).toBeUndefined();
-        });
-
-        it('returns undefined for empty blockId', () => {
-            const items = [{ id: '1', type: 'text', data: 'content' }];
-            const id = updateBlockType('', 'h1', items);
-            
-            expect(items[0].type).toBe('text');
-            expect(id).toBeUndefined();
-        });
-
-        it('returns undefined when block not found', () => {
-            const items = [{ id: '1', type: 'text', data: 'content' }];
-            const id = updateBlockType('nonexistent', 'h1', items);
-            
             expect(items[0].type).toBe('text');
             expect(id).toBeUndefined();
         });
 
         it('returns undefined for empty items array', () => {
-            const items = [];
-            const id = updateBlockType('1', 'h1', items);
-            
-            expect(id).toBeUndefined();
+            expect(updateBlockType('1', 'h1', [])).toBeUndefined();
         });
     });
 
@@ -261,10 +246,11 @@ describe('textEditorService.svelte.js', () => {
         it('creates object URL in previewUrls', () => {
             const file = new File(['test'], 'image.jpg', { type: 'image/jpeg' });
             const items = [];
-            
+
             insertImageBlock(file, items, 0);
-            
+
             const tempId = items[0].data;
+
             expect(previewUrls.has(tempId)).toBe(true);
             expect(previewUrls.get(tempId)).toMatch(/^blob:/);
         });

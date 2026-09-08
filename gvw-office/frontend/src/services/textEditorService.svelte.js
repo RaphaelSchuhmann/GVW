@@ -127,6 +127,7 @@ export function deleteBlock(items, blockId, isImage = false) {
         const blockData = block.data;
 
         if (previewUrls.has(blockData)) {
+            URL.revokeObjectURL(previewUrls.get(blockData));
             previewUrls.delete(blockData);
         }
 

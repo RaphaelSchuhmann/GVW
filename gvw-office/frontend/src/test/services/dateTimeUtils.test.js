@@ -37,6 +37,15 @@ describe("dateTimeUtils.svelte.js", () => {
     });
 
     describe("isToday", () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+            vi.setSystemTime(new Date("2026-04-10T12:00:00Z"));
+        });
+
+        afterEach(() => {
+            vi.useRealTimers();
+        });
+
         it("returns true for today's date", () => {
             const today = new Date();
 

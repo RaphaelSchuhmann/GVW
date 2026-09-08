@@ -10,9 +10,9 @@ let mockEventSource;
 
 vi.mock('../../stores/sseStore.svelte.js', () => ({
     lastRefresh: {
-        events: 0,
-        members: 0,
-        library: 0
+        EVENTS: 0,
+        MEMBERS: 0,
+        LIBRARY: 0
     }
 }));
 
@@ -46,9 +46,9 @@ describe('sse-handler.js - Application/State Logic', () => {
             close: vi.fn()
         };
 
-        lastRefresh.events = 0;
-        lastRefresh.members = 0;
-        lastRefresh.library = 0;
+        lastRefresh.EVENTS = 0;
+        lastRefresh.MEMBERS = 0;
+        lastRefresh.LIBRARY = 0;
     });
 
     afterEach(() => {
@@ -82,9 +82,9 @@ describe('sse-handler.js - Application/State Logic', () => {
                 call => call[0] === 'refresh'
             )[1];
 
-            refreshHandler({ data: 'events' });
+            refreshHandler({ data: 'EVENTS' });
 
-            expect(lastRefresh.events).toBeGreaterThan(0);
+            expect(lastRefresh.EVENTS).toBeGreaterThan(0);
         });
 
         it('handles refresh event for unknown type gracefully', () => {
@@ -219,9 +219,9 @@ describe('sse-handler.js - Application/State Logic', () => {
                 call => call[0] === 'refresh'
             )[1];
 
-            refreshHandler({ data: 'members' });
+            refreshHandler({ data: 'MEMBERS' });
 
-            expect(lastRefresh.members).toBeGreaterThan(0);
+            expect(lastRefresh.MEMBERS).toBeGreaterThan(0);
         });
 
         it('handles multiple refresh events', () => {
@@ -231,13 +231,13 @@ describe('sse-handler.js - Application/State Logic', () => {
                 call => call[0] === 'refresh'
             )[1];
 
-            refreshHandler({ data: 'events' });
-            refreshHandler({ data: 'members' });
-            refreshHandler({ data: 'library' });
+            refreshHandler({ data: 'EVENTS' });
+            refreshHandler({ data: 'MEMBERS' });
+            refreshHandler({ data: 'LIBRARY' });
 
-            expect(lastRefresh.events).toBeGreaterThan(0);
-            expect(lastRefresh.members).toBeGreaterThan(0);
-            expect(lastRefresh.library).toBeGreaterThan(0);
+            expect(lastRefresh.EVENTS).toBeGreaterThan(0);
+            expect(lastRefresh.MEMBERS).toBeGreaterThan(0);
+            expect(lastRefresh.LIBRARY).toBeGreaterThan(0);
         });
 
         it('ignores refresh events for undefined types', () => {
