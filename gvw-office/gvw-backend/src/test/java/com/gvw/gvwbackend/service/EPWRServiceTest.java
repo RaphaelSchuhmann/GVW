@@ -16,6 +16,7 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -91,13 +92,17 @@ class EPWRServiceTest {
             "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
         .thenReturn(List.of(epwrToken));
     when(hashUtil.compare("valid-token", "hashed-token")).thenReturn(true);
+    when(hashUtil.createHash(anyString())).thenReturn("rotated-hash");
+
     when(dbService.findByQuery("users", Map.of("selector", Map.of("role", Role.ADMIN)), User.class))
         .thenReturn(List.of());
 
     String result = epwrService.useEmergencyToken("valid-token");
 
     assertNotNull(result);
-    verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
+    ArgumentCaptor<EPWRToken> captor = ArgumentCaptor.forClass(EPWRToken.class);
+    verify(dbService).insert(eq("emergency_token"), captor.capture());
+    assertEquals("rotated-hash", captor.getValue().getHashedToken());
   }
 
   @Test

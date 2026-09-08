@@ -77,10 +77,13 @@ class TextEditorServiceTest {
   }
 
   @Test
-  void resolveUrl_Success() {
-    LinkMetadataResponseDTO result = textEditorService.resolveUrl("https://example.com");
+  void resolveUrl_UnreachableHost_ReturnsFallbackMetadata() {
+    String url = "https://unresolvable.invalid";
 
-    assertNotNull(result);
+    LinkMetadataResponseDTO result = textEditorService.resolveUrl(url);
+
+    assertEquals(url, result.title());
+    assertEquals("", result.favicon());
   }
 
   @Test
@@ -92,12 +95,13 @@ class TextEditorServiceTest {
   @Test
   void processUploadedFiles_Success() {
     MultipartFile mockFile = mock(MultipartFile.class);
-    StoredFile storedFile = new StoredFile("id-1", mock(Path.class), "test.png", ".png");
+    StoredFile storedFile = new StoredFile("id-1", mock(Path.class), "test.png", "png");
     when(fileUtils.storeFile(any(), anyString(), any(), any())).thenReturn(Optional.of(storedFile));
 
     var result = textEditorService.processUploadedFiles(List.of(mockFile), ErrorAction.CREATE);
 
     assertEquals(1, result.size());
+    assertEquals("id-1.png", result.get("test.png"));
   }
 
   @Test

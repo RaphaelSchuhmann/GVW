@@ -258,7 +258,8 @@ class HelpCenterServiceTest {
 
     var result = helpCenterService.searchArticles("test");
 
-    assertNotNull(result);
+    assertEquals(1, result.size());
+    assertEquals("article-1", result.getFirst().id());
   }
 
   @Test

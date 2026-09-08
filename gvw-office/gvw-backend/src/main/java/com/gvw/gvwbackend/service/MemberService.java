@@ -126,6 +126,7 @@ public class MemberService {
     }
 
     Member member = createMemberFromRequest(request);
+    Member savedMember = null;
 
     try {
       dbService.insert("members", member);
@@ -140,7 +141,7 @@ public class MemberService {
 
       log.debug("Member retrieved successfully after creation");
 
-      Member savedMember = members.getFirst();
+      savedMember = members.getFirst();
       userService.addLinkedUser(request, savedMember.getId());
 
       sseService.sendRefresh("MEMBERS");
@@ -159,9 +160,22 @@ public class MemberService {
           dbService.delete("members", orphan.getId(), orphan.getRev());
           log.debug("Rollback: Successfully deleted orphan member {}", orphan.getId());
         }
+
+        // Also delete the created user if it exists
+        if (savedMember != null) {
+          Map<String, Object> userQuery =
+              Map.of("selector", Map.of("memberId", savedMember.getId()), "limit", 1);
+          List<User> orphanUsers = dbService.findByQuery("users", userQuery, User.class);
+
+          if (!orphanUsers.isEmpty()) {
+            User orphanUser = orphanUsers.getFirst();
+            dbService.delete("users", orphanUser.getId(), orphanUser.getRev());
+            log.debug("Rollback: Successfully deleted orphan user {}", orphanUser.getId());
+          }
+        }
       } catch (Exception rollbackException) {
         log.error(
-            "CRITICAL: Manual intervention required. Could not delete orphan member for email: {}",
+            "CRITICAL: Manual intervention required. Could not delete orphan member/user for email: {}",
             request.email(),
             rollbackException);
       }

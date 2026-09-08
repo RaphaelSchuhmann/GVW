@@ -1,5 +1,6 @@
 package com.gvw.gvwbackend.service;
 
+import com.gvw.gvwbackend.exception.ConflictException;
 import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.EPWRToken;
@@ -92,8 +93,8 @@ public class EPWRService {
       try {
         dbService.insert("emergency_token", savedToken);
       } catch (Exception e) {
-        log.error("EPWR [new]: unable to replace emergency token in database");
-        throw new RuntimeException("Failed to update emergency token");
+        log.error("EPWR [new]: unable to replace emergency token in database", e);
+        throw new RuntimeException("Failed to update emergency token", e);
       }
     }
 
@@ -219,10 +220,13 @@ public class EPWRService {
     savedToken.setCreatedAt(Instant.now());
     savedToken.setExpiresAt(Instant.now().plus(Duration.ofDays(30)));
 
-    // Note that if replacement / insertion fails it throws
-    dbService.insert("emergency_token", savedToken);
-
-    return true;
+    try {
+      dbService.insert("emergency_token", savedToken);
+      return true;
+    } catch (ConflictException e) {
+      log.warn("Emergency token replacement conflicted", e);
+      return false;
+    }
   }
 
   /**

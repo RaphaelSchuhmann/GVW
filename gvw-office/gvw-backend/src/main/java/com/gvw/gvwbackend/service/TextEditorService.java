@@ -189,7 +189,7 @@ public class TextEditorService {
 
         StoredFile stored = storedFile.get();
 
-        filenames.put(stored.originalName(), stored.id() + stored.extension());
+        filenames.put(stored.originalName(), stored.id() + "." + stored.extension());
         physicalPaths.add(stored.path());
       }
 
