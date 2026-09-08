@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing the GVW Office help center.
@@ -27,9 +26,7 @@ public class HelpCenterService {
   private final SseService sseService;
   private final AppSettingsService appSettingsService;
   private final TextEditorService editorService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(HelpCenterService.class);
-  private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
 
   public HelpCenterService(
       DbService dbService,
@@ -171,9 +168,7 @@ public class HelpCenterService {
     startBlock.setData("");
     article.setContents(List.of(startBlock));
 
-    log.debug("Inserting help center article into database");
     dbService.insert("help_center", article);
-    log.debug("Help center article inserted successfully");
 
     log.debug("Updating help center category article count");
     String rev =
@@ -181,11 +176,7 @@ public class HelpCenterService {
             dto.category(), category.getArticleCount() + 1);
     log.debug("Help center category article count updated successfully");
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER refresh", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
 
     return rev;
   }
@@ -200,7 +191,7 @@ public class HelpCenterService {
    * @return list of articles in the requested category
    * @throws BadRequestException if the category identifier is missing
    */
-  public ArticlesResponseDTO getArticles(String category) {
+  public List<ArticleResponseDTO> getArticles(String category) {
     if (category == null || category.isBlank()) {
       throw new BadRequestException(
           String.valueOf(
@@ -215,17 +206,12 @@ public class HelpCenterService {
             HelpCenterArticle.class);
 
     if (articles == null || articles.isEmpty()) {
-      return new ArticlesResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ArticleResponseDTO> responseDTOs =
-        articles.stream()
-            .map(
-                m ->
-                    new ArticleResponseDTO(
-                        m.getId(), m.getTitle(), m.getDescription(), m.getTags()))
-            .toList();
-    return new ArticlesResponseDTO(responseDTOs);
+    return articles.stream()
+        .map(m -> new ArticleResponseDTO(m.getId(), m.getTitle(), m.getDescription(), m.getTags()))
+        .toList();
   }
 
   /**
@@ -323,24 +309,13 @@ public class HelpCenterService {
       article.setContents(request.content());
       article.setRev(request.rev());
 
-      log.debug("Updating help center article in database");
-      Map<String, Object> resp = dbService.update("help_center", article.getId(), article);
-      log.debug("Help center article updated successfully");
-
-      if (resp == null || !resp.containsKey("rev")) {
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.HELP_CENTER.createCode(ErrorAction.UPDATE, 500)));
-      }
+      String rev = dbService.update("help_center", article.getId(), article);
 
       editorService.synchronizeBlockAssets(oldContents, request.content(), ErrorAction.UPDATE);
 
-      try {
-        sseService.broadcastRefresh("HELP_CENTER");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast HELP_CENTER refresh", ex);
-      }
+      sseService.sendRefresh("HELP_CENTER");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error("Update failed for article ID: {}", request.id(), e);
 
@@ -425,17 +400,11 @@ public class HelpCenterService {
           article.getCategory(), category.getArticleCount() - 1);
     }
 
-    log.debug("Deleting help center article from database");
     dbService.delete("help_center", article.getId(), article.getRev());
-    log.debug("Help center article deleted successfully");
 
-    editorService.purgeAllBlockAssets(article.getContents(), ErrorAction.DELETE);
+    editorService.purgeAllBlockAssets(article.getContents());
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER refresh", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
   }
 
   /**
@@ -455,10 +424,7 @@ public class HelpCenterService {
    * @return matching articles with metadata or search snippets
    */
   public List<ArticlesSearchResponseDTO> searchArticles(String searchTerm) {
-    List<Map<String, Object>> rawArticles = dbService.findAll("help_center");
-
-    List<HelpCenterArticle> articles =
-        rawArticles.stream().map(map -> mapper.convertValue(map, HelpCenterArticle.class)).toList();
+    List<HelpCenterArticle> articles = dbService.findAll("help_center", HelpCenterArticle.class);
 
     if (articles.isEmpty()) {
       return List.of();

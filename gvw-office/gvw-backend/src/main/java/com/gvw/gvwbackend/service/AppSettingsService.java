@@ -81,20 +81,9 @@ public class AppSettingsService {
     settings.setMaxMembers(requestDTO.maxMembers());
     settings.setRev(requestDTO.rev());
 
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    Object revObj = resp != null ? resp.get("rev") : null;
-    if (!(revObj instanceof String) || ((String) revObj).isBlank()) {
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.APP_SETTINGS.createCode(ErrorAction.UPDATE, 500)));
-    }
-
-    String rev = (String) revObj;
-    try {
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh", ex);
-    }
+    sseService.sendRefresh("SETTINGS");
     return rev;
   }
 
@@ -141,20 +130,11 @@ public class AppSettingsService {
 
     settings.setScoreCategories(categories);
 
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    try {
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh", ex);
-    }
+    sseService.sendRefresh("SETTINGS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.APP_SETTINGS.createCode(ErrorAction.UPDATE, 500)));
+    return rev;
   }
 
   /**
@@ -181,20 +161,11 @@ public class AppSettingsService {
     if (displayName != null) categories.remove(displayName);
 
     settings.setScoreCategories(categories);
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    try {
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh", ex);
-    }
+    sseService.sendRefresh("SETTINGS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.APP_SETTINGS.createCode(ErrorAction.DELETE, 500)));
+    return rev;
   }
 
   /**
@@ -233,23 +204,12 @@ public class AppSettingsService {
 
     settings.setHelpCenterCategories(categories);
 
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER or SETTINGS refresh: ", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
+    sseService.sendRefresh("SETTINGS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(
-            ErrorDomain.APP_SETTINGS.createCode(
-                ErrorAction.CREATE, 500, ErrorResource.HELP_CENTER_CATEGORY)));
+    return rev;
   }
 
   /**
@@ -285,21 +245,12 @@ public class AppSettingsService {
     categories.removeIf(obj -> obj.getId().equals(id));
     settings.setHelpCenterCategories(categories);
 
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER or SETTINGS refresh: ", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
+    sseService.sendRefresh("SETTINGS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.APP_SETTINGS.createCode(ErrorAction.DELETE, 500)));
+    return rev;
   }
 
   /**
@@ -326,21 +277,12 @@ public class AppSettingsService {
     }
     settings.setHelpCenterCategories(categories);
 
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    try {
-      sseService.broadcastRefresh("HELP_CENTER");
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast HELP_CENTER or SETTINGS refresh: ", ex);
-    }
+    sseService.sendRefresh("HELP_CENTER");
+    sseService.sendRefresh("SETTINGS");
 
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.APP_SETTINGS.createCode(ErrorAction.UPDATE, 500)));
+    return rev;
   }
 
   /**
@@ -384,20 +326,11 @@ public class AppSettingsService {
 
     category.setArticleCount(newCount);
 
-    Map<String, Object> resp = dbService.update("app_settings", settings.getId(), settings);
+    String rev = dbService.update("app_settings", settings.getId(), settings);
 
-    try {
-      sseService.broadcastRefresh("SETTINGS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SETTINGS refresh: ", ex);
-    }
+    sseService.sendRefresh("SETTINGS");
 
-    if (resp != null && resp.get("rev") instanceof String rev) {
-      return rev;
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.APP_SETTINGS.createCode(ErrorAction.UPDATE, 500)));
+    return rev;
   }
 
   /**

@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddFeedbackRequestDTO;
 import com.gvw.gvwbackend.dto.response.FeedbackDetailsResponseDTO;
 import com.gvw.gvwbackend.dto.response.FeedbackResponseDTO;
-import com.gvw.gvwbackend.dto.response.FeedbacksResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -12,11 +11,9 @@ import com.gvw.gvwbackend.model.UserFeedback;
 import com.gvw.gvwbackend.model.UserReportMetaData;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing user feedback submissions.
@@ -31,7 +28,6 @@ import tools.jackson.databind.ObjectMapper;
 public class FeedbackService {
   private final DbService dbService;
   private final SseService sseService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private final UserService userService;
   private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
 
@@ -48,22 +44,16 @@ public class FeedbackService {
    *
    * @return response containing all available feedback summaries
    */
-  public FeedbacksResponseDTO getFeedbacks() {
-    List<Map<String, Object>> rawFeedbacks = dbService.findAll("feedbacks");
-
-    List<UserFeedback> feedbacks =
-        rawFeedbacks.stream().map(map -> mapper.convertValue(map, UserFeedback.class)).toList();
+  public List<FeedbackResponseDTO> getFeedbacks() {
+    List<UserFeedback> feedbacks = dbService.findAll("feedbacks", UserFeedback.class);
 
     if (feedbacks.isEmpty()) {
-      return new FeedbacksResponseDTO(List.of());
+      return List.of();
     }
 
-    List<FeedbackResponseDTO> feedbackResponseDTOS =
-        feedbacks.stream()
-            .map(m -> new FeedbackResponseDTO(m.getId(), m.getTitle(), m.getCategory()))
-            .toList();
-
-    return new FeedbacksResponseDTO(feedbackResponseDTOS);
+    return feedbacks.stream()
+        .map(m -> new FeedbackResponseDTO(m.getId(), m.getTitle(), m.getCategory()))
+        .toList();
   }
 
   /**
@@ -131,12 +121,7 @@ public class FeedbackService {
 
     dbService.insert("feedbacks", feedback);
 
-    try {
-      sseService.broadcastRefresh("FEEDBACK");
-      log.debug("FEEDBACK refresh broadcast sent successfully");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast FEEDBACK refresh", ex);
-    }
+    sseService.sendRefresh("FEEDBACK");
   }
 
   /**
@@ -160,17 +145,8 @@ public class FeedbackService {
           String.valueOf(ErrorDomain.FEEDBACK.createCode(ErrorAction.DELETE, 404)));
     }
 
-    boolean deleted = dbService.delete("feedbacks", feedback.getId(), feedback.getRev());
-    if (!deleted) {
-      log.error("Failed to delete feedback with ID {}", feedback.getId());
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.FEEDBACK.createCode(ErrorAction.DELETE, 500)));
-    }
+    dbService.delete("feedbacks", feedback.getId(), feedback.getRev());
 
-    try {
-      sseService.broadcastRefresh("FEEDBACK");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast FEEDBACK refresh", ex);
-    }
+    sseService.sendRefresh("FEEDBACK");
   }
 }

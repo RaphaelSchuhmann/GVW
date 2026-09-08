@@ -1,4 +1,4 @@
-package com.gvw.gvwbackend.service;
+package com.gvw.gvwbackend.util;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

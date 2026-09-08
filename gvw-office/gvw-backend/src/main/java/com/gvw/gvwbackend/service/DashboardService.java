@@ -9,7 +9,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for preparing dashboard data.
@@ -28,7 +27,6 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class DashboardService {
   private final DbService dbService;
-  private final ObjectMapper mapper = new ObjectMapper();
 
   public DashboardService(DbService dbService) {
     this.dbService = dbService;
@@ -48,10 +46,7 @@ public class DashboardService {
   public DashboardResponseDTO getUserDashboardData() {
     // Load only member fields required for dashboard statistics.
     // Full member data is intentionally not exposed here.
-    List<Map<String, Object>> membersRaw = dbService.findAll("members");
-
-    List<Member> members =
-        membersRaw.stream().map(map -> mapper.convertValue(map, Member.class)).toList();
+    List<Member> members = dbService.findAll("members", Member.class);
 
     List<DashboardMemberSummaryDTO> responseMemberData =
         members.stream()
@@ -60,10 +55,7 @@ public class DashboardService {
 
     // Only upcoming events are relevant for the dashboard preview.
     // Finished events remain available through the event management view.
-    List<Map<String, Object>> eventsRaw = dbService.findAll("events");
-
-    List<Event> events =
-        eventsRaw.stream().map(map -> mapper.convertValue(map, Event.class)).toList();
+    List<Event> events = dbService.findAll("events", Event.class);
 
     List<Event> upcomingEvents =
         events.stream()
@@ -87,10 +79,7 @@ public class DashboardService {
                         m.getRecurrence()))
             .toList();
 
-    List<Map<String, Object>> rawScores = dbService.findAll("library");
-
-    List<Score> scores =
-        rawScores.stream().map(map -> mapper.convertValue(map, Score.class)).toList();
+    List<Score> scores = dbService.findAll("library", Score.class);
 
     return new DashboardResponseDTO(
         responseMemberData, events.size(), responseUpcomingEventData, scores.size());
@@ -106,16 +95,12 @@ public class DashboardService {
    * @return aggregated admin dashboard data
    */
   public AdminDashboardResponseDTO getAdminDashboardData() {
-    List<Map<String, Object>> feedbacksRaw = dbService.findAll("feedbacks");
-    List<UserFeedback> feedbacks =
-        feedbacksRaw.stream().map(map -> mapper.convertValue(map, UserFeedback.class)).toList();
+    List<UserFeedback> feedbacks = dbService.findAll("feedbacks", UserFeedback.class);
 
     double averageSentiment =
         feedbacks.stream().mapToInt(UserFeedback::getSentiment).average().orElse(0.0);
 
-    List<Map<String, Object>> bugReportsRaw = dbService.findAll("bug_reports");
-    List<BugReport> bugReports =
-        bugReportsRaw.stream().map(map -> mapper.convertValue(map, BugReport.class)).toList();
+    List<BugReport> bugReports = dbService.findAll("bug_reports", BugReport.class);
 
     Optional<String> mostUsedHashOptional =
         bugReports.stream()
@@ -134,8 +119,7 @@ public class DashboardService {
       mostUsedHash = mostUsedHashOptional.get();
     }
 
-    List<Map<String, Object>> usersRaw = dbService.findAll("users");
-    List<User> users = usersRaw.stream().map(map -> mapper.convertValue(map, User.class)).toList();
+    List<User> users = dbService.findAll("users", User.class);
 
     // Collect non-empty memberIds
     Set<String> memberIds =

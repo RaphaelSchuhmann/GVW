@@ -116,14 +116,7 @@ public class AuthService {
     } else {
       user.setFailedLoginAttempts(0);
       user.setLockUntil(null);
-      Map<String, Object> resp = dbService.update("users", user.getId(), user);
-
-      if (resp != null && resp.containsKey("rev")) {
-        rev = (String) resp.get("rev");
-      } else {
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.AUTH, 500)));
-      }
+      rev = dbService.update("users", user.getId(), user);
     }
 
     String token =
@@ -174,14 +167,7 @@ public class AuthService {
     user.setChangePassword(false);
     user.setFirstLogin(false);
 
-    Map<String, Object> resp = dbService.update("users", user.getId(), user);
-
-    if (resp != null && resp.containsKey("rev")) {
-      return (String) resp.get("rev");
-    }
-
-    throw new RuntimeException(
-        String.valueOf(ErrorDomain.AUTH.createCode(ErrorAction.UPDATE, 500)));
+    return dbService.update("users", user.getId(), user);
   }
 
   /**

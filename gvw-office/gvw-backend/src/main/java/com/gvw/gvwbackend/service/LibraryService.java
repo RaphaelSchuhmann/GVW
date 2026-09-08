@@ -4,24 +4,17 @@ import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
 import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
-import com.gvw.gvwbackend.dto.response.ScoresResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.Score;
-import java.io.IOException;
+import com.gvw.gvwbackend.util.FileUtils;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing the score library.
@@ -31,18 +24,18 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Service
 public class LibraryService {
-  private final DbService dbService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private static final Logger log = LoggerFactory.getLogger(LibraryService.class);
+  private final DbService dbService;
   private final SseService sseService;
-  private static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
+  private final FileUtils fileUtils;
 
   @Value("${scores.directory:./api-data/scores}")
   private String scoresDir;
 
-  public LibraryService(DbService dbService, SseService sseService) {
+  public LibraryService(DbService dbService, SseService sseService, FileUtils fileUtils) {
     this.dbService = dbService;
     this.sseService = sseService;
+    this.fileUtils = fileUtils;
   }
 
   /**
@@ -53,31 +46,25 @@ public class LibraryService {
    *
    * @return response object containing all available scores
    */
-  public ScoresResponseDTO getAllScores() {
-    List<Map<String, Object>> scoresRaw = dbService.findAll("library");
-
-    List<Score> scores =
-        scoresRaw.stream().map(map -> mapper.convertValue(map, Score.class)).toList();
+  public List<ScoreResponseDTO> getAllScores() {
+    List<Score> scores = dbService.findAll("library", Score.class);
 
     if (scores.isEmpty()) {
-      return new ScoresResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ScoreResponseDTO> responseScores =
-        scores.stream()
-            .map(
-                m ->
-                    new ScoreResponseDTO(
-                        m.getId(),
-                        m.getScoreId(),
-                        m.getTitle(),
-                        m.getArtist(),
-                        m.getType(),
-                        m.getVoices(),
-                        m.getVoiceCount()))
-            .toList();
-
-    return new ScoresResponseDTO(responseScores);
+    return scores.stream()
+        .map(
+            m ->
+                new ScoreResponseDTO(
+                    m.getId(),
+                    m.getScoreId(),
+                    m.getTitle(),
+                    m.getArtist(),
+                    m.getType(),
+                    m.getVoices(),
+                    m.getVoiceCount()))
+        .toList();
   }
 
   /**
@@ -160,7 +147,7 @@ public class LibraryService {
     List<File> metaList = new ArrayList<>();
     try {
       log.debug("Storing score files");
-      metaList = storeFiles(files, ErrorAction.CREATE);
+      metaList = fileUtils.storeFiles(files, scoresDir, ErrorDomain.LIBRARY, ErrorAction.CREATE);
       log.debug("Score files stored successfully");
 
       Score score =
@@ -174,18 +161,12 @@ public class LibraryService {
               .files(metaList)
               .build();
 
-      log.debug("Inserting new score into database");
       dbService.insert("library", score);
-      log.debug("Score inserted successfully");
 
-      try {
-        sseService.broadcastRefresh("SCORES");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast SCORES refresh", ex);
-      }
+      sseService.sendRefresh("SCORES");
     } catch (Exception e) {
       for (File orphan : metaList) {
-        deleteFile(orphan.getId() + "." + orphan.getExtension(), ErrorAction.CREATE);
+        fileUtils.deleteFile(orphan.getId() + "." + orphan.getExtension(), scoresDir);
       }
 
       if (e instanceof ConflictException)
@@ -219,19 +200,13 @@ public class LibraryService {
 
     if (score.getFiles() != null) {
       for (File file : score.getFiles()) {
-        deleteFile(file.getId() + "." + file.getExtension(), ErrorAction.DELETE);
+        fileUtils.deleteFile(file.getId() + "." + file.getExtension(), scoresDir);
       }
     }
 
-    log.debug("Deleting score from database");
     dbService.delete("library", score.getId(), score.getRev());
-    log.debug("Score deleted successfully");
 
-    try {
-      sseService.broadcastRefresh("SCORES");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast SCORES refresh", ex);
-    }
+    sseService.sendRefresh("SCORES");
   }
 
   /**
@@ -244,36 +219,7 @@ public class LibraryService {
    * @throws RuntimeException if ZIP creation fails
    */
   public void streamFilesAsZip(List<File> files, OutputStream out) {
-    Path root = Paths.get(scoresDir);
-
-    try (ZipOutputStream zip = new ZipOutputStream(out)) {
-      for (File file : files) {
-        Path filePath = root.resolve(file.getId() + "." + file.getExtension());
-
-        if (Files.exists(filePath)) {
-          String entryName =
-              file.getOriginalName()
-                  .replaceAll("[\r\n]", "_")
-                  .replaceAll("\\.\\./", "")
-                  .replaceAll("\\.\\.\\\\", "");
-          entryName = Paths.get(entryName).getFileName().toString();
-
-          ZipEntry entry = new ZipEntry(entryName);
-          zip.putNextEntry(entry);
-
-          Files.copy(filePath, zip);
-
-          zip.closeEntry();
-        } else {
-          log.warn("File not found on disk, skipping: {}", filePath);
-        }
-      }
-      zip.finish();
-    } catch (IOException e) {
-      log.error("Error creating ZIP archive", e);
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UTILITY, 500)), e);
-    }
+    fileUtils.streamFilesAsZip(files, scoresDir, out, ErrorDomain.LIBRARY);
   }
 
   /**
@@ -319,7 +265,8 @@ public class LibraryService {
 
       if (newFiles != null && !newFiles.isEmpty()) {
         log.debug("Storing new score files");
-        newlyStoredFiles = storeFiles(newFiles, ErrorAction.UPDATE);
+        newlyStoredFiles =
+            fileUtils.storeFiles(newFiles, scoresDir, ErrorDomain.LIBRARY, ErrorAction.UPDATE);
         log.debug("New score files stored successfully");
 
         updatedFileList.addAll(newlyStoredFiles);
@@ -334,123 +281,23 @@ public class LibraryService {
       score.setVoices(request.voices());
       score.setVoiceCount(request.voiceCount());
 
-      log.debug("Updating score in database");
-      Map<String, Object> resp = dbService.update("library", score.getId(), score);
-      log.debug("Score updated successfully");
-
-      if (resp == null || !resp.containsKey("rev")) {
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 500)));
-      }
+      String rev = dbService.update("library", score.getId(), score);
 
       for (File oldFile : filesToPhysicallyDelete) {
-        deleteFile(oldFile.getId() + "." + oldFile.getExtension(), ErrorAction.UPDATE);
+        fileUtils.deleteFile(oldFile.getId() + "." + oldFile.getExtension(), scoresDir);
       }
 
-      try {
-        sseService.broadcastRefresh("SCORES");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast SCORES refresh", ex);
-      }
+      sseService.sendRefresh("SCORES");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error("Update failed. Rolling back new uploads.", e);
       for (File newFile : newlyStoredFiles) {
-        deleteFile(newFile.getId() + "." + newFile.getExtension(), ErrorAction.UPDATE);
+        fileUtils.deleteFile(newFile.getId() + "." + newFile.getExtension(), scoresDir);
       }
 
-      if (e instanceof RuntimeException)
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 500)), e);
       throw new RuntimeException(
           String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 500)), e);
-    }
-  }
-
-  /**
-   * Stores uploaded files on disk and creates metadata objects.
-   *
-   * <p>Files are assigned generated UUID based names while preserving their original names as
-   * metadata.
-   *
-   * @param files files to store
-   * @param action error action used for exception generation
-   * @return metadata of successfully stored files
-   * @throws IOException if file operations fail
-   */
-  private List<File> storeFiles(List<MultipartFile> files, ErrorAction action) throws IOException {
-    if (files == null || files.isEmpty()) return List.of();
-
-    List<File> storedFiles = new ArrayList<>();
-    List<Path> physicalPaths = new ArrayList<>();
-    Path root = Paths.get(scoresDir);
-
-    try {
-      Files.createDirectories(root);
-
-      for (MultipartFile file : files) {
-        if (file.getSize() > MAX_FILE_SIZE) {
-          throw new BadRequestException(
-              String.valueOf(ErrorDomain.LIBRARY.createCode(action, 400)));
-        }
-
-        String originalName = file.getOriginalFilename();
-        if (originalName == null || originalName.isBlank()) continue;
-
-        String id = UUID.randomUUID().toString();
-        int dotIndex = originalName.lastIndexOf('.');
-        String extensionWithDot = (dotIndex == -1) ? "" : originalName.substring(dotIndex);
-        String extensionOnly = extensionWithDot.replace(".", "");
-
-        Path targetPath = root.resolve(id + extensionWithDot);
-
-        Files.copy(file.getInputStream(), targetPath);
-        physicalPaths.add(targetPath);
-
-        storedFiles.add(
-            File.builder()
-                .id(id)
-                .originalName(originalName)
-                .mimeType(file.getContentType())
-                .size(file.getSize())
-                .extension(extensionOnly)
-                .build());
-      }
-    } catch (Exception e) {
-      log.error("Internal file storage failed. Cleaning up partial uploads...", e);
-      for (Path path : physicalPaths) {
-        try {
-          Files.deleteIfExists(path);
-        } catch (IOException cleanupEx) {
-          log.warn("Failed to clean up partial upload: {}", path, cleanupEx);
-        }
-      }
-
-      throw new RuntimeException(String.valueOf(ErrorDomain.LIBRARY.createCode(action, 500)), e);
-    }
-    return storedFiles;
-  }
-
-  /**
-   * Deletes a stored file from disk.
-   *
-   * @param fileName physical filename
-   * @param action error action used for generated exceptions
-   * @throws RuntimeException if deletion fails
-   */
-  private void deleteFile(String fileName, ErrorAction action) {
-    Path filePath = Paths.get(scoresDir, fileName);
-
-    if (!Files.exists(filePath)) {
-      log.info("File not found on disk while deleting, skipping: {}", filePath);
-      return;
-    }
-
-    try {
-      Files.deleteIfExists(filePath);
-    } catch (IOException e) {
-      throw new RuntimeException(String.valueOf(ErrorDomain.LIBRARY.createCode(action, 500)), e);
     }
   }
 

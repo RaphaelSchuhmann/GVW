@@ -3,7 +3,6 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.request.AddBugReportRequestDTO;
 import com.gvw.gvwbackend.dto.response.BugReportDetailsResponseDTO;
 import com.gvw.gvwbackend.dto.response.BugReportResponseDTO;
-import com.gvw.gvwbackend.dto.response.BugReportsResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
@@ -16,7 +15,6 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing user-submitted bug reports.
@@ -31,7 +29,6 @@ import tools.jackson.databind.ObjectMapper;
 public class BugReportService {
   private final DbService dbService;
   private final SseService sseService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private final UserService userService;
   private final MailService mailService;
   private static final Logger log = LoggerFactory.getLogger(BugReportService.class);
@@ -56,22 +53,16 @@ public class BugReportService {
    *
    * @return list of bug report summaries
    */
-  public BugReportsResponseDTO getBugReports() {
-    List<Map<String, Object>> rawBugReports = dbService.findAll("bug_reports");
-
-    List<BugReport> bugReports =
-        rawBugReports.stream().map(map -> mapper.convertValue(map, BugReport.class)).toList();
+  public List<BugReportResponseDTO> getBugReports() {
+    List<BugReport> bugReports = dbService.findAll("bug_reports", BugReport.class);
 
     if (bugReports.isEmpty()) {
-      return new BugReportsResponseDTO(List.of());
+      return List.of();
     }
 
-    List<BugReportResponseDTO> bugReportResponseDTOS =
-        bugReports.stream()
-            .map(m -> new BugReportResponseDTO(m.getId(), m.getTitle(), m.getSeverity()))
-            .toList();
-
-    return new BugReportsResponseDTO(bugReportResponseDTOS);
+    return bugReports.stream()
+        .map(m -> new BugReportResponseDTO(m.getId(), m.getTitle(), m.getSeverity()))
+        .toList();
   }
 
   /**
@@ -159,11 +150,7 @@ public class BugReportService {
       }
     }
 
-    try {
-      sseService.broadcastRefresh("BUG");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast BUG refresh", ex);
-    }
+    sseService.sendRefresh("BUG");
   }
 
   /**
@@ -185,16 +172,8 @@ public class BugReportService {
           String.valueOf(ErrorDomain.BUG_REPORT.createCode(ErrorAction.DELETE, 404)));
     }
 
-    boolean deleted = dbService.delete("bug_reports", bugReport.getId(), bugReport.getRev());
-    if (!deleted) {
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.BUG_REPORT.createCode(ErrorAction.DELETE, 500)));
-    }
+    dbService.delete("bug_reports", bugReport.getId(), bugReport.getRev());
 
-    try {
-      sseService.broadcastRefresh("BUG");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast BUG refresh", ex);
-    }
+    sseService.sendRefresh("BUG");
   }
 }

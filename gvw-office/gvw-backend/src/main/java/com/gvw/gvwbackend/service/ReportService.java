@@ -10,20 +10,14 @@ import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.*;
-import java.io.IOException;
+import com.gvw.gvwbackend.util.FileUtils;
 import java.io.OutputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.*;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing reports.
@@ -40,7 +34,7 @@ public class ReportService {
   private final DbService dbService;
   private final SseService sseService;
   private final TextEditorService editorService;
-  private final ObjectMapper mapper = new ObjectMapper();
+  private final FileUtils fileUtils;
   private static final Logger log = LoggerFactory.getLogger(ReportService.class);
 
   /**
@@ -51,10 +45,14 @@ public class ReportService {
    * @param editorService service used for managing editor content and assets
    */
   public ReportService(
-      DbService dbService, SseService sseService, TextEditorService editorService) {
+      DbService dbService,
+      SseService sseService,
+      TextEditorService editorService,
+      FileUtils fileUtils) {
     this.dbService = dbService;
     this.sseService = sseService;
     this.editorService = editorService;
+    this.fileUtils = fileUtils;
   }
 
   /**
@@ -65,30 +63,24 @@ public class ReportService {
    *
    * @return list of available reports
    */
-  public ReportsResponseDTO getReports() {
-    List<Map<String, Object>> rawReports = dbService.findAll("reports");
-
-    List<Report> reports =
-        rawReports.stream().map(map -> mapper.convertValue(map, Report.class)).toList();
+  public List<ReportResponseDTO> getReports() {
+    List<Report> reports = dbService.findAll("reports", Report.class);
 
     if (reports.isEmpty()) {
-      return new ReportsResponseDTO(List.of());
+      return List.of();
     }
 
-    List<ReportResponseDTO> responseDTOS =
-        reports.stream()
-            .map(
-                m ->
-                    new ReportResponseDTO(
-                        m.getId(),
-                        m.getTitle(),
-                        m.getAuthor(),
-                        m.getType(),
-                        m.getDescription(),
-                        m.getCreatedAt()))
-            .toList();
-
-    return new ReportsResponseDTO(responseDTOS);
+    return reports.stream()
+        .map(
+            m ->
+                new ReportResponseDTO(
+                    m.getId(),
+                    m.getTitle(),
+                    m.getAuthor(),
+                    m.getType(),
+                    m.getDescription(),
+                    m.getCreatedAt()))
+        .toList();
   }
 
   /**
@@ -134,15 +126,9 @@ public class ReportService {
     startBlock.setData("");
     report.setContents(List.of(startBlock));
 
-    log.debug("Inserting new report into database");
     dbService.insert("reports", report);
-    log.debug("Report inserted successfully");
 
-    try {
-      sseService.broadcastRefresh("REPORTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh", ex);
-    }
+    sseService.sendRefresh("REPORTS");
   }
 
   /**
@@ -250,19 +236,17 @@ public class ReportService {
           String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.DELETE, 404)));
     }
 
-    log.debug("Deleting report from database");
     dbService.delete("reports", report.getId(), report.getRev());
-    log.debug("Report deleted successfully");
 
     log.debug("Purging report editor assets");
-    editorService.purgeAllBlockAssets(report.getContents(), ErrorAction.DELETE);
+    editorService.purgeAllBlockAssets(report.getContents());
 
     List<File> attachments = report.getAttachments();
     if (!attachments.isEmpty()) {
       for (File file : attachments) {
         try {
-          editorService.deleteAssetFromDisk(
-              file.getId() + "." + file.getExtension(), ErrorAction.UPDATE);
+          fileUtils.deleteFile(
+              file.getId() + "." + file.getExtension(), editorService.getEditorAssetsDir());
         } catch (Exception ex) {
           log.error(
               "Failed to purge unlinked attachment asset from file system: {}",
@@ -272,11 +256,7 @@ public class ReportService {
       }
     }
 
-    try {
-      sseService.broadcastRefresh("REPORTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh", ex);
-    }
+    sseService.sendRefresh("REPORTS");
   }
 
   /**
@@ -288,36 +268,30 @@ public class ReportService {
    * @param input search term
    * @return matching reports with search context
    */
-  public ReportsSearchResponseDTO reportDeepSearch(String input) {
+  public List<ReportSearchResponseDTO> reportDeepSearch(String input) {
     if (input == null || input.isBlank()) {
-      return new ReportsSearchResponseDTO(List.of());
+      return List.of();
     }
 
-    List<Map<String, Object>> rawReports = dbService.findAll("reports");
-
-    List<Report> reports =
-        rawReports.stream().map(map -> mapper.convertValue(map, Report.class)).toList();
+    List<Report> reports = dbService.findAll("reports", Report.class);
 
     if (reports.isEmpty()) {
-      return new ReportsSearchResponseDTO(List.of());
+      return List.of();
     }
 
     List<TextDocumentSearchResult<Report>> results = editorService.deepSearch(reports, input);
 
-    List<ReportSearchResponseDTO> responseDTOS =
-        results.stream()
-            .map(
-                m ->
-                    new ReportSearchResponseDTO(
-                        m.getDocument().getId(),
-                        m.getDocument().getTitle(),
-                        m.getDocument().getAuthor(),
-                        m.getDocument().getType(),
-                        m.getSnippet(),
-                        m.getDocument().getCreatedAt()))
-            .toList();
-
-    return new ReportsSearchResponseDTO(responseDTOS);
+    return results.stream()
+        .map(
+            m ->
+                new ReportSearchResponseDTO(
+                    m.getDocument().getId(),
+                    m.getDocument().getTitle(),
+                    m.getDocument().getAuthor(),
+                    m.getDocument().getType(),
+                    m.getSnippet(),
+                    m.getDocument().getCreatedAt()))
+        .toList();
   }
 
   /**
@@ -374,30 +348,17 @@ public class ReportService {
       report.setContents(request.content());
       report.setRev(request.rev());
 
-      log.debug("Updating report in database");
-      Map<String, Object> resp = dbService.update("reports", report.getId(), report);
-
-      if (resp == null || !resp.containsKey("rev")) {
-        log.error("Report update failed: database response did not contain a revision");
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 500)));
-      }
-
-      log.debug("Report updated successfully");
+      String rev = dbService.update("reports", report.getId(), report);
 
       log.debug("Synchronizing report editor assets");
       editorService.synchronizeBlockAssets(oldContents, request.content(), ErrorAction.UPDATE);
       log.debug("Report editor assets synchronized successfully");
 
-      try {
-        sseService.broadcastRefresh("REPORTS");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast REPORTS refresh", ex);
-      }
+      sseService.sendRefresh("REPORTS");
 
       log.debug("Report update completed successfully");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error("Update failed for report ID: {}", request.id(), e);
 
@@ -434,23 +395,11 @@ public class ReportService {
     report.setDescription(description);
     report.setRev(request.rev());
 
-    log.debug("Updating report description in database");
-    Map<String, Object> resp = dbService.update("reports", report.getId(), report);
-    log.debug("Report description updated successfully");
+    String rev = dbService.update("reports", report.getId(), report);
 
-    if (resp == null || !resp.containsKey("rev")) {
-      log.error("Report description update failed: database response did not contain a revision");
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UPDATE, 500)));
-    }
+    sseService.sendRefresh("REPORTS");
 
-    try {
-      sseService.broadcastRefresh("REPORTS");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast REPORTS refresh", ex);
-    }
-
-    return (String) resp.get("rev");
+    return rev;
   }
 
   /**
@@ -498,7 +447,9 @@ public class ReportService {
 
     try {
       log.debug("Storing uploaded report attachments");
-      newlyWrittenFilesToDisk = editorService.storeFiles(files, ErrorAction.UPDATE);
+      newlyWrittenFilesToDisk =
+          fileUtils.storeFiles(
+              files, editorService.getEditorAssetsDir(), ErrorDomain.REPORT, ErrorAction.UPDATE);
       log.debug("Report attachments stored successfully");
 
       List<File> finalAttachmentList = new ArrayList<>();
@@ -534,21 +485,12 @@ public class ReportService {
       report.setAttachments(finalAttachmentList);
       report.setRev(request.rev());
 
-      log.debug("Updating report attachment metadata in database");
-      Map<String, Object> resp = dbService.update("reports", report.getId(), report);
-
-      if (resp == null || !resp.containsKey("rev") || resp.get("rev").toString().isEmpty()) {
-        log.error("Attachment update failed: database response did not contain a valid revision");
-        throw new RuntimeException(
-            String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 500)));
-      }
-
-      log.debug("Report attachment metadata updated successfully");
+      String rev = dbService.update("reports", report.getId(), report);
 
       for (File deadFile : filesToPurgeFromDisk) {
         try {
-          editorService.deleteAssetFromDisk(
-              deadFile.getId() + "." + deadFile.getExtension(), ErrorAction.UPDATE);
+          fileUtils.deleteFile(
+              deadFile.getId() + "." + deadFile.getExtension(), editorService.getEditorAssetsDir());
         } catch (Exception ex) {
           log.error(
               "Failed to purge unlinked attachment asset from file system: {}",
@@ -557,13 +499,9 @@ public class ReportService {
         }
       }
 
-      try {
-        sseService.broadcastRefresh("REPORTS");
-      } catch (RuntimeException ex) {
-        log.warn("Failed to broadcast REPORTS refresh", ex);
-      }
+      sseService.sendRefresh("REPORTS");
 
-      return (String) resp.get("rev");
+      return rev;
     } catch (Exception e) {
       log.error(
           "Attachment update transaction failed for report ID: {}. Triggering system rollback",
@@ -572,8 +510,9 @@ public class ReportService {
 
       for (File failedFile : newlyWrittenFilesToDisk) {
         try {
-          editorService.deleteAssetFromDisk(
-              failedFile.getId() + "." + failedFile.getExtension(), ErrorAction.UPDATE);
+          fileUtils.deleteFile(
+              failedFile.getId() + "." + failedFile.getExtension(),
+              editorService.getEditorAssetsDir());
         } catch (Exception rollbackEx) {
           log.error(
               "Critical: Failed to remove orphaned file during transaction rollback: {}",
@@ -599,35 +538,6 @@ public class ReportService {
    * @throws RuntimeException if archive creation fails
    */
   public void streamFilesAsZip(List<File> files, OutputStream out) {
-    Path root = Paths.get(editorService.getFilesDir());
-
-    try (ZipOutputStream zip = new ZipOutputStream(out)) {
-      for (File file : files) {
-        Path filePath = root.resolve(file.getId() + "." + file.getExtension());
-
-        if (Files.exists(filePath)) {
-          String entryName =
-              file.getOriginalName()
-                  .replaceAll("[\r\n]", "_")
-                  .replaceAll("\\.\\./", "")
-                  .replaceAll("\\.\\.\\\\", "");
-          entryName = Paths.get(entryName).getFileName().toString();
-
-          ZipEntry entry = new ZipEntry(entryName);
-          zip.putNextEntry(entry);
-
-          Files.copy(filePath, zip);
-
-          zip.closeEntry();
-        } else {
-          log.warn("Attachment file not found on disk, skipping: {}", file.getId());
-        }
-      }
-      zip.finish();
-    } catch (IOException e) {
-      log.error("Error creating ZIP archive", e);
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UTILITY, 500)), e);
-    }
+    fileUtils.streamFilesAsZip(files, editorService.getEditorAssetsDir(), out, ErrorDomain.REPORT);
   }
 }

@@ -1,9 +1,9 @@
 package com.gvw.gvwbackend.service;
 
-import com.gvw.gvwbackend.dto.request.AddUserAdminRequestDTO;
+import com.gvw.gvwbackend.dto.request.AddMemberRequestDTO;
+import com.gvw.gvwbackend.dto.request.AddUserRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateUserAdminRequestDTO;
 import com.gvw.gvwbackend.dto.response.UserManagerResponseDTO;
-import com.gvw.gvwbackend.dto.response.UserManagerResponsesDTO;
 import com.gvw.gvwbackend.dto.response.UserResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.mapper.UserMapper;
@@ -19,7 +19,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * Service responsible for managing application users.
@@ -33,7 +32,6 @@ public class UserService {
   private final DbService dbService;
   private final PasswordEncoder passwordEncoder;
   private final MailService mailService;
-  private final ObjectMapper mapper = new ObjectMapper();
   private final SseService sseService;
   private final UserMapper userMapper;
   private static final Logger log = LoggerFactory.getLogger(UserService.class);
@@ -96,10 +94,8 @@ public class UserService {
    *
    * @return collection of users formatted for administration views
    */
-  public UserManagerResponsesDTO getUsers() {
-    List<Map<String, Object>> usersRaw = dbService.findAll("users");
-    List<User> users = usersRaw.stream().map(map -> mapper.convertValue(map, User.class)).toList();
-    if (users.isEmpty()) return new UserManagerResponsesDTO(List.of());
+  public List<UserManagerResponseDTO> getUsers() {
+    List<User> users = dbService.findAll("users", User.class);
 
     // Collect non-empty memberIds
     Set<String> memberIds =
@@ -121,24 +117,21 @@ public class UserService {
                 .map(Member::getId)
                 .collect(Collectors.toSet());
 
-    List<UserManagerResponseDTO> dtos =
-        users.stream()
-            .map(
-                m ->
-                    new UserManagerResponseDTO(
-                        m.getId(),
-                        m.getRev(),
-                        m.getName(),
-                        m.getEmail(),
-                        m.getPhone(),
-                        m.getAddress(),
-                        m.getRole().getValue(),
-                        m.getMemberId() == null
-                            || m.getMemberId().isBlank()
-                            || !existingMemberIds.contains(m.getMemberId())))
-            .toList();
-
-    return new UserManagerResponsesDTO(dtos);
+    return users.stream()
+        .map(
+            m ->
+                new UserManagerResponseDTO(
+                    m.getId(),
+                    m.getRev(),
+                    m.getName(),
+                    m.getEmail(),
+                    m.getPhone(),
+                    m.getAddress(),
+                    m.getRole().getValue(),
+                    m.getMemberId() == null
+                        || m.getMemberId().isBlank()
+                        || !existingMemberIds.contains(m.getMemberId())))
+        .toList();
   }
 
   /**
@@ -160,13 +153,46 @@ public class UserService {
   /**
    * Creates a new user account.
    *
+   * @param request data required to create the user
+   */
+  public void addOrphanedUser(AddUserRequestDTO request) {
+    log.debug("Adding new orphaned user");
+    addUser(request, null);
+  }
+
+  /**
+   * Creates a new user account.
+   *
+   * @param originalRequest data required to create the user
+   * @param memberId the required memberId for the linked user
+   */
+  public void addLinkedUser(AddMemberRequestDTO originalRequest, String memberId) {
+    if (memberId == null || memberId.isBlank()) {
+      throw new IllegalArgumentException("memberId must not be blank");
+    }
+    log.debug("Adding new linked user");
+
+    AddUserRequestDTO request =
+        new AddUserRequestDTO(
+            originalRequest.name() + " " + originalRequest.surname(),
+            originalRequest.email(),
+            originalRequest.phone(),
+            originalRequest.address(),
+            originalRequest.role());
+    addUser(request, memberId);
+  }
+
+  /**
+   * Creates a new user account.
+   *
    * <p>Generates a temporary password, stores the user, sends the password via email, and
    * broadcasts a user refresh event.
    *
-   * @param request data required to create the user
+   * @param request data required to create an orphaned user
+   * @param memberId the required memberId for a linked user
    * @throws ConflictException if another user already uses the requested email
    */
-  public void addUser(AddUserAdminRequestDTO request) {
+  private void addUser(AddUserRequestDTO request, String memberId) {
     List<User> usersWithRequestMail =
         dbService.findByQuery(
             "users", Map.of("selector", Map.of("email", request.email())), User.class);
@@ -178,14 +204,16 @@ public class UserService {
 
     User user = createUserFromRequest(request);
 
+    if (memberId != null) {
+      user.setMemberId(memberId);
+    }
+
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
     user.setUserActive(true);
 
-    log.debug("Inserting new user into database");
     dbService.insert("users", user);
-    log.debug("User inserted successfully");
 
     log.debug("Sending new user email");
     mailService.sendMail(
@@ -195,11 +223,7 @@ public class UserService {
         Map.of("tempPassword", temporaryPassword));
     log.debug("New user email sent successfully");
 
-    try {
-      sseService.broadcastRefresh("USER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh", ex);
-    }
+    sseService.sendRefresh("USER");
   }
 
   /**
@@ -213,7 +237,7 @@ public class UserService {
    * @throws BadRequestException if the identifier is invalid
    * @throws NotFoundException if the user does not exist
    */
-  public String resetPasswordUsingUserId(String id) {
+  public String resetPasswordUsingId(String id) {
     if (id == null || id.isEmpty()) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 400)));
@@ -265,35 +289,22 @@ public class UserService {
    * @throws RuntimeException if the database update does not return a revision
    */
   private String resetPassword(User user) {
-    log.debug("User loaded successfully for password reset");
-
     String temporaryPassword = AuthService.generatePassword(3, 2);
 
     user.setPassword(passwordEncoder.encode(temporaryPassword));
     user.setChangePassword(true);
 
-    log.debug("Updating user password in database");
+    String rev = dbService.update("users", user.getId(), user);
 
-    Map<String, Object> resp = dbService.update("users", user.getId(), user);
-
-    if (resp == null || !resp.containsKey("rev")) {
-      log.error("Password reset failed: db update did not contain a rev");
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
-    }
-
-    log.debug("User password updated successfully");
     log.debug("Sending password reset email");
-
     mailService.sendMail(
         user.getEmail(),
         "GVW-Office: Passwort zurückgesetzt",
         "resetPassword",
         Map.of("tempPassword", temporaryPassword));
-
     log.info("Password reset completed successfully");
 
-    return (String) resp.get("rev");
+    return rev;
   }
 
   /**
@@ -330,25 +341,11 @@ public class UserService {
 
     user.setRev(request.rev());
 
-    log.debug("Updating user in database");
-    Map<String, Object> userResult = dbService.update("users", user.getId(), user);
+    String rev = dbService.update("users", user.getId(), user);
 
-    if (userResult == null || !userResult.containsKey("rev")) {
-      log.error("Database response did not contain a new rev");
-      throw new RuntimeException(
-          String.valueOf(ErrorDomain.USER.createCode(ErrorAction.UPDATE, 500)));
-    }
+    sseService.sendRefresh("USER");
 
-    log.debug("User update in database was successful");
-
-    try {
-      sseService.broadcastRefresh("USER");
-      log.debug("USER refresh broadcast sent successfully");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh", ex);
-    }
-
-    return (String) userResult.get("rev");
+    return rev;
   }
 
   /**
@@ -375,15 +372,9 @@ public class UserService {
           String.valueOf(ErrorDomain.USER.createCode(ErrorAction.DELETE, 400)));
     }
 
-    log.debug("Deleting user in database");
     dbService.delete("users", user.getId(), user.getRev());
-    log.debug("User deletion was successful");
 
-    try {
-      sseService.broadcastRefresh("USER");
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast USER refresh", ex);
-    }
+    sseService.sendRefresh("USER");
   }
 
   /**
@@ -463,9 +454,7 @@ public class UserService {
    */
   private User getUserByID(String id, ErrorAction action) {
     log.debug("Looking up user by database ID: {}", id);
-
     User user = dbService.findById("users", id, User.class);
-
     log.debug("User lookup returned: {}", user != null ? "user found" : "null");
 
     if (user == null) {
@@ -501,7 +490,7 @@ public class UserService {
    * @param request user creation request
    * @return initialized user entity
    */
-  private User createUserFromRequest(AddUserAdminRequestDTO request) {
+  private User createUserFromRequest(AddUserRequestDTO request) {
     User user = new User();
     user.setEmail(request.email());
     user.setName(request.name());

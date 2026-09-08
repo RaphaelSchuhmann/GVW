@@ -1,8 +1,7 @@
 package com.gvw.gvwbackend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import jakarta.mail.internet.MimeMessage;
@@ -19,34 +18,53 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 @ExtendWith(MockitoExtension.class)
-public class MailServiceTest {
+class MailServiceTest {
+
   @Mock private JavaMailSender mailSender;
+
   @Mock private TemplateEngine templateEngine;
+
   @InjectMocks private MailService mailService;
 
-  private final String FROM_EMAIL = "info@gvw-choir.de";
+  private static final String FROM_EMAIL = "noreply@example.com";
 
   @BeforeEach
-  void setup() {
+  void setUp() {
     ReflectionTestUtils.setField(mailService, "fromEmail", FROM_EMAIL);
   }
 
   @Test
-  void testSendMailSuccess() throws Exception {
-    String to = "member@test.com";
-    String subject = "Welcome!";
-    String templateName = "newUser";
-    Map<String, Object> variables = Map.of("tempPassword", "secret123");
-    String mockHtml = "<html><body>Welcome!</body></html>";
-
+  void sendMail_Success() {
     MimeMessage mimeMessage = mock(MimeMessage.class);
     when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+    when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html>Test</html>");
 
-    when(templateEngine.process(eq(templateName), any(Context.class))).thenReturn(mockHtml);
+    assertDoesNotThrow(
+        () -> mailService.sendMail("test@example.com", "Test Subject", "test-template", Map.of()));
 
-    assertDoesNotThrow(() -> mailService.sendMail(to, subject, templateName, variables));
+    verify(mailSender).send(mimeMessage);
+  }
 
-    verify(templateEngine).process(eq(templateName), any(Context.class));
-    verify(mailSender).send(any(MimeMessage.class));
+  @Test
+  void sendMail_TemplateEngineFailure_ThrowsRuntimeException() {
+    MimeMessage mimeMessage = mock(MimeMessage.class);
+    when(templateEngine.process(anyString(), any(Context.class)))
+        .thenThrow(new RuntimeException("Template error"));
+
+    assertThrows(
+        RuntimeException.class,
+        () -> mailService.sendMail("test@example.com", "Test Subject", "test-template", Map.of()));
+  }
+
+  @Test
+  void sendMail_SendFailure_ThrowsRuntimeException() {
+    MimeMessage mimeMessage = mock(MimeMessage.class);
+    when(mailSender.createMimeMessage()).thenReturn(mimeMessage);
+    when(templateEngine.process(anyString(), any(Context.class))).thenReturn("<html>Test</html>");
+    doThrow(new RuntimeException("Send error")).when(mailSender).send(any(MimeMessage.class));
+
+    assertThrows(
+        RuntimeException.class,
+        () -> mailService.sendMail("test@example.com", "Test Subject", "test-template", Map.of()));
   }
 }

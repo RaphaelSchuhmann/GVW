@@ -1,11 +1,12 @@
 package com.gvw.gvwbackend.service;
 
-import com.gvw.gvwbackend.dto.response.NewEmergencyTokenDTO;
 import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.EPWRToken;
 import com.gvw.gvwbackend.model.Role;
 import com.gvw.gvwbackend.model.User;
+import com.gvw.gvwbackend.util.HashUtil;
+import com.gvw.gvwbackend.util.TokenUtils;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -60,7 +61,7 @@ public class EPWRService {
    *
    * @return newly generated plaintext emergency token
    */
-  public NewEmergencyTokenDTO getNewEmergencyToken() {
+  public String getNewEmergencyToken() {
     String token = TokenUtils.generateToken();
     String hashedToken = hashUtil.createHash(token);
 
@@ -74,7 +75,9 @@ public class EPWRService {
       epwrToken.setCreatedAt(Instant.now());
       epwrToken.setExpiresAt(Instant.now().plus(Duration.ofDays(30)));
 
-      if (!dbService.insert("emergency_token", epwrToken)) {
+      try {
+        dbService.insert("emergency_token", epwrToken);
+      } catch (Exception e) {
         log.error("EPWR [new]: unable to insert emergency token into database");
         throw new RuntimeException("Failed to insert emergency token");
       }
@@ -86,14 +89,16 @@ public class EPWRService {
 
       // DbService.insert() replaces the existing CouchDB document when an ID is present.
       // This is intentionally used instead of a separate update operation.
-      if (!dbService.insert("emergency_token", savedToken)) {
+      try {
+        dbService.insert("emergency_token", savedToken);
+      } catch (Exception e) {
         log.error("EPWR [new]: unable to replace emergency token in database");
         throw new RuntimeException("Failed to update emergency token");
       }
     }
 
     log.info("Emergency token manually regenerated");
-    return new NewEmergencyTokenDTO(token);
+    return token;
   }
 
   /**
@@ -110,7 +115,7 @@ public class EPWRService {
    * @throws InvalidCredentialsException if the token is invalid, expired, or already used
    * @throws NotFoundException if no emergency token exists
    */
-  public NewEmergencyTokenDTO useEmergencyToken(String token) {
+  public String useEmergencyToken(String token) {
     EPWRToken savedToken = fetchAndValidateEmergencyToken(token);
 
     String newToken = TokenUtils.generateToken();
@@ -131,7 +136,7 @@ public class EPWRService {
     processAdminPasswordResets(admins);
     notifyAdminsOfUsage(admins);
 
-    return new NewEmergencyTokenDTO(newToken);
+    return newToken;
   }
 
   /**
@@ -183,7 +188,9 @@ public class EPWRService {
       admin.setPassword(passwordEncoder.encode(tempPw));
       admin.setChangePassword(true);
 
-      if (!dbService.insert("users", admin)) {
+      try {
+        dbService.insert("users", admin);
+      } catch (Exception e) {
         log.error("Failed to update admin password");
         throw new RuntimeException("Failed to update admin password");
       }
@@ -212,7 +219,10 @@ public class EPWRService {
     savedToken.setCreatedAt(Instant.now());
     savedToken.setExpiresAt(Instant.now().plus(Duration.ofDays(30)));
 
-    return dbService.insert("emergency_token", savedToken);
+    // Note that if replacement / insertion fails it throws
+    dbService.insert("emergency_token", savedToken);
+
+    return true;
   }
 
   /**
