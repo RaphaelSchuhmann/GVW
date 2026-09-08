@@ -75,6 +75,8 @@ export function resetPageState() {
     }
     currentPageKey = "";
     entry = null;
+    currentPageKey = "";
+    entry = null;
 }
 
 /**

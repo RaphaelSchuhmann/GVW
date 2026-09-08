@@ -76,6 +76,11 @@
 
             await getArticle(articleData.id);
             pendingImages.clear();
+
+            for (const url of previewUrls.values()) {
+                URL.revokeObjectURL(url);
+            }
+
             previewUrls.clear();
         }
     }
