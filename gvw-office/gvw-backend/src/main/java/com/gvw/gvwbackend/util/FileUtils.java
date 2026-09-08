@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import org.slf4j.Logger;
@@ -137,28 +138,39 @@ public class FileUtils {
   }
 
   /**
-   * Deletes a file from the specified directory by its filename. Logs an error if the deletion
-   * fails due to an I/O exception.
+   * Deletes a file from the specified directory by its filename after verifying that the target
+   * path remains safely within the target directory and contains no path traversal elements. Logs
+   * an error if the filename is invalid, targets an unauthorized path, or if deletion fails due to
+   * an I/O exception.
    *
    * @param fileName the name of the file to delete
-   * @param filesDir the directory where the file is stored
+   * @param filesDir the base directory where the file is stored
    */
   public void deleteFile(String fileName, String filesDir) {
-    if (fileName.contains("..") || fileName.contains("/") || fileName.contains(".")) {
-      log.error("Failed to delete file: illegal filename {}", fileName);
+    if (fileName == null || filesDir == null) {
+      log.error("Failed to delete file: fileName or filesDir is null");
       return;
     }
-    Path filePath = Paths.get(filesDir, fileName);
+
+    Path baseDir = Path.of(filesDir).toAbsolutePath().normalize();
+    Path targetPath = baseDir.resolve(fileName).normalize();
+
+    if (!targetPath.startsWith(baseDir) || targetPath.equals(baseDir)) {
+      log.error("Failed to delete file: illegal filename or path traversal attempt {}", fileName);
+      return;
+    }
+
     try {
-      Files.deleteIfExists(filePath);
+      Files.deleteIfExists(targetPath);
     } catch (IOException e) {
-      log.error("Failed to delete file: {}", filePath, e);
+      log.error("Failed to delete file: {}", targetPath, e);
     }
   }
 
   /**
-   * Deletes a file at the specified path location. Logs an error if the deletion fails due to an
-   * I/O exception.
+   * Deletes a file at the specified path location after normalizing the path and verifying that it
+   * contains no directory traversal elements (e.g., relative {@code ..} segments). Logs an error if
+   * the path is invalid or if deletion fails due to an I/O exception.
    *
    * @param filePath the {@link Path} of the file to delete
    */
@@ -168,15 +180,19 @@ public class FileUtils {
       return;
     }
 
-    Path fileName = filePath.getFileName();
+    Path normalized = filePath.normalize();
 
-    if (fileName == null || filePath.normalize().startsWith("..") || filePath.getNameCount() > 1) {
+    boolean hasTraversal =
+        StreamSupport.stream(normalized.spliterator(), false)
+            .anyMatch(p -> p.toString().equals(".."));
+
+    if (hasTraversal) {
       log.error("Failed to delete file: illegal path or filename {}", filePath);
       return;
     }
 
     try {
-      Files.deleteIfExists(filePath);
+      Files.deleteIfExists(normalized);
     } catch (IOException e) {
       log.error("Failed to delete file: {}", filePath, e);
     }
