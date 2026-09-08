@@ -11,10 +11,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -211,6 +208,7 @@ public class FileUtils {
   public void streamFilesAsZip(
       List<File> files, String filesDir, OutputStream out, ErrorDomain domain) {
     Path root = Paths.get(filesDir);
+    Set<String> usedNames = new HashSet<>();
 
     try (ZipOutputStream zip = new ZipOutputStream(out)) {
       for (File file : files) {
@@ -227,7 +225,19 @@ public class FileUtils {
                 .replaceAll("\\.\\./", "")
                 .replaceAll("\\.\\.\\\\", "");
 
-        entryName = Paths.get(entryName).getFileName().toString();
+        Path nameOnly = Paths.get(entryName).getFileName();
+        entryName =
+            (nameOnly == null || nameOnly.toString().isBlank())
+                ? file.getId() + "." + file.getExtension()
+                : nameOnly.toString();
+
+        if (!usedNames.add(entryName)) {
+          int dot = entryName.lastIndexOf('.');
+          String base = dot == -1 ? entryName : entryName.substring(0, dot);
+          String ext = dot == -1 ? "" : entryName.substring(dot);
+          entryName = base + "-" + file.getId() + ext;
+          usedNames.add(entryName);
+        }
 
         zip.putNextEntry(new ZipEntry(entryName));
         Files.copy(filePath, zip);

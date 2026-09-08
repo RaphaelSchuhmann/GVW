@@ -73,10 +73,14 @@ public class EventService {
           && event.getStatus().equals("upcoming")
           && event.getMode().equalsIgnoreCase("single")) {
         event.setStatus("finished");
-        String rev = dbService.update("events", event.getId(), event);
-
-        event.setRev(rev);
-        changed = true;
+        try {
+          String rev = dbService.update("events", event.getId(), event);
+          event.setRev(rev);
+          changed = true;
+        } catch (RuntimeException ex) {
+          log.warn("Failed to persist automatic status change for event {}", event.getId(), ex);
+          event.setStatus("upcoming");
+        }
       }
     }
 

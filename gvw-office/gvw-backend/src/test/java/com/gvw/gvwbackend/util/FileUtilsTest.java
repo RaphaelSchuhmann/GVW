@@ -9,13 +9,14 @@ import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.StoredFile;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
@@ -28,13 +29,10 @@ class FileUtilsTest {
 
   @InjectMocks private FileUtils fileUtils;
 
-  private static final String BASE_DIR = "./api-data/test";
-
   @TempDir Path tempDir;
 
-  @BeforeEach
-  void setUp() {
-    // No setup needed as FileUtils is a utility component
+  private String baseDir() {
+    return tempDir.toString();
   }
 
   @Test
@@ -46,7 +44,7 @@ class FileUtilsTest {
     when(mockFile.getContentType()).thenReturn("application/pdf");
 
     List<File> result =
-        fileUtils.storeFiles(List.of(mockFile), BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.CREATE);
+        fileUtils.storeFiles(List.of(mockFile), baseDir(), ErrorDomain.LIBRARY, ErrorAction.CREATE);
 
     assertEquals(1, result.size());
     assertEquals("test.pdf", result.getFirst().getOriginalName());
@@ -61,13 +59,13 @@ class FileUtilsTest {
         BadRequestException.class,
         () ->
             fileUtils.storeFiles(
-                List.of(mockFile), BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.CREATE));
+                List.of(mockFile), baseDir(), ErrorDomain.LIBRARY, ErrorAction.CREATE));
   }
 
   @Test
   void storeFiles_EmptyList_ReturnsEmptyList() {
     List<File> result =
-        fileUtils.storeFiles(null, BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.CREATE);
+        fileUtils.storeFiles(null, baseDir(), ErrorDomain.LIBRARY, ErrorAction.CREATE);
 
     assertTrue(result.isEmpty());
   }
@@ -80,7 +78,7 @@ class FileUtilsTest {
     when(mockFile.getSize()).thenReturn(12L);
 
     Optional<StoredFile> result =
-        fileUtils.storeFile(mockFile, BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.CREATE);
+        fileUtils.storeFile(mockFile, baseDir(), ErrorDomain.LIBRARY, ErrorAction.CREATE);
 
     assertTrue(result.isPresent());
     assertEquals("test.pdf", result.get().originalName());
@@ -89,7 +87,7 @@ class FileUtilsTest {
   @Test
   void storeFile_NullFile_ReturnsEmpty() {
     Optional<StoredFile> result =
-        fileUtils.storeFile(null, BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.CREATE);
+        fileUtils.storeFile(null, baseDir(), ErrorDomain.LIBRARY, ErrorAction.CREATE);
 
     assertTrue(result.isEmpty());
   }
@@ -101,12 +99,12 @@ class FileUtilsTest {
 
     assertThrows(
         BadRequestException.class,
-        () -> fileUtils.storeFile(mockFile, BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.CREATE));
+        () -> fileUtils.storeFile(mockFile, baseDir(), ErrorDomain.LIBRARY, ErrorAction.CREATE));
   }
 
   @Test
   void deleteFile_Success() throws IOException {
-    assertDoesNotThrow(() -> fileUtils.deleteFile("test.pdf", BASE_DIR));
+    assertDoesNotThrow(() -> fileUtils.deleteFile("test.pdf", baseDir()));
   }
 
   @Test
@@ -123,7 +121,8 @@ class FileUtilsTest {
   @Test
   void resolveFile_Success() throws IOException {
     Path result =
-        fileUtils.resolveFile("test.pdf", BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.UTILITY, null);
+        fileUtils.resolveFile(
+            "test.pdf", baseDir(), ErrorDomain.LIBRARY, ErrorAction.UTILITY, null);
 
     assertNotNull(result);
   }
@@ -134,7 +133,7 @@ class FileUtilsTest {
         BadRequestException.class,
         () ->
             fileUtils.resolveFile(
-                "../test.pdf", BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.UTILITY, null));
+                "../test.pdf", baseDir(), ErrorDomain.LIBRARY, ErrorAction.UTILITY, null));
   }
 
   @Test
@@ -142,17 +141,32 @@ class FileUtilsTest {
     assertThrows(
         BadRequestException.class,
         () ->
-            fileUtils.resolveFile(null, BASE_DIR, ErrorDomain.LIBRARY, ErrorAction.UTILITY, null));
+            fileUtils.resolveFile(null, baseDir(), ErrorDomain.LIBRARY, ErrorAction.UTILITY, null));
   }
 
   @Test
   void streamFilesAsZip_Success() throws IOException {
-    File mockFile = mock(File.class);
-    when(mockFile.getId()).thenReturn("file-1");
-    when(mockFile.getExtension()).thenReturn("pdf");
-    OutputStream out = mock(OutputStream.class);
+    Path realFile = Files.createFile(tempDir.resolve("file-1.pdf"));
+    Files.write(realFile, "test content".getBytes());
 
-    assertDoesNotThrow(
-        () -> fileUtils.streamFilesAsZip(List.of(mockFile), BASE_DIR, out, ErrorDomain.LIBRARY));
+    File file = new File();
+    file.setId("file-1");
+    file.setExtension("pdf");
+    file.setOriginalName("file-1.pdf");
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    fileUtils.streamFilesAsZip(List.of(file), tempDir.toString(), out, ErrorDomain.LIBRARY);
+
+    byte[] zipBytes = out.toByteArray();
+    assertTrue(zipBytes.length > 0);
+
+    try (ZipInputStream zipIn = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+
+      ZipEntry entry = zipIn.getNextEntry();
+
+      assertNotNull(entry);
+      assertEquals("file-1.pdf", entry.getName());
+    }
   }
 }

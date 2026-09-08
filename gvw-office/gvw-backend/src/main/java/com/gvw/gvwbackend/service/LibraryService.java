@@ -284,7 +284,14 @@ public class LibraryService {
       String rev = dbService.update("library", score.getId(), score);
 
       for (File oldFile : filesToPhysicallyDelete) {
-        fileUtils.deleteFile(oldFile.getId() + "." + oldFile.getExtension(), scoresDir);
+        try {
+          fileUtils.deleteFile(oldFile.getId() + "." + oldFile.getExtension(), scoresDir);
+        } catch (java.nio.file.InvalidPathException | SecurityException e) {
+          log.warn(
+              "Failed to delete file {} after successful update: {}",
+              oldFile.getId(),
+              e.getMessage());
+        }
       }
 
       sseService.sendRefresh("SCORES");
@@ -295,6 +302,10 @@ public class LibraryService {
       for (File newFile : newlyStoredFiles) {
         fileUtils.deleteFile(newFile.getId() + "." + newFile.getExtension(), scoresDir);
       }
+
+      if (e instanceof ConflictException)
+        throw new ConflictException(
+            String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 409)));
 
       throw new RuntimeException(
           String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 500)), e);

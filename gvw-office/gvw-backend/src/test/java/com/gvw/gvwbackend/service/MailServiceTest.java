@@ -47,13 +47,17 @@ class MailServiceTest {
 
   @Test
   void sendMail_TemplateEngineFailure_ThrowsRuntimeException() {
-    MimeMessage mimeMessage = mock(MimeMessage.class);
     when(templateEngine.process(anyString(), any(Context.class)))
         .thenThrow(new RuntimeException("Template error"));
 
-    assertThrows(
-        RuntimeException.class,
-        () -> mailService.sendMail("test@example.com", "Test Subject", "test-template", Map.of()));
+    RuntimeException ex =
+        assertThrows(
+            RuntimeException.class,
+            () ->
+                mailService.sendMail(
+                    "test@example.com", "Test Subject", "test-template", Map.of()));
+    assertEquals("Error sending mail", ex.getMessage());
+    assertEquals("Template error", ex.getCause().getMessage());
   }
 
   @Test

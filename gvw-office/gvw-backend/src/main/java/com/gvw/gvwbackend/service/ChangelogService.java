@@ -39,6 +39,13 @@ public class ChangelogService {
     }
 
     return changelogs.stream()
+        .sorted(
+            (a, b) -> {
+              if (a.getTimestamp() == null && b.getTimestamp() == null) return 0;
+              if (a.getTimestamp() == null) return 1;
+              if (b.getTimestamp() == null) return -1;
+              return b.getTimestamp().compareTo(a.getTimestamp());
+            })
         .map(
             m ->
                 new ChangelogResponseDTO(
