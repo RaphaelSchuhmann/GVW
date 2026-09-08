@@ -156,6 +156,7 @@ public class UserService {
    * @param request data required to create the user
    */
   public void addOrphanedUser(AddUserRequestDTO request) {
+    log.debug("Adding new orphaned user");
     addUser(request, null);
   }
 
@@ -169,6 +170,8 @@ public class UserService {
     if (memberId == null || memberId.isBlank()) {
       throw new IllegalArgumentException("memberId must not be blank");
     }
+    log.debug("Adding new linked user");
+
     AddUserRequestDTO request =
         new AddUserRequestDTO(
             originalRequest.name() + " " + originalRequest.surname(),
