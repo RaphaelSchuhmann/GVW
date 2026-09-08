@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.dto.request.AddMemberRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateMemberRequestDTO;
+import com.gvw.gvwbackend.dto.response.MemberResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ConflictException;
 import com.gvw.gvwbackend.exception.NotFoundException;
@@ -15,449 +16,234 @@ import com.gvw.gvwbackend.model.Role;
 import com.gvw.gvwbackend.model.User;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mapstruct.factory.Mappers;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
-public class MemberServiceTest {
+class MemberServiceTest {
+
   @Mock private DbService dbService;
-  @Mock private PasswordEncoder passwordEncoder;
-  @Mock private MailService mailService;
+
+  @Mock private MemberMapper memberMapper;
+
   @Mock private SseService sseService;
 
-  private MemberService memberService;
+  @Mock private UserService userService;
+
+  @InjectMocks private MemberService memberService;
+
+  private Member member;
+  private User user;
 
   @BeforeEach
-  void setup() {
-    MemberMapper memberMapper = Mappers.getMapper(MemberMapper.class);
-    memberService =
-        new MemberService(dbService, memberMapper, passwordEncoder, mailService, sseService);
+  void setUp() {
+    member = new Member();
+    member.setId("member-1");
+    member.setRev("1-abc");
+    member.setName("John");
+    member.setSurname("Doe");
+    member.setEmail("john@example.com");
+    member.setPhone("123456789");
+    member.setAddress("123 Street");
+    member.setVoice("Soprano");
+    member.setStatus("active");
+    member.setRole(Role.MEMBER);
+    member.setBirthdate("1990-01-01");
+    member.setJoined("2020-01-01");
+
+    user = new User();
+    user.setId("user-1");
+    user.setUserId("auth-user-1");
+    user.setEmail("john@example.com");
+    user.setPassword("encodedPassword");
+    user.setRole(Role.MEMBER);
+    user.setUserActive(true);
+    user.setMemberId("member-1");
   }
 
   @Test
-  void testAddMemberShouldCreateMemberAndUser() {
+  void getMembers_Success() {
+    when(dbService.findAll("members", Member.class)).thenReturn(List.of(member));
+
+    List<MemberResponseDTO> result = memberService.getMembers();
+
+    assertEquals(1, result.size());
+    assertEquals("member-1", result.get(0).id());
+    assertEquals("John", result.get(0).name());
+  }
+
+  @Test
+  void getMembers_Empty_ReturnsEmptyList() {
+    when(dbService.findAll("members", Member.class)).thenReturn(List.of());
+
+    List<MemberResponseDTO> result = memberService.getMembers();
+
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
+  void addMember_Success() {
     AddMemberRequestDTO request =
         new AddMemberRequestDTO(
-            "Max",
-            "Mustermann",
-            "test@mail.com",
-            "phoneNumber",
-            "address",
-            "t1",
+            "Jane",
+            "Doe",
+            "jane@example.com",
+            "987654321",
+            "456 Avenue",
+            "Alto",
             "active",
-            "member",
-            "birthdate",
-            "joined");
-
-    Member savedMember = generateValidMember();
-    savedMember.setId("member-id");
-
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(List.of());
-
-    when(dbService.findByQuery(eq("members"), any(), eq(Member.class)))
-        .thenReturn(List.of(savedMember));
+            "MEMBER",
+            "1995-01-01",
+            "2021-01-01");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "jane@example.com"), "limit", 1),
+            User.class))
+        .thenReturn(List.of());
+    when(dbService.findByQuery(
+            "members",
+            Map.of("selector", Map.of("email", "jane@example.com"), "limit", 1),
+            Member.class))
+        .thenReturn(List.of(member));
 
     memberService.addMember(request);
 
     verify(dbService).insert(eq("members"), any(Member.class));
-    verify(dbService)
-        .insert(
-            eq("users"),
-            argThat(
-                (User user) ->
-                    user.getMemberId().equals("member-id")
-                        && user.getEmail().equals("test@mail.com")));
-
-    verify(mailService)
-        .sendMail(
-            eq("test@mail.com"),
-            contains("GVW-Office: Temporäres Password"),
-            eq("newUser"),
-            argThat(vars -> vars.containsKey("tempPassword")));
+    verify(userService).addLinkedUser(eq(request), eq("member-1"));
+    verify(sseService).sendRefresh("MEMBERS");
   }
 
   @Test
-  void testAddMemberShouldThrowConflictExceptionWhenEmailExists() {
+  void addMember_EmailExists_ThrowsConflict() {
     AddMemberRequestDTO request =
         new AddMemberRequestDTO(
-            "Max",
-            "Mustermann",
-            "test@mail.com",
-            "phoneNumber",
-            "address",
-            "t1",
+            "Jane",
+            "Doe",
+            "john@example.com",
+            "987654321",
+            "456 Avenue",
+            "Alto",
             "active",
-            "member",
-            "birthdate",
-            "joined");
+            "MEMBER",
+            "1995-01-01",
+            "2021-01-01");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "john@example.com"), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
 
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class)))
-        .thenReturn(List.of(generateValidUser()));
-
-    assertThrows(
-        ConflictException.class,
-        () -> {
-          memberService.addMember(request);
-        });
-
-    verify(dbService, never()).insert(eq("members"), any());
+    assertThrows(ConflictException.class, () -> memberService.addMember(request));
   }
 
   @Test
-  void testAddMemberShouldRollbackWhenUserInsertFails() {
-    AddMemberRequestDTO request =
-        new AddMemberRequestDTO(
-            "Max",
-            "Mustermann",
-            "test@mail.com",
-            "phoneNumber",
-            "address",
-            "t1",
-            "active",
-            "member",
-            "birthdate",
-            "joined");
+  void deleteMember_Success() {
+    when(dbService.findById("members", "member-1", Member.class)).thenReturn(member);
+    when(dbService.findByQuery(
+            "users", Map.of("selector", Map.of("memberId", "member-1"), "limit", 1), User.class))
+        .thenReturn(List.of(user));
 
-    Member savedMember = generateValidMember();
-    savedMember.setId("member-id");
-    savedMember.setRev("rev-1");
+    memberService.deleteMember("member-1");
 
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(List.of());
-
-    when(dbService.findByQuery(eq("members"), any(), eq(Member.class)))
-        .thenReturn(List.of(savedMember));
-
-    doThrow(RuntimeException.class).when(dbService).insert(eq("users"), any(User.class));
-
-    assertThrows(RuntimeException.class, () -> memberService.addMember(request));
-
-    verify(dbService).delete("members", "member-id", "rev-1");
-
-    verify(mailService, never()).sendMail(anyString(), anyString(), anyString(), anyMap());
+    verify(dbService).delete("members", "member-1", "1-abc");
+    verify(dbService).delete("users", "user-1", user.getRev());
+    verify(sseService).sendRefresh("MEMBERS");
   }
 
   @Test
-  void testAddMemberShouldThrowNotFoundWhenMemberNotFoundAfterInsert() {
-    AddMemberRequestDTO request =
-        new AddMemberRequestDTO(
-            "Max",
-            "Mustermann",
-            "test@mail.com",
-            "phoneNumber",
-            "address",
-            "t1",
-            "active",
-            "member",
-            "birthdate",
-            "joined");
-
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(List.of());
-
-    when(dbService.findByQuery(eq("members"), any(), eq(Member.class))).thenReturn(List.of());
-
-    assertThrows(
-        RuntimeException.class,
-        () -> {
-          memberService.addMember(request);
-        });
+  void deleteMember_NullId_ThrowsBadRequest() {
+    assertThrows(BadRequestException.class, () -> memberService.deleteMember(null));
   }
 
   @Test
-  void testAddMemberShouldSendCorrectPassword() {
-    AddMemberRequestDTO request =
-        new AddMemberRequestDTO(
-            "Max",
-            "Mustermann",
-            "test@mail.com",
-            "phoneNumber",
-            "address",
-            "t1",
-            "active",
-            "member",
-            "birthdate",
-            "joined");
+  void deleteMember_NotFound_ThrowsNotFound() {
+    when(dbService.findById("members", "non-existent", Member.class)).thenReturn(null);
 
-    Member savedMember = generateValidMember();
-    savedMember.setId("member-id");
-
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(List.of());
-
-    when(dbService.findByQuery(eq("members"), any(), eq(Member.class)))
-        .thenReturn(List.of(savedMember));
-
-    memberService.addMember(request);
-
-    ArgumentCaptor<Map<String, Object>> mapCaptor = ArgumentCaptor.forClass(Map.class);
-    verify(mailService).sendMail(anyString(), anyString(), anyString(), mapCaptor.capture());
-
-    Map<String, Object> sentVariables = mapCaptor.getValue();
-    String password = (String) sentVariables.get("tempPassword");
-
-    assertNotNull(password);
+    assertThrows(NotFoundException.class, () -> memberService.deleteMember("non-existent"));
   }
 
   @Test
-  void testDeleteMemberShouldDeleteMemberAndUser() {
-    Member savedMember = generateValidMember();
-    User savedUser = generateValidUser();
-
-    savedMember.setId("id-123");
-    savedMember.setRev("rev-1");
-
-    savedUser.setId("id-123");
-    savedUser.setMemberId(savedMember.getId());
-    savedUser.setRev(savedMember.getRev());
-
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMember);
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(List.of(savedUser));
-
-    memberService.deleteMember(savedMember.getId());
-
-    verify(dbService).delete("members", "id-123", "rev-1");
-    verify(dbService).delete("users", "id-123", "rev-1");
-  }
-
-  @Test
-  void testDeleteMemberShouldThrowBadRequestWhenIdIsNullOrEmpty() {
-    assertThrows(
-        BadRequestException.class,
-        () -> {
-          memberService.deleteMember("");
-        });
-
-    assertThrows(
-        BadRequestException.class,
-        () -> {
-          memberService.deleteMember(null);
-        });
-  }
-
-  @Test
-  void testDeleteMemberShouldThrowNotFoundWhenMemberIsNotFound() {
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(null);
-
-    assertThrows(
-        NotFoundException.class,
-        () -> {
-          memberService.deleteMember("member-id");
-        });
-  }
-
-  @Test
-  void testUpdateMemberShouldUpdateMemberAndUser() {
-    String memberId = "member-id";
-
+  void updateMember_Success() {
     UpdateMemberRequestDTO request =
         new UpdateMemberRequestDTO(
-            memberId,
-            "Max",
-            "Mustermann",
-            "new@mail.com",
-            "phone",
-            "address",
-            "t1",
+            "member-1",
+            "1-abc",
+            "John Updated",
+            "Doe",
+            "john@example.com",
+            "123456789",
+            "123 Street",
+            "Soprano",
             "active",
-            "member",
-            "birthdate",
-            "joined",
-            "rev-member");
+            "MEMBER",
+            "1990-01-01",
+            "2020-01-01");
+    when(dbService.findById("members", "member-1", Member.class)).thenReturn(member);
+    when(dbService.findByQuery(
+            "users", Map.of("selector", Map.of("memberId", "member-1"), "limit", 1), User.class))
+        .thenReturn(List.of(user));
+    when(dbService.update("members", "member-1", member)).thenReturn("2-def");
+    when(dbService.update("users", "user-1", user)).thenReturn("2-ghi");
 
-    Member existingMember = generateValidMember();
-    existingMember.setId(memberId);
-    existingMember.setRev("rev-member");
+    List<String> result = memberService.updateMember(request);
 
-    User existingUser = generateValidUser();
-    existingUser.setId("user-id");
-    existingUser.setRev("rev-user");
-    existingUser.setMemberId(memberId);
-
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(existingMember);
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class)))
-        .thenReturn(List.of(existingUser));
-
-    when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn("2-newrev");
-    when(dbService.update(eq("users"), eq("user-id"), any(User.class))).thenReturn("2-newrev");
-
-    List<String> resp = memberService.updateMember(request);
-
-    assertNotNull(resp);
-    assertFalse(resp.isEmpty());
-    assertFalse(resp.getFirst().isBlank());
-    assertFalse(resp.get(1).isBlank());
-
-    verify(dbService).update("members", existingMember.getId(), existingMember);
-    verify(dbService).update("users", existingUser.getId(), existingUser);
-
-    assertEquals("Max", existingMember.getName());
-    assertEquals("Mustermann", existingMember.getSurname());
-    assertEquals("new@mail.com", existingMember.getEmail());
-
-    assertEquals("Max Mustermann", existingUser.getName());
-    assertEquals("new@mail.com", existingUser.getEmail());
-
-    assertEquals("user-id", existingUser.getId());
-    assertEquals("rev-user", existingUser.getRev());
-
-    assertEquals(memberId, existingMember.getId());
-    assertEquals("rev-member", existingMember.getRev());
+    assertEquals(2, result.size());
+    assertEquals("2-def", result.get(0));
+    assertEquals("2-ghi", result.get(1));
+    verify(sseService).sendRefresh("MEMBERS");
   }
 
   @Test
-  void testUpdateMemberShouldThrowNotFoundWhenUserNotFound() {
-    Member savedMember = generateValidMember();
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMember);
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(null);
-
+  void updateMember_NotFound_ThrowsNotFound() {
     UpdateMemberRequestDTO request =
         new UpdateMemberRequestDTO(
-            "member-id",
-            "Max",
-            "Mustermann",
-            "new@mail.com",
-            "phone",
-            "address",
-            "t1",
+            "non-existent",
+            "1-abc",
+            "John",
+            "Doe",
+            "john@example.com",
+            "123456789",
+            "123 Street",
+            "Soprano",
             "active",
-            "role",
-            "birthdate",
-            "joined",
-            "1-rev");
+            "MEMBER",
+            "1990-01-01",
+            "2020-01-01");
+    when(dbService.findById("members", "non-existent", Member.class)).thenReturn(null);
+
+    assertThrows(NotFoundException.class, () -> memberService.updateMember(request));
+  }
+
+  @Test
+  void updateMemberStatus_Success() {
+    when(dbService.findById("members", "member-1", Member.class)).thenReturn(member);
+    when(dbService.findByQuery(
+            "users", Map.of("selector", Map.of("memberId", "member-1"), "limit", 1), User.class))
+        .thenReturn(List.of(user));
+    when(dbService.update("members", "member-1", member)).thenReturn("2-def");
+    when(dbService.update("users", "user-1", user)).thenReturn("2-ghi");
+
+    List<String> result = memberService.updateMemberStatus("member-1", "1-abc");
+
+    assertEquals(2, result.size());
+    assertEquals("inactive", member.getStatus());
+    verify(sseService).sendRefresh("MEMBERS");
+  }
+
+  @Test
+  void updateMemberStatus_NullId_ThrowsBadRequest() {
+    assertThrows(BadRequestException.class, () -> memberService.updateMemberStatus(null, "1-abc"));
+  }
+
+  @Test
+  void updateMemberStatus_NotFound_ThrowsNotFound() {
+    when(dbService.findById("members", "non-existent", Member.class)).thenReturn(null);
 
     assertThrows(
-        NotFoundException.class,
-        () -> {
-          memberService.updateMember(request);
-        });
-  }
-
-  @Test
-  void testUpdateMemberShouldThrowNotFoundWhenMemberNotFound() {
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(null);
-
-    UpdateMemberRequestDTO request =
-        new UpdateMemberRequestDTO(
-            "member-id",
-            "Max",
-            "Mustermann",
-            "new@mail.com",
-            "phone",
-            "address",
-            "t1",
-            "active",
-            "role",
-            "birthdate",
-            "joined",
-            "1-rev");
-
-    assertThrows(
-        NotFoundException.class,
-        () -> {
-          memberService.updateMember(request);
-        });
-  }
-
-  @Test
-  void testUpdateMemberStatusShouldUpdateMemberStatusFromActiveToInactive() {
-    Member savedMemberActive = generateValidMember();
-    savedMemberActive.setId("member-id");
-    savedMemberActive.setRev("1-rev");
-
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMemberActive);
-    when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn("2-newrev");
-
-    List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
-
-    assertNotNull(resp);
-    assertFalse(resp.getFirst().isBlank());
-    assertFalse(resp.getLast().isBlank());
-
-    verify(dbService).update("members", savedMemberActive.getId(), savedMemberActive);
-
-    assertEquals("inactive", savedMemberActive.getStatus());
-  }
-
-  @Test
-  void testUpdateMemberStatusShouldUpdateMemberStatusFromInactiveToActive() {
-    Member savedMemberActive = generateValidMember();
-    savedMemberActive.setId("member-id");
-    savedMemberActive.setStatus("inactive");
-    savedMemberActive.setRev("1-rev");
-
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMemberActive);
-    when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn("2-newrev");
-
-    List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
-
-    assertNotNull(resp);
-    assertFalse(resp.getFirst().isBlank());
-    assertFalse(resp.getLast().isBlank());
-
-    verify(dbService).update("members", savedMemberActive.getId(), savedMemberActive);
-
-    assertEquals("active", savedMemberActive.getStatus());
-  }
-
-  @Test
-  void testUpdateMemberStatusShouldUpdateMemberStatusFromNullToActive() {
-    Member savedMemberActive = generateValidMember();
-    savedMemberActive.setId("member-id");
-    savedMemberActive.setStatus(null);
-    savedMemberActive.setRev("1-rev");
-
-    when(dbService.findById(eq("members"), any(), eq(Member.class))).thenReturn(savedMemberActive);
-    when(dbService.update(eq("members"), eq("member-id"), any(Member.class)))
-        .thenReturn("2-newrev");
-
-    List<String> resp = memberService.updateMemberStatus("member-id", "1-rev");
-
-    assertNotNull(resp);
-    assertFalse(resp.getFirst().isBlank());
-    assertFalse(resp.getLast().isBlank());
-
-    verify(dbService).update("members", savedMemberActive.getId(), savedMemberActive);
-
-    assertEquals("active", savedMemberActive.getStatus());
-  }
-
-  private Member generateValidMember() {
-    Member member = new Member();
-    member.setName("Max");
-    member.setSurname("Mustermann");
-    member.setEmail("test@mail.com");
-    member.setPhone("phoneNumber");
-    member.setAddress("address");
-    member.setVoice("t1");
-    member.setRole(Role.MEMBER);
-    member.setStatus("active");
-    member.setBirthdate("birthdate");
-    member.setJoined("joined");
-
-    return member;
-  }
-
-  private User generateValidUser() {
-    User user = new User();
-    user.setEmail("test@mail.com");
-    user.setName("Max Mustermann");
-    user.setPhone("phoneNumber");
-    user.setAddress("address");
-    user.setChangePassword(true);
-    user.setFirstLogin(true);
-    user.setUserId(UUID.randomUUID().toString());
-    user.setRole(Role.MEMBER);
-    user.setFailedLoginAttempts(0);
-    user.setLockUntil(null);
-
-    return user;
+        NotFoundException.class, () -> memberService.updateMemberStatus("non-existent", "1-abc"));
   }
 }

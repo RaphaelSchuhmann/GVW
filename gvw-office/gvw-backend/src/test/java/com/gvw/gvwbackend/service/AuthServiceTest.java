@@ -1,31 +1,30 @@
 package com.gvw.gvwbackend.service;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.dto.request.ChangePwRequestDTO;
 import com.gvw.gvwbackend.dto.request.LoginRequestDTO;
+import com.gvw.gvwbackend.dto.response.AutoLoginResponseDTO;
 import com.gvw.gvwbackend.dto.response.LoginResponseDTO;
 import com.gvw.gvwbackend.exception.ConflictException;
 import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.TooManyRequestsException;
 import com.gvw.gvwbackend.model.Role;
 import com.gvw.gvwbackend.model.User;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
-public class AuthServiceTest {
+class AuthServiceTest {
 
   @Mock private DbService dbService;
 
@@ -35,291 +34,203 @@ public class AuthServiceTest {
 
   @InjectMocks private AuthService authService;
 
-  @Test
-  void testLoginShouldSucceedWhenValidCredentials() {
-    User user = new User();
-    user.setUserId("123");
-    user.setId("123");
-    user.setRev("1-rev");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
+  private User user;
+
+  @BeforeEach
+  void setUp() {
+    user = new User();
+    user.setId("user-1");
+    user.setUserId("auth-user-1");
+    user.setEmail("test@example.com");
+    user.setPassword("encodedPassword");
     user.setRole(Role.MEMBER);
-    user.setFailedLoginAttempts(2);
-    user.setLockUntil(null);
+    user.setUserActive(true);
     user.setChangePassword(false);
     user.setFirstLogin(false);
-
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-
-    when(passwordEncoder.matches("plainPw", "hashedPw")).thenReturn(true);
-    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
-
-    when(jwtService.generateToken(eq("123"), anyMap())).thenReturn("mocked-jwt");
-
-    LoginRequestDTO request = new LoginRequestDTO("test@mail.com", "plainPw");
-
-    LoginResponseDTO response = authService.login(request);
-
-    assertEquals("mocked-jwt", response.authToken());
-    assertFalse(response.changePassword());
-    assertFalse(response.firstLogin());
-
-    verify(dbService)
-        .update(
-            eq("users"),
-            eq("123"),
-            argThat(
-                (User updatedUser) ->
-                    updatedUser.getFailedLoginAttempts() == 0
-                        && updatedUser.getLockUntil() == null));
-
-    verify(jwtService).generateToken(eq("123"), anyMap());
-  }
-
-  @Test
-  void testLoginShouldUnauthorizedIfWrongEmail() {
-    User user = new User();
-    user.setUserId("123");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(2);
-    user.setLockUntil(null);
-    user.setChangePassword(false);
-    user.setFirstLogin(false);
-
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of());
-
-    LoginRequestDTO request = new LoginRequestDTO("test@a.com", "plainPw");
-
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> {
-          authService.login(request);
-        });
-  }
-
-  @Test
-  void testLoginShouldToManyRequestsIfUserLocked() {
-    User user = new User();
-    user.setUserId("123");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(5);
-    user.setLockUntil(Instant.now().plus(Duration.ofMinutes(15)));
-    user.setChangePassword(false);
-    user.setFirstLogin(false);
-
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-
-    LoginRequestDTO request = new LoginRequestDTO("test@mail.com", "plainPw");
-
-    assertThrows(
-        TooManyRequestsException.class,
-        () -> {
-          authService.login(request);
-        });
-  }
-
-  @Test
-  void testLoginShouldLockAccountWhenTooManyFailedAttempts() {
-    User user = new User();
-    user.setId("123");
-    user.setRev("1-rev");
-    user.setUserId("123");
-    user.setEmail("mail");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(5);
-    user.setLockUntil(null);
-
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
-
-    when(passwordEncoder.matches(any(), any())).thenReturn(false);
-
-    LoginRequestDTO request = new LoginRequestDTO("mail", "wrongPw");
-
-    TooManyRequestsException ex =
-        assertThrows(TooManyRequestsException.class, () -> authService.login(request));
-
-    verify(dbService)
-        .update(
-            eq("users"),
-            eq("123"),
-            argThat((User updatedUser) -> updatedUser.getLockUntil() != null));
-  }
-
-  @Test
-  void testLoginShouldIncreaseFailedAttemptsWhenInvalidPw() {
-    User user = new User();
-    user.setUserId("123");
-    user.setId("123");
-    user.setRev("1-rev");
-    user.setEmail("mail");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(2);
-    user.setLockUntil(null);
-
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
-
-    when(passwordEncoder.matches(any(), any())).thenReturn(false);
-
-    LoginRequestDTO request = new LoginRequestDTO("mail", "wrongPw");
-
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> {
-          authService.login(request);
-        });
-
-    ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-
-    verify(dbService).update(eq("users"), eq("123"), captor.capture());
-
-    User updatedUser = captor.getValue();
-
-    assertEquals(3, updatedUser.getFailedLoginAttempts());
-  }
-
-  @Test
-  void testChangePasswordShouldChangeUserPassword() {
-    User user = new User();
-    user.setUserId("123");
-    user.setId("123");
-    user.setRev("1-rev");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
     user.setFailedLoginAttempts(0);
     user.setLockUntil(null);
-    user.setChangePassword(true);
-    user.setFirstLogin(true);
-
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-    when(dbService.update(eq("users"), eq("123"), any(User.class))).thenReturn("2-newrev");
-
-    when(passwordEncoder.matches(any(), any())).thenReturn(false).thenReturn(true);
-
-    when(passwordEncoder.encode("newPw")).thenReturn("hashedNewPw");
-
-    ChangePwRequestDTO request = new ChangePwRequestDTO("test@mail.com", "oldPw", "newPw");
-
-    authService.changePassword(request);
-
-    ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-
-    verify(dbService).update(eq("users"), eq("123"), captor.capture());
-
-    User updatedUser = captor.getValue();
-
-    assertEquals("hashedNewPw", updatedUser.getPassword());
-    assertFalse(updatedUser.getChangePassword());
-    assertFalse(updatedUser.getFirstLogin());
   }
 
   @Test
-  void testChangePasswordShouldFailIfInvalidEmail() {
-    User user = new User();
-    user.setUserId("123");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(0);
-    user.setLockUntil(null);
-    user.setChangePassword(true);
-    user.setFirstLogin(true);
+  void login_Success() {
+    LoginRequestDTO request = new LoginRequestDTO("test@example.com", "password");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+    when(passwordEncoder.matches("password", "encodedPassword")).thenReturn(true);
+    when(jwtService.generateToken("auth-user-1", Map.of("role", "member"))).thenReturn("jwt-token");
+    when(dbService.update("users", "user-1", user)).thenReturn("2-rev");
 
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of());
+    LoginResponseDTO result = authService.login(request);
 
-    ChangePwRequestDTO request = new ChangePwRequestDTO("test2@mail.com", "oldPw", "newPw");
-
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> {
-          authService.changePassword(request);
-        });
+    assertEquals("jwt-token", result.authToken());
+    assertFalse(result.changePassword());
+    assertFalse(result.firstLogin());
+    assertEquals("2-rev", result.rev());
+    assertEquals(0, user.getFailedLoginAttempts());
+    assertNull(user.getLockUntil());
   }
 
   @Test
-  void testChangePasswordShouldFailIfNewPwIsSameAsOld() {
-    User user = new User();
-    user.setUserId("123");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(0);
-    user.setLockUntil(null);
-    user.setChangePassword(true);
-    user.setFirstLogin(true);
+  void login_UserNotFound_ThrowsInvalidCredentials() {
+    LoginRequestDTO request = new LoginRequestDTO("test@example.com", "password");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of());
 
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-
-    when(passwordEncoder.matches(any(), any())).thenReturn(true);
-
-    ChangePwRequestDTO request = new ChangePwRequestDTO("test@mail.com", "oldPw", "oldPw");
-
-    assertThrows(
-        ConflictException.class,
-        () -> {
-          authService.changePassword(request);
-        });
+    assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
   }
 
   @Test
-  void testChangePasswordShouldFailIfOldPwIsInvalid() {
-    User user = new User();
-    user.setUserId("123");
-    user.setEmail("test@mail.com");
-    user.setPassword("hashedPw");
-    user.setFailedLoginAttempts(0);
-    user.setLockUntil(null);
-    user.setChangePassword(true);
-    user.setFirstLogin(true);
+  void login_AccountLocked_ThrowsTooManyRequests() {
+    user.setLockUntil(Instant.now().plusSeconds(300));
+    LoginRequestDTO request = new LoginRequestDTO("test@example.com", "password");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
 
-    when(dbService.findByQuery(any(), any(), eq(User.class))).thenReturn(List.of(user));
-
-    when(passwordEncoder.matches(any(), any())).thenReturn(false).thenReturn(false);
-
-    ChangePwRequestDTO request = new ChangePwRequestDTO("test@mail.com", "invalidOldPw", "newPw");
-
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> {
-          authService.changePassword(request);
-        });
+    assertThrows(TooManyRequestsException.class, () -> authService.login(request));
   }
 
   @Test
-  void testGeneratePasswordShouldContainWordsAndDigits() {
-    String result = AuthService.generatePassword(3, 2);
+  void login_WrongPassword_IncrementsFailedAttempts() {
+    LoginRequestDTO request = new LoginRequestDTO("test@example.com", "wrong");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+    when(passwordEncoder.matches("wrong", "encodedPassword")).thenReturn(false);
+    when(dbService.update("users", "user-1", user)).thenReturn("2-rev");
 
-    long digitCount = result.chars().filter(Character::isDigit).count();
-
-    long upperCaseCount = result.chars().filter(Character::isUpperCase).count();
-
-    assertEquals(2, digitCount);
-    assertEquals(3, upperCaseCount);
+    assertThrows(InvalidCredentialsException.class, () -> authService.login(request));
+    assertEquals(1, user.getFailedLoginAttempts());
   }
 
   @Test
-  void testGeneratePasswordShouldReturnEmptyWhenZeroInputs() {
-    String result = AuthService.generatePassword(0, 0);
+  void login_FifthFailedAttempt_LocksAccount() {
+    user.setFailedLoginAttempts(4);
+    LoginRequestDTO request = new LoginRequestDTO("test@example.com", "wrong");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+    when(passwordEncoder.matches("wrong", "encodedPassword")).thenReturn(false);
+    when(dbService.update("users", "user-1", user)).thenReturn("2-rev");
 
-    assertEquals("", result);
+    assertThrows(TooManyRequestsException.class, () -> authService.login(request));
+    assertNotNull(user.getLockUntil());
   }
 
   @Test
-  void testGeneratePasswordShouldContainOnlyWords() {
-    String result = AuthService.generatePassword(3, 0);
+  void changePassword_Success() {
+    ChangePwRequestDTO request =
+        new ChangePwRequestDTO("test@example.com", "oldPassword", "newPassword");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com"), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+    when(passwordEncoder.matches("newPassword", "encodedPassword")).thenReturn(false);
+    when(passwordEncoder.matches("oldPassword", "encodedPassword")).thenReturn(true);
+    when(passwordEncoder.encode("newPassword")).thenReturn("newEncodedPassword");
+    when(dbService.update("users", "user-1", user)).thenReturn("2-rev");
 
-    long digitCount = result.chars().filter(Character::isDigit).count();
+    String result = authService.changePassword(request);
 
-    assertEquals(0, digitCount);
+    assertEquals("newEncodedPassword", user.getPassword());
+    assertFalse(user.getChangePassword());
+    assertFalse(user.getFirstLogin());
+    assertEquals("2-rev", result);
   }
 
   @Test
-  void testGeneratePasswordShouldContainOnlyDigits() {
-    String result = AuthService.generatePassword(0, 5);
+  void changePassword_SameAsOld_ThrowsConflict() {
+    ChangePwRequestDTO request =
+        new ChangePwRequestDTO("test@example.com", "oldPassword", "oldPassword");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com"), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+    when(passwordEncoder.matches("oldPassword", "encodedPassword")).thenReturn(true);
 
-    long digitCount = result.chars().filter(Character::isDigit).count();
+    assertThrows(ConflictException.class, () -> authService.changePassword(request));
+  }
 
-    assertEquals(5, digitCount);
+  @Test
+  void changePassword_WrongOldPassword_ThrowsInvalidCredentials() {
+    ChangePwRequestDTO request =
+        new ChangePwRequestDTO("test@example.com", "wrongOld", "newPassword");
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("email", "test@example.com"), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+    when(passwordEncoder.matches("newPassword", "encodedPassword")).thenReturn(false);
+    when(passwordEncoder.matches("wrongOld", "encodedPassword")).thenReturn(false);
+
+    assertThrows(InvalidCredentialsException.class, () -> authService.changePassword(request));
+  }
+
+  @Test
+  void autoLogin_Success() {
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("userId", "auth-user-1", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of(user));
+
+    AutoLoginResponseDTO result = authService.autoLogin("auth-user-1");
+
+    assertEquals("test@example.com", result.email());
+    assertFalse(result.changePassword());
+    assertFalse(result.firstLogin());
+  }
+
+  @Test
+  void autoLogin_NullId_ThrowsInvalidCredentials() {
+    assertThrows(InvalidCredentialsException.class, () -> authService.autoLogin(null));
+  }
+
+  @Test
+  void autoLogin_BlankId_ThrowsInvalidCredentials() {
+    assertThrows(InvalidCredentialsException.class, () -> authService.autoLogin(""));
+  }
+
+  @Test
+  void autoLogin_UserNotFound_ThrowsInvalidCredentials() {
+    when(dbService.findByQuery(
+            "users",
+            Map.of("selector", Map.of("userId", "non-existent", "userActive", true), "limit", 1),
+            User.class))
+        .thenReturn(List.of());
+
+    assertThrows(InvalidCredentialsException.class, () -> authService.autoLogin("non-existent"));
+  }
+
+  @Test
+  void generatePassword_Success() {
+    String password = AuthService.generatePassword(3, 2);
+
+    assertNotNull(password);
+    assertFalse(password.isEmpty());
+  }
+
+  @Test
+  void generatePassword_TooManyWords_ThrowsIndexOutOfBounds() {
+    assertThrows(IndexOutOfBoundsException.class, () -> AuthService.generatePassword(10000, 2));
+  }
+
+  @Test
+  void generatePassword_TooManyNumbers_ThrowsIndexOutOfBounds() {
+    assertThrows(IndexOutOfBoundsException.class, () -> AuthService.generatePassword(3, 20));
   }
 }

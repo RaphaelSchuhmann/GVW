@@ -2,69 +2,77 @@ package com.gvw.gvwbackend.util;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class HashUtilTest {
-  private HashUtil hashUtil;
+class HashUtilTest {
 
-  @BeforeEach()
-  void setUp() {
-    hashUtil = new HashUtil();
+  @InjectMocks private HashUtil hashUtil;
+
+  @Test
+  void createHash_Success() {
+    String result = hashUtil.createHash("test-value");
+
+    assertNotNull(result);
+    assertFalse(result.isEmpty());
+    assertEquals(64, result.length()); // SHA-256 produces 64 hex characters
   }
 
   @Test
-  void testCreateHashShouldReturnConsistentHashForSameInput() {
-    String input = "test123";
+  void createHash_SameInput_SameOutput() {
+    String hash1 = hashUtil.createHash("test-value");
+    String hash2 = hashUtil.createHash("test-value");
 
-    String hash1 = hashUtil.createHash(input);
-    String hash2 = hashUtil.createHash(input);
-
-    assertNotNull(hash1);
     assertEquals(hash1, hash2);
   }
 
   @Test
-  void testCreateHashShouldReturnDifferentHashesForDifferentInput() {
-    String hash1 = hashUtil.createHash("test123");
-    String hash2 = hashUtil.createHash("test3214");
+  void createHash_DifferentInput_DifferentOutput() {
+    String hash1 = hashUtil.createHash("test-value-1");
+    String hash2 = hashUtil.createHash("test-value-2");
 
     assertNotEquals(hash1, hash2);
   }
 
   @Test
-  void testCreateHashShouldReturnNullWhenInputIsNull() {
-    String hash = hashUtil.createHash(null);
+  void createHash_EmptyString_ReturnsHash() {
+    String result = hashUtil.createHash("");
 
-    assertNull(hash);
+    assertNotNull(result);
+    assertFalse(result.isEmpty());
   }
 
   @Test
-  void testCompareShouldReturnTrueForMatchingInput() {
-    String raw = "mySecret";
-    String hash = hashUtil.createHash(raw);
+  void createHash_NullInput_ReturnsNull() {
+    String result = hashUtil.createHash(null);
 
-    boolean result = hashUtil.compare(raw, hash);
+    assertNull(result);
+  }
+
+  @Test
+  void compare_MatchingHashes_ReturnsTrue() {
+    String hash = hashUtil.createHash("test-value");
+
+    boolean result = hashUtil.compare("test-value", hash);
 
     assertTrue(result);
   }
 
   @Test
-  void testCompareShouldReturnFalseForNonMatchingInput() {
-    String raw = "mySecret";
-    String hash = hashUtil.createHash(raw);
+  void compare_NonMatchingHashes_ReturnsFalse() {
+    String hash = hashUtil.createHash("test-value");
 
-    boolean result = hashUtil.compare("wrongInput", hash);
+    boolean result = hashUtil.compare("wrong-value", hash);
 
     assertFalse(result);
   }
 
   @Test
-  void testCompareShouldReturnFalseWhenRawInputIsNull() {
-    String hash = hashUtil.createHash("test");
+  void compare_NullValue_ReturnsFalse() {
+    String hash = hashUtil.createHash("test-value");
 
     boolean result = hashUtil.compare(null, hash);
 
@@ -72,14 +80,14 @@ public class HashUtilTest {
   }
 
   @Test
-  void testCompareShouldReturnFalseWhenStoredHashIsNull() {
-    boolean result = hashUtil.compare("test", null);
+  void compare_NullHash_ReturnsFalse() {
+    boolean result = hashUtil.compare("test-value", null);
 
     assertFalse(result);
   }
 
   @Test
-  void testCompareShouldReturnFalseWhenBothAreNull() {
+  void compare_BothNull_ReturnsFalse() {
     boolean result = hashUtil.compare(null, null);
 
     assertFalse(result);

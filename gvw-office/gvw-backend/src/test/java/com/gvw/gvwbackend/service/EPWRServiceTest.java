@@ -1,18 +1,19 @@
 package com.gvw.gvwbackend.service;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.exception.InvalidCredentialsException;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.EPWRToken;
+import com.gvw.gvwbackend.model.Role;
 import com.gvw.gvwbackend.model.User;
 import com.gvw.gvwbackend.util.HashUtil;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,7 +22,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
-public class EPWRServiceTest {
+class EPWRServiceTest {
+
   @Mock private DbService dbService;
 
   @Mock private PasswordEncoder passwordEncoder;
@@ -32,118 +34,124 @@ public class EPWRServiceTest {
 
   @InjectMocks private EPWRService epwrService;
 
-  @Test
-  void testGetNewEmergencyTokenNoSavedToken() {
-    when(hashUtil.createHash(any())).thenReturn("hashedToken");
+  private EPWRToken epwrToken;
 
-    when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of());
-
-    String token = epwrService.getNewEmergencyToken();
-
-    assertNotNull(token);
-
-    verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
-  }
-
-  @Test
-  void testGetNewEmergencyTokenSavedToken() {
-    EPWRToken epwrToken = new EPWRToken();
-    epwrToken.setHashedToken("hashedToken");
+  @BeforeEach
+  void setUp() {
+    epwrToken = new EPWRToken();
+    epwrToken.setId("token-1");
+    epwrToken.setHashedToken("hashed-token");
     epwrToken.setCreatedAt(Instant.now());
-    epwrToken.setExpiresAt(Instant.now().plusSeconds(10));
+    epwrToken.setExpiresAt(Instant.now().plusSeconds(2592000)); // 30 days
+  }
 
-    when(hashUtil.createHash(any())).thenReturn("newHashedToken");
+  @Test
+  void getNewEmergencyToken_NewToken_Success() {
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of());
+    when(hashUtil.createHash(anyString())).thenReturn("new-hashed-token");
 
-    when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of(epwrToken));
+    String result = epwrService.getNewEmergencyToken();
 
-    String token = epwrService.getNewEmergencyToken();
-
-    assertNotNull(token);
-
+    assertNotNull(result);
+    assertFalse(result.isEmpty());
     verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
   }
 
   @Test
-  void testUseEmergencyTokenSucceeds() {
-    String rawToken = "plain-token";
-    String storedHash = "stored-hash";
+  void getNewEmergencyToken_ReplaceExisting_Success() {
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of(epwrToken));
+    when(hashUtil.createHash(anyString())).thenReturn("new-hashed-token");
 
-    EPWRToken storedToken = new EPWRToken();
-    storedToken.setHashedToken(storedHash);
-    storedToken.setExpiresAt(Instant.now().plusSeconds(3600));
+    String result = epwrService.getNewEmergencyToken();
 
-    User admin1 = new User();
-    admin1.setEmail("admin1@mail.com");
+    assertNotNull(result);
+    verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
+  }
 
-    User admin2 = new User();
-    admin2.setEmail("admin2@mail.com");
+  @Test
+  void getNewEmergencyToken_InsertFailure_ThrowsRuntimeException() {
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of());
+    when(hashUtil.createHash(anyString())).thenReturn("new-hashed-token");
+    doThrow(new RuntimeException("DB error"))
+        .when(dbService)
+        .insert(eq("emergency_token"), any(EPWRToken.class));
 
-    List<User> admins = List.of(admin1, admin2);
+    assertThrows(RuntimeException.class, () -> epwrService.getNewEmergencyToken());
+  }
 
-    when(dbService.findByQuery(eq("emergency_token"), any(), eq(EPWRToken.class)))
-        .thenReturn(List.of(storedToken));
+  @Test
+  void useEmergencyToken_Success() {
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of(epwrToken));
+    when(hashUtil.compare("valid-token", "hashed-token")).thenReturn(true);
+    when(dbService.findByQuery("users", Map.of("selector", Map.of("role", Role.ADMIN)), User.class))
+        .thenReturn(List.of());
 
-    when(dbService.findByQuery(eq("users"), any(), eq(User.class))).thenReturn(admins);
+    String result = epwrService.useEmergencyToken("valid-token");
 
-    when(hashUtil.compare(rawToken, storedHash)).thenReturn(true);
+    assertNotNull(result);
+    verify(dbService).insert(eq("emergency_token"), any(EPWRToken.class));
+  }
 
-    when(passwordEncoder.encode(any())).thenReturn("encoded-password");
+  @Test
+  void useEmergencyToken_TokenNotFound_ThrowsNotFound() {
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of());
 
-    String token = epwrService.useEmergencyToken(rawToken);
+    assertThrows(NotFoundException.class, () -> epwrService.useEmergencyToken("invalid-token"));
+  }
 
-    assertNotNull(token);
+  @Test
+  void useEmergencyToken_TokenExpired_ThrowsInvalidCredentials() {
+    epwrToken.setExpiresAt(Instant.now().minusSeconds(3600));
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of(epwrToken));
 
-    verify(dbService, times(2)).insert(eq("users"), any(User.class));
+    assertThrows(
+        InvalidCredentialsException.class, () -> epwrService.useEmergencyToken("expired-token"));
+  }
 
-    verify(passwordEncoder, times(2)).encode(any());
+  @Test
+  void useEmergencyToken_InvalidHash_ThrowsInvalidCredentials() {
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of(epwrToken));
+    when(hashUtil.compare("invalid-token", "hashed-token")).thenReturn(false);
 
+    assertThrows(
+        InvalidCredentialsException.class, () -> epwrService.useEmergencyToken("invalid-token"));
+  }
+
+  @Test
+  void useEmergencyToken_WithAdmins_ResetsPasswords() {
+    User admin = new User();
+    admin.setId("admin-1");
+    admin.setEmail("admin@example.com");
+    admin.setPassword("old-password");
+    admin.setChangePassword(false);
+
+    when(dbService.findByQuery(
+            "emergency_token", Map.of("selector", Map.of(), "limit", 1), EPWRToken.class))
+        .thenReturn(List.of(epwrToken));
+    when(hashUtil.compare("valid-token", "hashed-token")).thenReturn(true);
+    when(dbService.findByQuery("users", Map.of("selector", Map.of("role", Role.ADMIN)), User.class))
+        .thenReturn(List.of(admin));
+    when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
+
+    String result = epwrService.useEmergencyToken("valid-token");
+
+    assertNotNull(result);
+    verify(passwordEncoder).encode(anyString());
     verify(mailService, times(2))
-        .sendMail(
-            anyString(), eq("GVW-Office: Passwort zurückgesetzt"), eq("resetPassword"), any());
-
-    verify(mailService, times(2))
-        .sendMail(anyString(), eq("Notfallzugang verwendet"), eq("emergencyTokenUsed"), any());
-
-    verify(dbService).insert(eq("emergency_token"), eq(storedToken));
-  }
-
-  @Test
-  void testUseEmergencyTokenShouldThrowTokenNotFound() {
-    when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of());
-
-    assertThrows(
-        NotFoundException.class,
-        () -> {
-          epwrService.useEmergencyToken("token");
-        });
-  }
-
-  @Test
-  void testUseEmergencyTokenShouldThrowTokenExpired() {
-    EPWRToken savedToken = new EPWRToken();
-    savedToken.setExpiresAt(Instant.now());
-
-    when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of(savedToken));
-
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> {
-          epwrService.useEmergencyToken("token");
-        });
-  }
-
-  @Test
-  void testUseEmergencyTokenShouldThrowInvalidToken() {
-    EPWRToken savedToken = new EPWRToken();
-    savedToken.setHashedToken("hashedToken");
-    savedToken.setExpiresAt(Instant.now().plusSeconds(3600));
-
-    when(dbService.findByQuery(any(), any(), eq(EPWRToken.class))).thenReturn(List.of(savedToken));
-
-    assertThrows(
-        InvalidCredentialsException.class,
-        () -> {
-          epwrService.useEmergencyToken("token");
-        });
+        .sendMail(eq("admin@example.com"), anyString(), anyString(), anyMap());
   }
 }

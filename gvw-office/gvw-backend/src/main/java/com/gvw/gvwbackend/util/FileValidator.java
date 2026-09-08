@@ -1,5 +1,6 @@
-package com.gvw.gvwbackend.service;
+package com.gvw.gvwbackend.util;
 
+import java.util.Locale;
 import java.util.Set;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
@@ -57,7 +58,7 @@ public class FileValidator {
     String fileName = file.getOriginalFilename();
     if (fileName == null || !fileName.contains(".")) return false;
 
-    String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+    String extension = fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
     return ALLOWED_EXTENSIONS.contains(extension);
   }
 }

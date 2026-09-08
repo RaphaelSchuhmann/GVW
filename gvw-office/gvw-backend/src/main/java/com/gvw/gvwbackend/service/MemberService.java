@@ -11,10 +11,8 @@ import com.gvw.gvwbackend.model.User;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 /**
@@ -32,9 +30,8 @@ import org.springframework.stereotype.Service;
 public class MemberService {
   private final DbService dbService;
   private final MemberMapper memberMapper;
-  private final PasswordEncoder passwordEncoder;
-  private final MailService mailService;
   private final SseService sseService;
+  private final UserService userService;
   private static final Logger log = LoggerFactory.getLogger(MemberService.class);
 
   /**
@@ -42,21 +39,17 @@ public class MemberService {
    *
    * @param dbService service used for database operations
    * @param memberMapper mapper used for updating member and user entities
-   * @param passwordEncoder encoder used for storing user passwords securely
-   * @param mailService service used for sending account emails
    * @param sseService service used for broadcasting member changes
    */
   public MemberService(
       DbService dbService,
       MemberMapper memberMapper,
-      PasswordEncoder passwordEncoder,
-      MailService mailService,
-      SseService sseService) {
+      SseService sseService,
+      UserService userService) {
     this.dbService = dbService;
     this.memberMapper = memberMapper;
-    this.passwordEncoder = passwordEncoder;
-    this.mailService = mailService;
     this.sseService = sseService;
+    this.userService = userService;
   }
 
   /**
@@ -133,7 +126,6 @@ public class MemberService {
     }
 
     Member member = createMemberFromRequest(request);
-    User user = createUserFromRequest(request);
 
     try {
       dbService.insert("members", member);
@@ -148,24 +140,8 @@ public class MemberService {
 
       log.debug("Member retrieved successfully after creation");
 
-      String temporaryPassword = AuthService.generatePassword(3, 2);
-
       Member savedMember = members.getFirst();
-      user.setMemberId(savedMember.getId());
-      user.setPassword(passwordEncoder.encode(temporaryPassword));
-      user.setUserActive(member.getStatus().equals("active"));
-
-      dbService.insert("users", user);
-
-      if (user.getUserActive()) {
-        log.debug("Sending new user email");
-        mailService.sendMail(
-            user.getEmail(),
-            "GVW-Office: Temporäres Password",
-            "newUser",
-            Map.of("tempPassword", temporaryPassword));
-        log.debug("New user email sent successfully");
-      }
+      userService.addLinkedUser(request, savedMember.getId());
 
       sseService.sendRefresh("MEMBERS");
     } catch (Exception e) {
@@ -206,7 +182,7 @@ public class MemberService {
    * @throws NotFoundException if the member or linked user does not exist
    */
   public void deleteMember(String id) {
-    if (id == null || id.isEmpty()) {
+    if (id == null || id.isBlank()) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.DELETE, 400)));
     }
@@ -237,32 +213,25 @@ public class MemberService {
    * @throws NotFoundException if the member or linked user does not exist
    */
   public List<String> updateMember(UpdateMemberRequestDTO request) {
-    // Can throw not found
     Member member = getMemberById(request.id(), ErrorAction.UPDATE);
     User user = getUserByMemberId(request.id(), ErrorAction.UPDATE);
 
     boolean statusChanged = !Objects.equals(member.getStatus(), request.status());
 
-    Member originalMember = member;
+    Member originalMember = member.toBuilder().build();
 
     memberMapper.updateMemberFromDto(request, member);
     memberMapper.updateUserFromDto(request, user);
 
     member.setRev(request.rev());
 
-    String temporaryPassword = AuthService.generatePassword(3, 2);
-
-    if (statusChanged && request.status().equals("active")) {
-      user.setPassword(passwordEncoder.encode(temporaryPassword));
+    if (request.status().equals("active")) {
       user.setUserActive(true);
-      user.setChangePassword(true);
       member.setStatus("active");
     } else {
       user.setUserActive(false);
       member.setStatus("inactive");
     }
-
-    log.debug("Updating member in database");
 
     String memberRev = dbService.update("members", member.getId(), member);
 
@@ -272,29 +241,12 @@ public class MemberService {
       userRev = dbService.update("users", user.getId(), user);
     } catch (RuntimeException ex) {
       log.error("Linked user update failed, attempting to roll back member update", ex);
-
-      try {
-        originalMember.setRev(memberRev);
-        dbService.update("members", originalMember.getId(), originalMember);
-
-        log.debug("Member update rolled back successfully");
-      } catch (RuntimeException rollbackEx) {
-        log.error("Failed to roll back member update", rollbackEx);
-      }
-
+      rollbackMemberUpdate(originalMember, memberRev);
       throw ex;
     }
 
     if (statusChanged && request.status().equals("active")) {
-      log.debug("Sending new user email");
-
-      mailService.sendMail(
-          user.getEmail(),
-          "GVW-Office: Temporäres Password",
-          "resetPassword",
-          Map.of("tempPassword", temporaryPassword));
-
-      log.debug("New user email sent successfully");
+      userService.resetPasswordUsingId(user.getId());
     }
 
     sseService.sendRefresh("MEMBERS");
@@ -315,7 +267,7 @@ public class MemberService {
    * @throws NotFoundException if the member does not exist
    */
   public List<String> updateMemberStatus(String id, String _rev) {
-    if (id == null || id.isEmpty()) {
+    if (id == null || id.isBlank()) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.UPDATE, 400)));
     }
@@ -323,30 +275,31 @@ public class MemberService {
     Member member = getMemberById(id, ErrorAction.UPDATE);
     User user = getUserByMemberId(id, ErrorAction.UPDATE);
 
+    Member originalMember = member.toBuilder().build();
+
     member.setRev(_rev);
     member.setStatus("active".equals(member.getStatus()) ? "inactive" : "active");
 
-    String temporaryPassword = AuthService.generatePassword(3, 2);
     if (member.getStatus().equals("active")) {
-      user.setPassword(passwordEncoder.encode(temporaryPassword));
       user.setUserActive(true);
       user.setChangePassword(true);
     } else {
       user.setUserActive(false);
     }
 
-    String userRev = dbService.update("users", user.getId(), user);
-
     String memberRev = dbService.update("members", member.getId(), member);
 
-    if (user.getUserActive()) {
-      log.debug("Sending new user email");
-      mailService.sendMail(
-          user.getEmail(),
-          "GVW-Office: Temporäres Password",
-          "resetPassword",
-          Map.of("tempPassword", temporaryPassword));
-      log.debug("New user email sent successfully");
+    String userRev;
+    try {
+      userRev = dbService.update("users", user.getId(), user);
+    } catch (RuntimeException ex) {
+      log.error("Linked user update failed, attempting to roll back member update", ex);
+      rollbackMemberUpdate(originalMember, memberRev);
+      throw ex;
+    }
+
+    if (member.getStatus().equals("active")) {
+      userService.resetPasswordUsingMemberId(id);
     }
 
     sseService.sendRefresh("MEMBERS");
@@ -365,31 +318,6 @@ public class MemberService {
     List<User> users = dbService.findByQuery("users", query, User.class);
 
     return !users.isEmpty();
-  }
-
-  /**
-   * Creates a user entity from a member creation request.
-   *
-   * <p>Initializes default authentication state including first login requirement, generated user
-   * identifier, and assigned role.
-   *
-   * @param request member creation data
-   * @return initialized user entity
-   */
-  private User createUserFromRequest(AddMemberRequestDTO request) {
-    User user = new User();
-    user.setEmail(request.email());
-    user.setName(request.name() + " " + request.surname());
-    user.setPhone(request.phone());
-    user.setAddress(request.address());
-    user.setChangePassword(true);
-    user.setFirstLogin(true);
-    user.setUserId(UUID.randomUUID().toString());
-    user.setRole(Role.fromString(request.role()));
-    user.setFailedLoginAttempts(0);
-    user.setLockUntil(null);
-
-    return user;
   }
 
   /**
@@ -447,5 +375,24 @@ public class MemberService {
       throw new NotFoundException(String.valueOf(ErrorDomain.MEMBER.createCode(action, 404)));
 
     return users.getFirst();
+  }
+
+  /**
+   * Rolls back a previously persisted member update.
+   *
+   * <p>Restores the original member state using the revision created by the failed update. Rollback
+   * failures are logged but do not replace the original exception.
+   *
+   * @param originalMember original state of the member before the update
+   * @param memberRev revision created by the update that is being rolled back
+   */
+  private void rollbackMemberUpdate(Member originalMember, String memberRev) {
+    try {
+      originalMember.setRev(memberRev);
+      dbService.update("members", originalMember.getId(), originalMember);
+      log.debug("Member update rolled back successfully");
+    } catch (RuntimeException rollbackEx) {
+      log.error("Failed to roll back member update", rollbackEx);
+    }
   }
 }

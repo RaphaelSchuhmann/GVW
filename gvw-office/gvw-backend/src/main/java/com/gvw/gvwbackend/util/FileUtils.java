@@ -254,7 +254,7 @@ public class FileUtils {
    * @param paths list of file {@link Path} instances to be deleted
    * @param e the exception that triggered the cleanup process
    */
-  private void cleanUp(List<Path> paths, Exception e) {
+  void cleanUp(List<Path> paths, Exception e) {
     log.error("Internal file storage failed. Cleaning up partial uploads...", e);
     for (Path path : paths) {
       try {

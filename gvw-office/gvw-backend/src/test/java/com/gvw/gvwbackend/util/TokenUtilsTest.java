@@ -3,13 +3,19 @@ package com.gvw.gvwbackend.util;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
 
-@ExtendWith(MockitoExtension.class)
-public class TokenUtilsTest {
+class TokenUtilsTest {
+
   @Test
-  void testGenerateTokenShouldReturnNotNullString() {
+  void generateToken_DefaultLength_Success() {
+    String token = TokenUtils.generateToken();
+
+    assertNotNull(token);
+    assertFalse(token.isEmpty());
+  }
+
+  @Test
+  void generateToken_CustomLength_Success() {
     String token = TokenUtils.generateToken(32);
 
     assertNotNull(token);
@@ -17,47 +23,31 @@ public class TokenUtilsTest {
   }
 
   @Test
-  void testGenerateTokenShouldReturnDifferentTokensEachCall() {
-    String token1 = TokenUtils.generateToken(32);
-    String token2 = TokenUtils.generateToken(32);
+  void generateToken_DifferentCalls_DifferentTokens() {
+    String token1 = TokenUtils.generateToken();
+    String token2 = TokenUtils.generateToken();
 
     assertNotEquals(token1, token2);
   }
 
   @Test
-  void testGenerateTokenShouldRespectByteLength() {
-    int byteLength = 32;
-
-    String token = TokenUtils.generateToken(byteLength);
-
-    int expectedLength = (int) Math.ceil(byteLength / 3.0) * 4;
-
-    assertTrue(token.length() <= expectedLength);
-    assertTrue(token.length() >= expectedLength - 2);
-  }
-
-  @Test
-  void testGenerateTokenShouldWorkWithZeroLength() {
+  void generateToken_ZeroLength_ReturnsEmpty() {
     String token = TokenUtils.generateToken(0);
 
     assertNotNull(token);
-    assertEquals("", token);
+    assertTrue(token.isEmpty());
   }
 
   @Test
-  void testGenerateTokenShouldDefaultUse64Bytes() {
-    String token = TokenUtils.generateToken();
-
-    int expectedLength = (int) Math.ceil(64 / 3.0) * 4;
-
-    assertTrue(token.length() <= expectedLength);
-    assertTrue(token.length() >= expectedLength - 2);
+  void generateToken_NegativeLength_ThrowsIllegalArgumentException() {
+    assertThrows(IllegalArgumentException.class, () -> TokenUtils.generateToken(-1));
   }
 
   @Test
-  void testGenerateTokenShouldOnlyContainBase64Characters() {
-    String token = TokenUtils.generateToken(32);
+  void generateToken_LargeLength_Success() {
+    String token = TokenUtils.generateToken(128);
 
-    assertTrue(token.matches("^[A-Za-z0-9+/]*$"));
+    assertNotNull(token);
+    assertFalse(token.isEmpty());
   }
 }

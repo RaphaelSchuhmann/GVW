@@ -153,6 +153,8 @@ public class TextEditorService {
       String dataUrl = "data:image/x-icon;base64," + base64Image;
 
       return new LinkMetadataResponseDTO(title, dataUrl);
+    } catch (BadRequestException e) {
+      throw e;
     } catch (Exception e) {
       return new LinkMetadataResponseDTO(url, "");
     }
