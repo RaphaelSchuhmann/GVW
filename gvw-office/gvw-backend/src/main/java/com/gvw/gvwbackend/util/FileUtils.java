@@ -144,6 +144,10 @@ public class FileUtils {
    * @param filesDir the directory where the file is stored
    */
   public void deleteFile(String fileName, String filesDir) {
+    if (fileName.contains("..") || fileName.contains("/") || fileName.contains(".")) {
+      log.error("Failed to delete file: illegal filename {}", fileName);
+      return;
+    }
     Path filePath = Paths.get(filesDir, fileName);
     try {
       Files.deleteIfExists(filePath);
@@ -159,6 +163,18 @@ public class FileUtils {
    * @param filePath the {@link Path} of the file to delete
    */
   public void deleteFile(Path filePath) {
+    if (filePath == null) {
+      log.error("Failed to delete file: path is null");
+      return;
+    }
+
+    Path fileName = filePath.getFileName();
+
+    if (fileName == null || filePath.normalize().startsWith("..") || filePath.getNameCount() > 1) {
+      log.error("Failed to delete file: illegal path or filename {}", filePath);
+      return;
+    }
+
     try {
       Files.deleteIfExists(filePath);
     } catch (IOException e) {
