@@ -190,6 +190,8 @@ describe("dateTimeUtils.svelte.js", () => {
 
         it("returns non-string values unchanged", () => {
             expect(removeMillisecondsFromTimeStamp(123)).toBe(123);
+            expect(removeMillisecondsFromTimeStamp(null)).toBe("");
+            expect(removeMillisecondsFromTimeStamp(undefined)).toBe("");
         });
     });
 });
