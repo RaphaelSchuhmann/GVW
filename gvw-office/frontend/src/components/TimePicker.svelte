@@ -1,6 +1,7 @@
 <script>
     import { marginMap } from "../lib/dynamicStyles";
     import { tick } from "svelte";
+    import { getRoundedTime } from "../services/dateTimeUtils.js";
 
     let {
         selected = $bindable(""),
@@ -100,8 +101,9 @@
                 activeHour = h;
                 activeMinute = m;
             } else {
-                activeHour = String(new Date().getHours()).padStart(2, "0");
-                activeMinute = String(new Date().getMinutes()).padStart(2, "0");
+                const { hours, minutes } = getRoundedTime();
+                activeHour = String(hours).padStart(2, "0");
+                activeMinute = String(minutes).padStart(2, "0");
                 updateSelection();
             }
 

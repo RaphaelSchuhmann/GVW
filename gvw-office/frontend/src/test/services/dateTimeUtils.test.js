@@ -9,7 +9,8 @@ import {
     isISOString,
     yearToISOString,
     getYearFromISOString,
-    removeMillisecondsFromTimeStamp
+    removeMillisecondsFromTimeStamp,
+    getRoundedTime
 } from "../../services/dateTimeUtils";
 
 describe("dateTimeUtils.svelte.js", () => {
@@ -192,6 +193,83 @@ describe("dateTimeUtils.svelte.js", () => {
             expect(removeMillisecondsFromTimeStamp(123)).toBe(123);
             expect(removeMillisecondsFromTimeStamp(null)).toBe("");
             expect(removeMillisecondsFromTimeStamp(undefined)).toBe("");
+        });
+    });
+
+    describe("getRoundedTime", () => {
+        describe('30-minute interval rounding boundaries', () => {
+            it('rounds 0–14 minutes down to 0 minutes', () => {
+                const dateAt0 = new Date('2026-09-09T15:00:00');
+                const dateAt10 = new Date('2026-09-09T15:10:00');
+                const dateAt14 = new Date('2026-09-09T15:14:59');
+
+                expect(getRoundedTime(dateAt0)).toEqual({ hours: 15, minutes: 0 });
+                expect(getRoundedTime(dateAt10)).toEqual({ hours: 15, minutes: 0 });
+                expect(getRoundedTime(dateAt14)).toEqual({ hours: 15, minutes: 0 });
+            });
+
+            it('rounds 15–44 minutes to 30 minutes', () => {
+                const dateAt15 = new Date('2026-09-09T15:15:00');
+                expect(getRoundedTime(dateAt15)).toEqual({ hours: 15, minutes: 30 });
+
+                const dateAt16 = new Date('2026-09-09T15:16:00');
+                expect(getRoundedTime(dateAt16)).toEqual({ hours: 15, minutes: 30 });
+
+                const dateAt40 = new Date('2026-09-09T15:40:00');
+                expect(getRoundedTime(dateAt40)).toEqual({ hours: 15, minutes: 30 });
+
+                const dateAt44 = new Date('2026-09-09T15:44:59');
+                expect(getRoundedTime(dateAt44)).toEqual({ hours: 15, minutes: 30 });
+            });
+
+            it('rounds 45–59 minutes up to 60 minutes and advances the hour', () => {
+                const dateAt45 = new Date('2026-09-09T15:45:00');
+                expect(getRoundedTime(dateAt45)).toEqual({ hours: 16, minutes: 0 });
+
+                const dateAt46 = new Date('2026-09-09T15:46:00');
+                expect(getRoundedTime(dateAt46)).toEqual({ hours: 16, minutes: 0 });
+
+                const dateAt59 = new Date('2026-09-09T15:59:59');
+                expect(getRoundedTime(dateAt59)).toEqual({ hours: 16, minutes: 0 });
+            });
+        });
+
+        describe('edge cases and rollover boundaries', () => {
+            it('handles hour rollover across midnight (23:45+ -> 00:00)', () => {
+                const lateNight = new Date('2026-09-09T23:50:00');
+                expect(getRoundedTime(lateNight)).toEqual({ hours: 0, minutes: 0 });
+            });
+
+            it('handles midnight boundary (00:10 -> 00:00)', () => {
+                const midnight = new Date('2026-09-09T00:10:00');
+                expect(getRoundedTime(midnight)).toEqual({ hours: 0, minutes: 0 });
+            });
+
+            it('does not mutate the original Date object passed into it', () => {
+                const input = new Date('2026-09-09T15:46:00');
+                const originalTimestamp = input.getTime();
+
+                getRoundedTime(input);
+
+                expect(input.getTime()).toBe(originalTimestamp);
+            });
+        });
+
+        describe('default parameter behavior', () => {
+            beforeEach(() => {
+                vi.useFakeTimers();
+            });
+
+            afterEach(() => {
+                vi.useRealTimers();
+            });
+
+            it('defaults to current time when no date argument is provided', () => {
+                // Mock system time to 10:18 AM
+                vi.setSystemTime(new Date('2026-09-09T10:18:00'));
+
+                expect(getRoundedTime()).toEqual({ hours: 10, minutes: 30 });
+            });
         });
     });
 });
