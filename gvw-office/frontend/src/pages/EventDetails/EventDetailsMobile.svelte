@@ -40,7 +40,7 @@
     let draft = $state(null);
     let isSubmitting = $state(false);
 
-    const currentDate = isEditing ? draft?.date : eventData?.date;
+    const currentDate = $derived(isEditing ? draft?.date : eventData?.date);
     const ordinal = $derived(getOrdinalFromDateString(currentDate));
     const weekDay = $derived(getWeekDayFromDateStringMondayFirst(currentDate));
 
@@ -107,7 +107,7 @@
      */
     $effect.pre(() => {
         if (isEditing && !draft) {
-            draft = JSON.parse(JSON.stringify(eventData));
+            startEditing();
         }
     });
 
