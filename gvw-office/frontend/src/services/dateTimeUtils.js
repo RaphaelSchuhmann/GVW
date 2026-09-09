@@ -194,3 +194,30 @@ export function removeMillisecondsFromTimeStamp(ts) {
     if (!ts.includes(".")) return ts;
     return ts.slice(0, ts.indexOf("."));
 }
+
+/**
+ * Rounds a given date to the nearest 30-minute interval and returns the resulting hours and minutes.
+ *
+ * - 0–14 minutes round to 0
+ * - 15–44 minutes round to 30
+ * - 45–59 minutes round to 60 (advancing the hour)
+ *
+ * @param {Date} [date=new Date()] - The Date instance to round. Defaults to the current date and time.
+ * @returns {{ hours: number, minutes: number }} An object containing the rounded `hours` (0–23) and `minutes` (0 or 30).
+ */
+export function getRoundedTime(date = new Date()) {
+    const rounded = new Date(date);
+
+    // Math.round(minutes / 30) converts:
+    //  0-14  min -> 0 min  (e.g., 15:10 -> 15:00)
+    // 15-44  min -> 30 min (e.g., 15:16 -> 15:30, 15:40 -> 15:30)
+    // 45-59  min -> 60 min (e.g., 15:46 -> 16:00)
+    const roundedMinutes = Math.round(rounded.getMinutes() / 30) * 30;
+
+    rounded.setMinutes(roundedMinutes, 0, 0);
+
+    return {
+        hours: rounded.getHours(),
+        minutes: rounded.getMinutes()
+    };
+}
