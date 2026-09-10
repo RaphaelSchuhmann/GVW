@@ -48,6 +48,7 @@ export async function loadDashboardData() {
             !Array.isArray(body?.members) ||
             !Number.isFinite(body?.totalEvents) ||
             !Array.isArray(body?.upcomingEvents) ||
+            !Array.isArray(body?.upcomingBirthdays) ||
             !Number.isFinite(body?.totalScores)
         ) {
             addToast({
@@ -61,6 +62,7 @@ export async function loadDashboardData() {
         dashboardStore.members = body.members;
         dashboardStore.totalEvents = body.totalEvents;
         dashboardStore.upcomingEvents = body.upcomingEvents;
+        dashboardStore.upcomingBirthdays = body.upcomingBirthdays;
         dashboardStore.totalScores = body.totalScores;
     } finally {
         isFetching.userDashboard = false;
@@ -88,6 +90,7 @@ export function prepareEvents() {
         const time = event?.time || "";
 
         return {
+            id: event?.id,
             title: event?.title || "Unbekannt",
             time: time ? `${getEventOccurrenceByEvent(event)} - ${time} Uhr` : date,
             location: event?.location || "Unbekannt",

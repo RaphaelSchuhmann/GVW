@@ -5,7 +5,8 @@ import com.gvw.gvwbackend.model.Event;
 import java.time.LocalTime;
 
 public record DashboardEventSummaryDTO(
-    String title,
+        String id,
+        String title,
     String date,
     @JsonFormat(pattern = "HH:mm") LocalTime time,
     String location,

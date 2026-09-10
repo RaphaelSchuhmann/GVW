@@ -5,6 +5,12 @@ import com.gvw.gvwbackend.dto.response.DashboardEventSummaryDTO;
 import com.gvw.gvwbackend.dto.response.DashboardMemberSummaryDTO;
 import com.gvw.gvwbackend.dto.response.DashboardResponseDTO;
 import com.gvw.gvwbackend.model.*;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,6 +33,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class DashboardService {
   private final DbService dbService;
+  private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM");
 
   public DashboardService(DbService dbService) {
     this.dbService = dbService;
@@ -53,12 +60,23 @@ public class DashboardService {
             .map(m -> new DashboardMemberSummaryDTO(m.getStatus(), m.getVoice()))
             .toList();
 
+    // Get the 10 closest upcoming birthdays
+    List<Member> sortedMembers = sortMembersByUpcomingBirthday(members);
+
+    List<Map<String, String>> upcomingBirthdays = sortedMembers.stream().limit(10)
+            .map(member -> {
+              LocalDate birthdate = parseToLocalDate(member.getBirthdate());
+
+              return Map.of("id", member.getId(), "name", member.getName() + " " + member.getSurname(), "date", formatter.format(birthdate));
+            }).toList().reversed();
+
     // Only upcoming events are relevant for the dashboard preview.
     // Finished events remain available through the event management view.
     List<Event> events = dbService.findAll("events", Event.class);
 
     List<Event> upcomingEvents =
         events.stream()
+                .limit(3)
             .filter(event -> "upcoming".equals(event.getStatus()))
             .sorted(
                 Comparator.comparing(
@@ -70,7 +88,8 @@ public class DashboardService {
             .map(
                 m ->
                     new DashboardEventSummaryDTO(
-                        m.getTitle(),
+                        m.getId(),
+                            m.getTitle(),
                         m.getDate(),
                         m.getTime(),
                         m.getLocation(),
@@ -82,7 +101,7 @@ public class DashboardService {
     List<Score> scores = dbService.findAll("library", Score.class);
 
     return new DashboardResponseDTO(
-        responseMemberData, events.size(), responseUpcomingEventData, scores.size());
+        responseMemberData, events.size(), responseUpcomingEventData, upcomingBirthdays, scores.size());
   }
 
   /**
@@ -154,5 +173,28 @@ public class DashboardService {
         mostUsedHash,
         users.size(),
         totalOrphaned);
+  }
+
+  private List<Member> sortMembersByUpcomingBirthday(List<Member> members) {
+    LocalDate today = LocalDate.now();
+
+    return members.stream()
+            .sorted(Comparator.comparingLong(member -> {
+              LocalDate birthdate = parseToLocalDate(member.getBirthdate());
+              LocalDate nextBirthday = birthdate.withYear(today.getYear());
+
+              if (nextBirthday.isBefore(today)) {
+                nextBirthday = nextBirthday.plusYears(1);
+              }
+
+              return ChronoUnit.DAYS.between(today, nextBirthday);
+            }))
+            .toList();
+  }
+
+  private LocalDate parseToLocalDate(String birthdateStr) {
+    return Instant.parse(birthdateStr)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate();
   }
 }
