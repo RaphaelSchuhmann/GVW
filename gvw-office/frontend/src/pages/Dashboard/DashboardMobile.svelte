@@ -15,6 +15,7 @@
     import { dashboardStore } from "../../stores/dashboard.svelte.js";
     import { prepareEvents, getVoiceCounts } from "../../services/dashboardService.svelte.js";
     import Spinner from "../../components/Spinner.svelte";
+    import Chip from "../../components/Chip.svelte";
 
     /** @type {import("../../components/Modal.svelte").default} */
     let voiceDistributionSettingsModal = null;
@@ -31,7 +32,7 @@
         }
         return count;
     });
-    let voiceCounts = $derived(getVoiceCounts())
+    let voiceCounts = $derived(getVoiceCounts());
 
     /**
      * Updates the maximum members per voice setting
@@ -56,12 +57,15 @@
 
     let sidebarOpen = $state(false);
 
-    function openSidebar() { sidebarOpen = true; }
+    function openSidebar() {
+        sidebarOpen = true;
+    }
 </script>
 
-<Modal bind:this={voiceDistributionSettingsModal} title="Stimmenverteilung Einstellungen" subTitle="Einstellungen für die Stimmverteilung"
+<Modal bind:this={voiceDistributionSettingsModal} title="Stimmenverteilung Einstellungen"
+       subTitle="Einstellungen für die Stimmverteilung"
        extraFunctionOnClose={false} extraFunction={() => maxMembers = String(appSettings.maxMembers)} isMobile={true}>
-    <Input title="Maximale anzahl an Mitgliedern pro Stimme" type="number" marginTop="5" bind:value={maxMembers}/>
+    <Input title="Maximale anzahl an Mitgliedern pro Stimme" type="number" marginTop="5" bind:value={maxMembers} />
     <div class="w-full flex items-center justify-end mt-5 gap-2">
         <Button type="secondary" onclick={voiceDistributionSettingsModal.hideModal}>Abbrechen</Button>
         <Button type="primary" disabled={isSubmitting} onclick={updateMaxMembersVoiceDistribution} isSubmit={true}>
@@ -75,7 +79,7 @@
     </div>
 </Modal>
 
-<ToastStack isMobile={true}/>
+<ToastStack isMobile={true} />
 
 <MobileSidebar currentPage="dashboard" bind:isOpen={sidebarOpen} />
 
@@ -87,14 +91,16 @@
                     <span class="material-symbols-rounded text-icon-dt-4 text-gv-dark-text">menu</span>
                 </button>
             </div>
-            <PageHeader title="Dashboard" subTitle="Willkommen in GVW Office - Übersicht Gesangverein Weppersdorf" showSlot={false}/>
+            <PageHeader title="Dashboard" subTitle="Willkommen in GVW Office - Übersicht Gesangverein Weppersdorf"
+                        showSlot={false} />
 
             <!-- Small cards -->
             <div class="flex flex-col items-center overflow-hidden mt-8 gap-4">
                 <Card padding="5" justify="justify-around">
                     <div class="flex w-full items-center">
                         <p class="text-dt-6 text-gv-dark-text">Aktive Mitglieder</p>
-                        <span class="material-symbols-rounded text-icon-dt-5 text-gv-secondary-text ml-auto">group</span>
+                        <span
+                            class="material-symbols-rounded text-icon-dt-5 text-gv-secondary-text ml-auto">group</span>
                     </div>
                     <p class="text-dt-5 text-black w-full text-start">
                         <span>{activeMembers}</span>
@@ -127,40 +133,62 @@
                 <!-- Upcoming Events -->
                 <Card padding="5">
                     <p class="text-dt-5 text-gv-dark-text w-full text-start flex flex-col mb-3">
-                        <span>Kommende Veranstaltungen</span>
-                        <span class="text-gv-light-text text-dt-6">Nächste Veranstaltungen und Proben</span>
+                        Kommende Veranstaltungen
                     </p>
-                    <div class="w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto max-h-[47dvh] flex flex-col items-center pr-2">
-                        {#each events as event (event.title)}
+                    <div
+                        class="w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto max-h-[47dvh] flex flex-col items-center pr-2">
+                        {#each events as event (event.id)}
                             <ComingEvent margin="5" title={event.title} time={event.time} location={event.location}
                                          type={event.type} isMobile={true} />
                         {/each}
                     </div>
                 </Card>
 
+                <!-- Upcoming Birthdays -->
+                <Card padding="5">
+                    <p class="min-[1200px]:text-dt-3 text-dt-5 text-gv-dark-text w-full text-start flex flex-col mb-3">
+                        Kommende Geburtstage
+                    </p>
+                    <div class="w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto max-h-[45dvh] flex flex-col items-center pr-2 gap-5">
+                        {#each dashboardStore.upcomingBirthdays as birthday (birthday.id)}
+                            <div class="flex items-center w-full">
+                                <p class="text-gv-dark-text text-dt-5 truncate">{birthday.name}</p>
+                                <div class="ml-auto">
+                                    <Chip text={birthday.date} />
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </Card>
+
                 <!-- Voice distribution -->
                 <Card padding="5">
-                    <div class="flex items-center w-full">
+                    <div class="w-full h-full flex flex-col items-start gap-5">
                         <p class="text-dt-5 text-gv-dark-text w-full text-start flex flex-col">
-                            <span>Stimmenverteilung</span>
-                            <span class="text-gv-light-text text-dt-6">Übersicht der Mitglieder nach Stimmlage</span>
+                            Stimmenverteilung
                         </p>
-                    </div>
-                    <div class="w-full min-h-0 overflow-x-hidden overflow-y-auto flex flex-col items-center pr-2">
-                        <VoiceDistribution isMobile={true} voice="1. Tenor" voiceMembers={voiceCounts.tenor1} totalMembers={appSettings.maxMembers} />
-                        <VoiceDistribution isMobile={true} voice="2. Tenor" voiceMembers={voiceCounts.tenor2} totalMembers={appSettings.maxMembers} />
-                        <VoiceDistribution isMobile={true} voice="1. Bass" voiceMembers={voiceCounts.bass1} totalMembers={appSettings.maxMembers} />
-                        <VoiceDistribution isMobile={true} voice="2. Bass" voiceMembers={voiceCounts.bass2} totalMembers={appSettings.maxMembers} />
-                    </div>
-                    {#if user.role === "board_member" || user.role === "admin"}
-                        <div class="w-full flex items-center justify-end pr-2 mt-5">
-                            <button
-                                class="cursor-pointer flex items-center justify-center rounded-2 p-2 hover:bg-gv-hover-effect"
-                                onclick={voiceDistributionSettingsModal.showModal}>
-                                <span class="material-symbols-rounded text-icon-dt-4 text-gv-dark-text">settings</span>
-                            </button>
+                        <div
+                            class="w-full min-h-0 overflow-x-hidden overflow-y-auto flex flex-col items-center pr-2 gap-10">
+                            <VoiceDistribution isMobile={true} voice="1. Tenor" voiceMembers={voiceCounts.tenor1}
+                                               totalMembers={appSettings.maxMembers} />
+                            <VoiceDistribution isMobile={true} voice="2. Tenor" voiceMembers={voiceCounts.tenor2}
+                                               totalMembers={appSettings.maxMembers} />
+                            <VoiceDistribution isMobile={true} voice="1. Bass" voiceMembers={voiceCounts.bass1}
+                                               totalMembers={appSettings.maxMembers} />
+                            <VoiceDistribution isMobile={true} voice="2. Bass" voiceMembers={voiceCounts.bass2}
+                                               totalMembers={appSettings.maxMembers} />
                         </div>
-                    {/if}
+                        {#if user.role === "board_member" || user.role === "admin"}
+                            <div class="w-full flex items-center justify-end pr-2 mt-5">
+                                <button
+                                    class="cursor-pointer flex items-center justify-center rounded-2 p-2 hover:bg-gv-hover-effect"
+                                    onclick={voiceDistributionSettingsModal.showModal}>
+                                    <span
+                                        class="material-symbols-rounded text-icon-dt-4 text-gv-dark-text">settings</span>
+                                </button>
+                            </div>
+                        {/if}
+                    </div>
                 </Card>
             </div>
         </div>

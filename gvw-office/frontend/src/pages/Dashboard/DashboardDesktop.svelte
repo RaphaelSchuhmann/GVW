@@ -15,6 +15,8 @@
     import { dashboardStore } from "../../stores/dashboard.svelte.js";
     import { prepareEvents, getVoiceCounts } from "../../services/dashboardService.svelte.js";
     import Spinner from "../../components/Spinner.svelte";
+    import Chip from "../../components/Chip.svelte";
+    import { viewport } from "../../stores/viewport.svelte.js";
 
     /** @type {import("../../components/Modal.svelte").default} */
     let voiceDistributionSettingsModal = null;
@@ -49,6 +51,10 @@
 
         voiceDistributionSettingsModal.hideModal();
     }
+
+    $effect(() => {
+        console.log(dashboardStore.upcomingBirthdays);
+    });
 </script>
 
 <Modal bind:this={voiceDistributionSettingsModal} title="Stimmenverteilung Einstellungen"
@@ -68,7 +74,7 @@
     </div>
 </Modal>
 
-<ToastStack/>
+<ToastStack />
 
 <main class="flex h-screen overflow-hidden">
     <DesktopSidebar currentPage="dashboard" />
@@ -114,44 +120,67 @@
             <!-- Big cards -->
             <div
                 class="w-full flex-1 mt-5 gap-5 flex max-[1300px]:flex-col max-[1300px]:h-[calc(100vh-100px)] h-full min-h-0 max-[1300px]:overflow-y-auto">
-                <!-- Upcoming Events -->
-                <Card padding="5">
-                    <p class="min-[1200px]:text-dt-3 text-dt-5 text-gv-dark-text w-full text-start flex flex-col mb-3">
-                        <span>Kommende Veranstaltungen</span>
-                        <span class="text-gv-light-text min-[1200px]:text-dt-4 text-dt-6">Nächste Veranstaltungen und Proben</span>
-                    </p>
-                    <div
-                        class="w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto max-h-[45dvh] flex flex-col items-center pr-2">
-                        {#each events as event (event.title)}
-                            <ComingEvent margin="5" title={event.title} time={event.time} location={event.location}
-                                         type={event.type} />
-                        {/each}
-                    </div>
-                </Card>
+                <!-- Upcoming Events & Birthdays -->
+                <div class="flex flex-col w-full gap-5">
+                    <Card padding="5" fillHeight={viewport.width >= 1300}>
+                        <p class="min-[1200px]:text-dt-3 text-dt-5 text-gv-dark-text w-full text-start flex flex-col mb-3">
+                            <span>Kommende Veranstaltungen</span>
+                        </p>
+                        <div
+                            class="w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto max-h-[45dvh] flex flex-col items-center pr-2 gap-5">
+                            {#each events as event (event.id)}
+                                <ComingEvent title={event.title} time={event.time} location={event.location}
+                                             type={event.type} />
+                            {/each}
+                        </div>
+                    </Card>
+
+                    <Card padding="5" fillHeight={viewport.width >= 1300}>
+                        <p class="min-[1200px]:text-dt-3 text-dt-5 text-gv-dark-text w-full text-start flex flex-col mb-3">
+                            <span>Kommende Geburtstage</span>
+                        </p>
+                        <div
+                            class="w-full flex-1 min-h-0 overflow-x-hidden overflow-y-auto max-h-[45dvh] flex flex-col items-center pr-2 gap-5">
+                            {#each dashboardStore.upcomingBirthdays as birthday (birthday.id)}
+                                <div class="flex items-center w-full">
+                                    <p class="text-gv-dark-text text-dt-5">{birthday.name}</p>
+                                    <div class="ml-auto">
+                                        <Chip text={birthday.date} />
+                                    </div>
+                                </div>
+                            {/each}
+                        </div>
+                    </Card>
+                </div>
 
                 <!-- Voice distribution -->
                 <Card padding="5">
-                    <div class="flex items-center w-full">
+                    <div class="w-full h-full flex flex-col items-start gap-5">
                         <p class="text-dt-3 text-gv-dark-text w-full text-start flex flex-col">
-                            <span>Stimmenverteilung</span>
-                            <span class="text-gv-light-text text-dt-4">Übersicht der Mitglieder nach Stimmlage</span>
+                            Stimmenverteilung
                         </p>
-                    </div>
-                    <div class="w-full min-h-0 overflow-x-hidden overflow-y-auto flex flex-col items-center pr-2">
-                        <VoiceDistribution voice="1. Tenor" voiceMembers={voiceCounts.tenor1} totalMembers={appSettings.maxMembers} />
-                        <VoiceDistribution voice="2. Tenor" voiceMembers={voiceCounts.tenor2} totalMembers={appSettings.maxMembers} />
-                        <VoiceDistribution voice="1. Bass" voiceMembers={voiceCounts.bass1} totalMembers={appSettings.maxMembers} />
-                        <VoiceDistribution voice="2. Bass" voiceMembers={voiceCounts.bass2} totalMembers={appSettings.maxMembers} />
-                    </div>
-                    {#if user.role === "board_member" || user.role === "admin"}
-                        <div class="w-full flex items-center justify-end pr-2 mt-5">
-                            <button
-                                class="cursor-pointer flex items-center justify-center rounded-2 p-2 hover:bg-gv-hover-effect"
-                                onclick={voiceDistributionSettingsModal.showModal}>
-                                <span class="material-symbols-rounded text-icon-dt-2 text-gv-dark-text">settings</span>
-                            </button>
+                        <div
+                            class="w-full min-h-0 overflow-x-hidden overflow-y-auto flex flex-col items-center pr-2 gap-10">
+                            <VoiceDistribution voice="1. Tenor" voiceMembers={voiceCounts.tenor1}
+                                               totalMembers={appSettings.maxMembers} />
+                            <VoiceDistribution voice="2. Tenor" voiceMembers={voiceCounts.tenor2}
+                                               totalMembers={appSettings.maxMembers} />
+                            <VoiceDistribution voice="1. Bass" voiceMembers={voiceCounts.bass1}
+                                               totalMembers={appSettings.maxMembers} />
+                            <VoiceDistribution voice="2. Bass" voiceMembers={voiceCounts.bass2}
+                                               totalMembers={appSettings.maxMembers} />
                         </div>
-                    {/if}
+                        {#if user.role === "board_member" || user.role === "admin"}
+                            <div class="w-full flex items-center justify-end pr-2 mt-5">
+                                <button
+                                    class="cursor-pointer flex items-center justify-center rounded-2 p-2 hover:bg-gv-hover-effect"
+                                    onclick={voiceDistributionSettingsModal.showModal}>
+                                    <span
+                                        class="material-symbols-rounded text-icon-dt-2 text-gv-dark-text">settings</span>
+                                </button>
+                            </div>
+                        {/if}
+                    </div>
                 </Card>
             </div>
         </div>
