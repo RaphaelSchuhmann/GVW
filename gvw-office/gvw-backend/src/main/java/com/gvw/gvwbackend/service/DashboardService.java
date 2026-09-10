@@ -7,7 +7,7 @@ import com.gvw.gvwbackend.dto.response.DashboardResponseDTO;
 import com.gvw.gvwbackend.model.*;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -77,8 +77,7 @@ public class DashboardService {
                       "date",
                       formatter.format(birthdate));
                 })
-            .toList()
-            .reversed();
+            .toList();
 
     // Only upcoming events are relevant for the dashboard preview.
     // Finished events remain available through the event management view.
@@ -86,11 +85,11 @@ public class DashboardService {
 
     List<Event> upcomingEvents =
         events.stream()
-            .limit(3)
             .filter(event -> "upcoming".equals(event.getStatus()))
             .sorted(
                 Comparator.comparing(
                     Event::getDate, Comparator.nullsLast(Comparator.naturalOrder())))
+            .limit(3)
             .toList();
 
     List<DashboardEventSummaryDTO> responseUpcomingEventData =
@@ -209,6 +208,6 @@ public class DashboardService {
   }
 
   private LocalDate parseToLocalDate(String birthdateStr) {
-    return Instant.parse(birthdateStr).atZone(ZoneId.systemDefault()).toLocalDate();
+    return Instant.parse(birthdateStr).atZone(ZoneOffset.UTC).toLocalDate();
   }
 }
