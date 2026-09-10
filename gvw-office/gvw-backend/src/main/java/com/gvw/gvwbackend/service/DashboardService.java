@@ -5,7 +5,6 @@ import com.gvw.gvwbackend.dto.response.DashboardEventSummaryDTO;
 import com.gvw.gvwbackend.dto.response.DashboardMemberSummaryDTO;
 import com.gvw.gvwbackend.dto.response.DashboardResponseDTO;
 import com.gvw.gvwbackend.model.*;
-
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -63,12 +62,23 @@ public class DashboardService {
     // Get the 10 closest upcoming birthdays
     List<Member> sortedMembers = sortMembersByUpcomingBirthday(members);
 
-    List<Map<String, String>> upcomingBirthdays = sortedMembers.stream().limit(10)
-            .map(member -> {
-              LocalDate birthdate = parseToLocalDate(member.getBirthdate());
+    List<Map<String, String>> upcomingBirthdays =
+        sortedMembers.stream()
+            .limit(10)
+            .map(
+                member -> {
+                  LocalDate birthdate = parseToLocalDate(member.getBirthdate());
 
-              return Map.of("id", member.getId(), "name", member.getName() + " " + member.getSurname(), "date", formatter.format(birthdate));
-            }).toList().reversed();
+                  return Map.of(
+                      "id",
+                      member.getId(),
+                      "name",
+                      member.getName() + " " + member.getSurname(),
+                      "date",
+                      formatter.format(birthdate));
+                })
+            .toList()
+            .reversed();
 
     // Only upcoming events are relevant for the dashboard preview.
     // Finished events remain available through the event management view.
@@ -76,7 +86,7 @@ public class DashboardService {
 
     List<Event> upcomingEvents =
         events.stream()
-                .limit(3)
+            .limit(3)
             .filter(event -> "upcoming".equals(event.getStatus()))
             .sorted(
                 Comparator.comparing(
@@ -89,7 +99,7 @@ public class DashboardService {
                 m ->
                     new DashboardEventSummaryDTO(
                         m.getId(),
-                            m.getTitle(),
+                        m.getTitle(),
                         m.getDate(),
                         m.getTime(),
                         m.getLocation(),
@@ -101,7 +111,11 @@ public class DashboardService {
     List<Score> scores = dbService.findAll("library", Score.class);
 
     return new DashboardResponseDTO(
-        responseMemberData, events.size(), responseUpcomingEventData, upcomingBirthdays, scores.size());
+        responseMemberData,
+        events.size(),
+        responseUpcomingEventData,
+        upcomingBirthdays,
+        scores.size());
   }
 
   /**
@@ -179,22 +193,22 @@ public class DashboardService {
     LocalDate today = LocalDate.now();
 
     return members.stream()
-            .sorted(Comparator.comparingLong(member -> {
-              LocalDate birthdate = parseToLocalDate(member.getBirthdate());
-              LocalDate nextBirthday = birthdate.withYear(today.getYear());
+        .sorted(
+            Comparator.comparingLong(
+                member -> {
+                  LocalDate birthdate = parseToLocalDate(member.getBirthdate());
+                  LocalDate nextBirthday = birthdate.withYear(today.getYear());
 
-              if (nextBirthday.isBefore(today)) {
-                nextBirthday = nextBirthday.plusYears(1);
-              }
+                  if (nextBirthday.isBefore(today)) {
+                    nextBirthday = nextBirthday.plusYears(1);
+                  }
 
-              return ChronoUnit.DAYS.between(today, nextBirthday);
-            }))
-            .toList();
+                  return ChronoUnit.DAYS.between(today, nextBirthday);
+                }))
+        .toList();
   }
 
   private LocalDate parseToLocalDate(String birthdateStr) {
-    return Instant.parse(birthdateStr)
-            .atZone(ZoneId.systemDefault())
-            .toLocalDate();
+    return Instant.parse(birthdateStr).atZone(ZoneId.systemDefault()).toLocalDate();
   }
 }
