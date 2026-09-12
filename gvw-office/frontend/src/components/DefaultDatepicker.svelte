@@ -151,7 +151,9 @@
 </script>
 
 <div class="flex w-full flex-col">
-    <p class="text-dt-6 font-medium mb-2 {disabled ? 'text-gv-light-text' : 'text-gv-dark-text'}">{title}</p>
+    {#if title}
+        <p class="text-dt-6 font-medium mb-2 {disabled ? 'text-gv-light-text' : 'text-gv-dark-text'}">{title}</p>
+    {/if}
     <div class="relative w-full {marginMap[marginTop]}" bind:this={datepickerRef}>
         <div class="flex items-center w-full bg-gv-input-bg {open ? 'border border-gv-primary' : ''} rounded-1 gap-1">
             <input

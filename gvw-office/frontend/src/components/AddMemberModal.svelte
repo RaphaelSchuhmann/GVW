@@ -62,7 +62,9 @@
 
         const isMarriedInvalid = typeof memberInput.isMarried !== "boolean";
 
-        return hasEmptyFields || hasUnselectedDropdowns || isMarriedInvalid || isSubmitting;
+        const hasMissingMarriageDate =
+            memberInput.isMarried && !memberInput.marriedSince.trim();
+        return hasEmptyFields || hasUnselectedDropdowns || isMarriedInvalid || hasMissingMarriageDate || isSubmitting;
     });
 
     /**
