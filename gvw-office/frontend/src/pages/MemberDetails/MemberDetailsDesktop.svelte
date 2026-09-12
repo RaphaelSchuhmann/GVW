@@ -17,6 +17,7 @@
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import Spinner from "../../components/Spinner.svelte";
     import { formatISODateString, getYearFromISOString } from "../../services/dateTimeUtils.js";
+    import Checkbox from "../../components/Checkbox.svelte";
 
     let {
         memberData,
@@ -56,13 +57,30 @@
 
     const hasChanges = $derived.by(() => {
         if (!draft || !memberData) return false;
+
         const allFieldsFilled = REQUIRED_MEMBER_FIELDS.every(field => {
             const value = draft[field];
             return value !== null && value !== undefined && String(value).trim() !== "";
         });
 
-        if (!allFieldsFilled) return false;
-        return REQUIRED_MEMBER_FIELDS.some(field => draft[field] !== memberData[field]);
+        const isMarriedValid = typeof draft.isMarried === "boolean";
+
+        // Return false if required fields are missing OR isMarried is INVALID (!isMarriedValid)
+        if (!allFieldsFilled || !isMarriedValid) return false;
+
+        const normalizeString = (val) => (val ?? "").trim();
+
+        // if isMarried is true, marriedSince cannot be empty
+        if (draft.isMarried && !normalizeString(draft.marriedSince)) return false;
+
+        const requiredFieldChanged = REQUIRED_MEMBER_FIELDS.some(
+            field => draft[field] !== memberData[field]
+        );
+
+        const marriedSinceChanged = normalizeString(draft.marriedSince) !== normalizeString(memberData.marriedSince);
+        const isMarriedChanged = draft.isMarried !== memberData.isMarried;
+
+        return requiredFieldChanged || isMarriedChanged || marriedSinceChanged;
     });
 
     /**
@@ -128,20 +146,44 @@
         }
     }
 
-    function updateVoice(value) { draft.voice = voiceMapD2I[value]; }
+    function updateVoice(value) {
+        draft.voice = voiceMapD2I[value];
+    }
 
-    function updateStatus(value) { draft.status = statusMapD2I[value]; }
+    function updateStatus(value) {
+        draft.status = statusMapD2I[value];
+    }
 
-    function updateRole(value) { draft.role = roleMapD2I[value]; }
+    function updateRole(value) {
+        draft.role = roleMapD2I[value];
+    }
 
-    function updateBirthdate(value) { draft.birthdate = value; }
+    function updateBirthdate(value) {
+        draft.birthdate = value;
+    }
 
-    function updateJoined(value) { draft.joined = value; }
+    function updateJoined(value) {
+        draft.joined = value;
+    }
 
-    function disableIsDeleting() { onChangeIsDeleting(false); }
+    function updateIsMarried(value) {
+        draft.isMarried = value;
+
+        if (value === false) {
+            draft.marriedSince = "";
+        }
+    }
+
+    function updateMarriedSince(value) {
+        draft.marriedSince = value;
+    }
+
+    function disableIsDeleting() {
+        onChangeIsDeleting(false);
+    }
 </script>
 
-<ToastStack/>
+<ToastStack />
 
 <ConfirmDeleteModal expectedInput={`${memberData.name} ${memberData.surname}`} id={memberData.id}
                     title="Mitglied löschen" subTitle="Sind Sie sich sicher das Sie dieses Mitglied löschen möchten?"
@@ -215,8 +257,10 @@
                            readonly={true} />
 
                     <div class="w-full flex items-center gap-4 max-[900px]:flex-col">
-                        <Input value={voiceMapI2D[memberData.voice] || memberData.voice} title="Stimmlage" readonly={true} />
-                        <Input value={statusMapI2D[memberData.status] || memberData.status} title="Status" readonly={true} />
+                        <Input value={voiceMapI2D[memberData.voice] || memberData.voice} title="Stimmlage"
+                               readonly={true} />
+                        <Input value={statusMapI2D[memberData.status] || memberData.status} title="Status"
+                               readonly={true} />
                         <Input value={roleMapI2D[memberData.role] || memberData.role} title="Rolle" readonly={true} />
                     </div>
 
@@ -224,6 +268,10 @@
                         <Input value={formatISODateString(memberData.birthdate)} title="Geburtsdatum" readonly={true} />
                         <Input value={getYearFromISOString(memberData.joined)} title="Mitglied seit" readonly={true} />
                     </div>
+
+                    <Input
+                        value={memberData.isMarried ? formatISODateString(memberData.marriedSince) : "Nicht verheiratet"}
+                        title="Hochzeitsdatum" readonly={true} />
                 {:else}
                     <div class="flex items-center min-[900px]:gap-4 gap-5 w-full max-[900px]:flex-col">
                         <Input
@@ -244,7 +292,8 @@
                     <div class="w-full flex items-center min-[900px]:gap-4 gap-5 max-[900px]:flex-col">
                         <Dropdown onChange={updateVoice} selected={voiceMapI2D[draft.voice] || draft.voice}
                                   title="Stimmlage"
-                                  options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass", "Sonstige"]} showDropshadow={true} />
+                                  options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass", "Sonstige"]}
+                                  showDropshadow={true} />
 
                         <Dropdown onChange={updateStatus}
                                   selected={statusMapI2D[draft.status] || draft.status} title="Status"
@@ -252,20 +301,19 @@
 
                         <Dropdown onChange={updateRole} selected={roleMapI2D[draft.role] || draft.role}
                                   title="Rolle"
-                                  options={["Mitglied", "Vorstand", "Schriftführer", "Chorleitung", "Notenwart"]} showDropshadow={true} />
+                                  options={["Mitglied", "Vorstand", "Schriftführer", "Chorleitung", "Notenwart"]}
+                                  showDropshadow={true} />
                     </div>
 
                     <div class="w-full flex items-center min-[900px]:gap-4 gap-5 max-[900px]:flex-col">
-                        <div class="flex flex-col items-start w-full">
-                            <p class="text-dt-6 font-medium mb-1">Geburtsdatum</p>
-                            <DefaultDatepicker onChange={updateBirthdate}
-                                               selected={draft.birthdate} />
-                        </div>
+                        <DefaultDatepicker onChange={updateBirthdate} selected={draft.birthdate} title="Geburtsdatum" />
+                        <YearDatepicker onChange={updateJoined} selected={draft.joined} title="Mitglied seit" />
+                    </div>
 
-                        <div class="flex flex-col items-start w-full">
-                            <p class="text-dt-6 font-medium mb-1">Mitglied seit</p>
-                            <YearDatepicker onChange={updateJoined} selected={draft.joined} />
-                        </div>
+                    <div class="w-full flex items-center gap-4">
+                        <Checkbox isChecked={draft.isMarried} onChange={updateIsMarried} />
+                        <DefaultDatepicker title="Hochzeitsdatum" disabled={!draft.isMarried}
+                                           selected={draft.marriedSince} onChange={updateMarriedSince} />
                     </div>
                 {/if}
 
@@ -290,7 +338,8 @@
                 {#if viewport.width > 900 && isEditing}
                     <div class="flex items-center w-full gap-2">
                         <Button type="secondary" onclick={cancelEditing} isCancel={true}>Abbrechen</Button>
-                        <Button type="primary" disabled={!hasChanges || isSubmitting} onclick={async () => await updateMemberData()}>
+                        <Button type="primary" disabled={!hasChanges || isSubmitting}
+                                onclick={async () => await updateMemberData()}>
                             {#if isSubmitting}
                                 <Spinner light={true} />
                                 <p>Speichern...</p>

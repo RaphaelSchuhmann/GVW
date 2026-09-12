@@ -166,7 +166,9 @@ class UserServiceTest {
             "active",
             "MEMBER",
             "1995-01-01",
-            "2021-01-01");
+            "2021-01-01",
+            false,
+            "");
     when(dbService.findByQuery(
             "users", Map.of("selector", Map.of("email", "jane@example.com")), User.class))
         .thenReturn(List.of());
@@ -191,7 +193,9 @@ class UserServiceTest {
             "active",
             "MEMBER",
             "1995-01-01",
-            "2021-01-01");
+            "2021-01-01",
+            false,
+            "");
 
     assertThrows(
         IllegalArgumentException.class, () -> userService.addLinkedUser(memberRequest, null));

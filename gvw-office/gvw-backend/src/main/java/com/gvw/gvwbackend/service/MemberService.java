@@ -82,7 +82,9 @@ public class MemberService {
                     m.getStatus(),
                     m.getRole().getValue(),
                     m.getBirthdate(),
-                    m.getJoined()))
+                    m.getJoined(),
+                    m.getIsMarried(),
+                    m.getMarriedSince()))
         .toList();
   }
 

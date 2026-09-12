@@ -51,10 +51,6 @@
 
         voiceDistributionSettingsModal.hideModal();
     }
-
-    $effect(() => {
-        console.log(dashboardStore.upcomingBirthdays);
-    });
 </script>
 
 <Modal bind:this={voiceDistributionSettingsModal} title="Stimmenverteilung Einstellungen"

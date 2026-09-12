@@ -172,7 +172,7 @@
         </div>
 
         {#if open && !disabled}
-            <div class="absolute flex flex-col bottom-full rounded-1 w-max min-w-full bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 mb-1">
+            <div class="absolute flex flex-col bottom-full right-0 rounded-1 w-max min-w-full bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 mb-1">
                 <div class="w-full items-center flex flex-col">
                     {@render calendarGrid()}
                 </div>
