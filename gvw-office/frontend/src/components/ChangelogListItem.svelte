@@ -70,7 +70,7 @@
         {#if expanded}
             <div transition:slide={{ duration: 200, easing: cubicOut }}
                  class="w-full max-h-[30vh] overflow-y-auto mt-2">
-                <div class="text-gv-dark-text text-dt-7 pl-1">
+                <div class="text-gv-dark-text text-dt-7 pl-1 flex flex-col justify-start">
                     <SanitizedHTML htmlContent={formatChangelog(data.content)} />
                 </div>
             </div>
