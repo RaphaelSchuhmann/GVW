@@ -166,14 +166,14 @@ export function formatChangelog(rawText) {
             const trimmed = line.trim();
 
             if (trimmed.startsWith("-")) {
-                return `<li class="ml-4 list-disc">${trimmed.substring(1).trim()}</li>`;
+                return `<li class="whitespace-pre-line ml-4 list-disc">${trimmed.substring(1).trim()}</li>`;
             }
 
             if (trimmed.endsWith(":")) {
-                return `<p class="font-bold mt-2">${line}</p>`;
+                return `<span class="whitespace-pre-line font-bold mt-2">${trimmed}</span>`;
             }
 
-            return line;
+            return `<span class="whitespace-pre-line">${trimmed}</span>`;
         })
         .join("");
 }
