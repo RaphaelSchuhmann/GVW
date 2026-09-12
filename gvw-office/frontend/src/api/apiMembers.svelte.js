@@ -192,6 +192,8 @@ export async function apiResetMembersPassword(id) {
  *     role: "member",
  *     birthday: "2000-01-01"
  *     joined: "2026",
+ *     isMarried: false,
+ *     marriedSince: ""
  * });
  *
  * if (resp?.ok) {
@@ -211,6 +213,8 @@ export async function apiUpdateMember(member) {
         role: member.role,
         birthdate: member.birthdate,
         joined: member.joined,
+        isMarried: member.isMarried,
+        marriedSince: member.marriedSince,
         rev: member.rev
     });
     if (!resp) return { resp: null, body: null };

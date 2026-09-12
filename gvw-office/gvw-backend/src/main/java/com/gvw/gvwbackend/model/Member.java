@@ -32,5 +32,8 @@ public class Member {
   private String birthdate;
   private String joined;
 
+  @Builder.Default private Boolean isMarried = false; // should be false by default
+  private String marriedSince;
+
   @Builder.Default private final String type = "member";
 }

@@ -12,4 +12,6 @@ public record MemberResponseDTO(
     String status,
     String role,
     String birthdate,
-    String joined) {}
+    String joined,
+    boolean isMarried,
+    String marriedSince) {}

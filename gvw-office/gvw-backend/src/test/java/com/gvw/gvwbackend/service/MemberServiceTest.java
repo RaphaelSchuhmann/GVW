@@ -98,7 +98,9 @@ class MemberServiceTest {
             "active",
             "MEMBER",
             "1995-01-01",
-            "2021-01-01");
+            "2021-01-01",
+            false,
+            "");
     when(dbService.findByQuery(
             "users",
             Map.of("selector", Map.of("email", "jane@example.com"), "limit", 1),
@@ -130,7 +132,9 @@ class MemberServiceTest {
             "active",
             "MEMBER",
             "1995-01-01",
-            "2021-01-01");
+            "2021-01-01",
+            false,
+            "");
     when(dbService.findByQuery(
             "users",
             Map.of("selector", Map.of("email", "john@example.com"), "limit", 1),
@@ -171,7 +175,6 @@ class MemberServiceTest {
     UpdateMemberRequestDTO request =
         new UpdateMemberRequestDTO(
             "member-1",
-            "1-abc",
             "John Updated",
             "Doe",
             "john@example.com",
@@ -181,7 +184,10 @@ class MemberServiceTest {
             "active",
             "MEMBER",
             "1990-01-01",
-            "2020-01-01");
+            "2020-01-01",
+            false,
+            "",
+            "1-abc");
     when(dbService.findById("members", "member-1", Member.class)).thenReturn(member);
     when(dbService.findByQuery(
             "users", Map.of("selector", Map.of("memberId", "member-1"), "limit", 1), User.class))
@@ -202,7 +208,6 @@ class MemberServiceTest {
     UpdateMemberRequestDTO request =
         new UpdateMemberRequestDTO(
             "non-existent",
-            "1-abc",
             "John",
             "Doe",
             "john@example.com",
@@ -212,7 +217,10 @@ class MemberServiceTest {
             "active",
             "MEMBER",
             "1990-01-01",
-            "2020-01-01");
+            "2020-01-01",
+            false,
+            "",
+            "1-abc");
     when(dbService.findById("members", "non-existent", Member.class)).thenReturn(null);
 
     assertThrows(NotFoundException.class, () -> memberService.updateMember(request));

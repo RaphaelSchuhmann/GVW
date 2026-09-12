@@ -82,7 +82,9 @@ public class MemberService {
                     m.getStatus(),
                     m.getRole().getValue(),
                     m.getBirthdate(),
-                    m.getJoined()))
+                    m.getJoined(),
+                    m.getIsMarried(),
+                    m.getMarriedSince()))
         .toList();
   }
 
@@ -123,6 +125,11 @@ public class MemberService {
     if (emailExists(request.email())) {
       throw new ConflictException(
           String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.CREATE, 409)));
+    }
+
+    if (request.isMarried() && (request.marriedSince() == null || request.marriedSince().isBlank())) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.CREATE, 400)));
     }
 
     Member member = createMemberFromRequest(request);
@@ -227,6 +234,11 @@ public class MemberService {
    * @throws NotFoundException if the member or linked user does not exist
    */
   public List<String> updateMember(UpdateMemberRequestDTO request) {
+    if (request.isMarried() && (request.marriedSince() == null || request.marriedSince().isBlank())) {
+      throw new BadRequestException(
+              String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.CREATE, 400)));
+    }
+
     Member member = getMemberById(request.id(), ErrorAction.UPDATE);
     User user = getUserByMemberId(request.id(), ErrorAction.UPDATE);
 
@@ -352,6 +364,8 @@ public class MemberService {
     member.setStatus(request.status());
     member.setBirthdate(request.birthdate());
     member.setJoined(request.joined());
+    member.setIsMarried(request.isMarried());
+    member.setMarriedSince(request.marriedSince());
 
     return member;
   }

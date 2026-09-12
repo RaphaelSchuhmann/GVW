@@ -15,7 +15,9 @@
     let {
         selected = $bindable(""),
         marginTop = "",
-        onChange = () => {}
+        onChange = () => {},
+        disabled = $bindable(false),
+        title = "",
     } = $props();
 
     let open = $state(false);
@@ -148,70 +150,76 @@
     function updateUsedMonth(val) { usedMonth = monthOptions.indexOf(val); }
 </script>
 
-<div class="relative w-full {marginMap[marginTop]}" bind:this={datepickerRef}>
-    <div class="flex items-center w-full bg-gv-input-bg {open ? 'border border-gv-primary' : ''} rounded-1 gap-1">
-        <input
-            type="text"
-            class="w-full p-2 pl-3 pr-3 rounded-l-1 text-gv-dark-text outline-gv-primary text-dt-6"
-            placeholder="DD.MM.YYYY"
-            value={isISOString(selected) ? formatISODateString(selected) : selected}
-            readonly
-        >
-        <button
-            type="button"
-            aria-label={open ? "Close date picker" : "Open date picker"}
-            class="p-1.5 rounded-2 h-full aspect-square mr-1 flex items-center justify-center cursor-pointer hover:bg-gv-hover-effect"
-            onclick={toggleDatepicker}>
-            <span class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">calendar_month</span>
-        </button>
-    </div>
+<div class="flex w-full flex-col">
+    {#if title}
+        <p class="text-dt-6 font-medium mb-2 {disabled ? 'text-gv-light-text' : 'text-gv-dark-text'}">{title}</p>
+    {/if}
+    <div class="relative w-full {marginMap[marginTop]}" bind:this={datepickerRef}>
+        <div class="flex items-center w-full bg-gv-input-bg {open ? 'border border-gv-primary' : ''} rounded-1 gap-1">
+            <input
+                type="text"
+                class="w-full p-2 pl-3 pr-3 rounded-l-1 {disabled ? 'text-gv-light-text' : 'text-gv-dark-text'} outline-gv-primary text-dt-6"
+                placeholder="DD.MM.YYYY"
+                value={isISOString(selected) ? formatISODateString(selected) : selected}
+                readonly
+            >
+            <button
+                type="button"
+                aria-label={open ? "Close date picker" : "Open date picker"}
+                class="p-1.5 rounded-2 h-full aspect-square mr-1 flex items-center justify-center cursor-pointer hover:bg-gv-hover-effect"
+                onclick={toggleDatepicker}
+                disabled={disabled}>
+                <span class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">calendar_month</span>
+            </button>
+        </div>
 
-    {#if open}
-        <div class="absolute flex flex-col bottom-full rounded-1 w-max min-w-full bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 mb-1">
-            <div class="w-full items-center flex flex-col">
-                {@render calendarGrid()}
-            </div>
-
-            <div class="flex items-center w-full justify-between gap-1">
-                <button
-                    type="button"
-                    aria-label="Previous month"
-                    class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
-                    onclick={back}>
-                    <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_left</span>
-                </button>
-
-                <div class="flex items-center w-full gap-2">
-                    <Dropdown
-                        bgWhite={true}
-                        padding="2"
-                        options={monthOptions}
-                        selected={monthOptions[usedMonth]}
-                        onChange={updateUsedMonth}
-                        disableMinWidth={true}
-                        displayTop={true}
-                    />
-                    <Dropdown
-                        bgWhite={true}
-                        padding="2"
-                        options={yearOptions}
-                        selected={String(usedYear)}
-                        onChange={updateUsedYear}
-                        disableMinWidth={true}
-                        displayTop={true}
-                    />
+        {#if open && !disabled}
+            <div class="absolute flex flex-col bottom-full right-0 rounded-1 w-max min-w-full bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 mb-1">
+                <div class="w-full items-center flex flex-col">
+                    {@render calendarGrid()}
                 </div>
 
-                <button
-                    type="button"
-                    aria-label="Next month"
-                    class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
-                    onclick={next}>
-                    <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_right</span>
-                </button>
+                <div class="flex items-center w-full justify-between gap-1">
+                    <button
+                        type="button"
+                        aria-label="Previous month"
+                        class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                        onclick={back}>
+                        <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_left</span>
+                    </button>
+
+                    <div class="flex items-center w-full gap-2">
+                        <Dropdown
+                            bgWhite={true}
+                            padding="2"
+                            options={monthOptions}
+                            selected={monthOptions[usedMonth]}
+                            onChange={updateUsedMonth}
+                            disableMinWidth={true}
+                            displayTop={true}
+                        />
+                        <Dropdown
+                            bgWhite={true}
+                            padding="2"
+                            options={yearOptions}
+                            selected={String(usedYear)}
+                            onChange={updateUsedYear}
+                            disableMinWidth={true}
+                            displayTop={true}
+                        />
+                    </div>
+
+                    <button
+                        type="button"
+                        aria-label="Next month"
+                        class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                        onclick={next}>
+                        <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_right</span>
+                    </button>
+                </div>
             </div>
-        </div>
-    {/if}
+        {/if}
+    </div>
 </div>
 
 {#snippet calendarGrid()}
