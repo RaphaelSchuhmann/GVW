@@ -5,7 +5,8 @@
     let {
         selected = $bindable(""),
         marginTop = "",
-        onChange = () => {}
+        onChange = () => {},
+        title = "",
     } = $props();
 
     let open = $state(false);
@@ -75,55 +76,58 @@
     }
 </script>
 
-<div class="relative w-full {marginMap[marginTop]}" bind:this={datepickerRef}>
-    <div
-        class="flex items-center w-full bg-gv-input-bg border-gv-primary rounded-1 {open ? 'border' : ''} gap-1">
-        <input type="text" class="w-full p-2 pl-3 pr-3 rounded-l-1 text-gv-dark-text outline-gv-primary text-dt-6"
-               placeholder="YYYY"
-               value={selectedYearNumeric ?? ""}
-               readonly>
-        <button
-            class="p-1.5 rounded-2 h-full aspect-square mr-1 flex items-center justify-center cursor-pointer hover:bg-gv-hover-effect"
-            onclick={toggleOpen}>
-            <span class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">calendar_month</span>
-        </button>
-    </div>
-
-    {#if open}
+<div class="flex w-full flex-col">
+    <p class="text-dt-6 font-medium mb-2 text-gv-dark-text">{title}</p>
+    <div class="relative w-full {marginMap[marginTop]}" bind:this={datepickerRef}>
         <div
-            class="absolute bottom-full flex flex-col rounded-1 w-full bg-gv-input-bg border border-gv-primary p-4 gap-4 mb-1">
-
-            <div class="grid grid-cols-3 gap-2">
-                {#each yearsGrid as year, i (i)}
-                    <button
-                        class="py-3 rounded-2 text-dt-6 font-medium transition-all cursor-pointer"
-                        class:bg-gv-dark-turquoise={compareSelectedToYear(year)}
-                        class:text-white={compareSelectedToYear(year)}
-                        class:text-gv-light-text={!compareSelectedToYear(year)}
-                        class:hover:bg-gv-hover-effect={!compareSelectedToYear(year)}
-                        data-year={year}
-                        onclick={selectYear}
-                    >
-                        {year}
-                    </button>
-                {/each}
-            </div>
-
-            <div class="flex items-center justify-between">
-                <button class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
-                        onclick={backRange}>
-                    <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_left</span>
-                </button>
-
-                <span class="text-dt-6 font-bold text-gv-dark-text">
-                    {yearsGrid[0]} - {yearsGrid[11]}
-                </span>
-
-                <button class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
-                        onclick={nextRange}>
-                    <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_right</span>
-                </button>
-            </div>
+            class="flex items-center w-full bg-gv-input-bg border-gv-primary rounded-1 {open ? 'border' : ''} gap-1">
+            <input type="text" class="w-full p-2 pl-3 pr-3 rounded-l-1 text-gv-dark-text outline-gv-primary text-dt-6"
+                   placeholder="YYYY"
+                   value={selectedYearNumeric ?? ""}
+                   readonly>
+            <button
+                class="p-1.5 rounded-2 h-full aspect-square mr-1 flex items-center justify-center cursor-pointer hover:bg-gv-hover-effect"
+                onclick={toggleOpen}>
+                <span class="material-symbols-rounded text-icon-dt-6 text-gv-light-text">calendar_month</span>
+            </button>
         </div>
-    {/if}
+
+        {#if open}
+            <div
+                class="absolute bottom-full flex flex-col rounded-1 w-full bg-gv-input-bg border border-gv-primary p-4 gap-4 mb-1">
+
+                <div class="grid grid-cols-3 gap-2">
+                    {#each yearsGrid as year, i (i)}
+                        <button
+                            class="py-3 rounded-2 text-dt-6 font-medium transition-all cursor-pointer"
+                            class:bg-gv-dark-turquoise={compareSelectedToYear(year)}
+                            class:text-white={compareSelectedToYear(year)}
+                            class:text-gv-light-text={!compareSelectedToYear(year)}
+                            class:hover:bg-gv-hover-effect={!compareSelectedToYear(year)}
+                            data-year={year}
+                            onclick={selectYear}
+                        >
+                            {year}
+                        </button>
+                    {/each}
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <button class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                            onclick={backRange}>
+                        <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_left</span>
+                    </button>
+
+                    <span class="text-dt-6 font-bold text-gv-dark-text">
+                        {yearsGrid[0]} - {yearsGrid[11]}
+                    </span>
+
+                    <button class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                            onclick={nextRange}>
+                        <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">arrow_right</span>
+                    </button>
+                </div>
+            </div>
+        {/if}
+    </div>
 </div>

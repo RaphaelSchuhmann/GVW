@@ -11,6 +11,7 @@
     import Button from "./Button.svelte";
     import Input from "./Input.svelte";
     import Modal from "./Modal.svelte";
+    import Checkbox from "./Checkbox.svelte";
 
     let { isMobile = false } = $props();
 
@@ -38,7 +39,9 @@
         status: null,
         role: null,
         birthdate: "",
-        joined: ""
+        joined: "",
+        isMarried: false,
+        marriedSince: ""
     });
 
     let isSubmitting = $state(false);
@@ -57,7 +60,9 @@
             return !val || val.toLowerCase() === "wählen";
         });
 
-        return hasEmptyFields || hasUnselectedDropdowns || isSubmitting;
+        const isMarriedInvalid = typeof memberInput.isMarried !== "boolean";
+
+        return hasEmptyFields || hasUnselectedDropdowns || isMarriedInvalid || isSubmitting;
     });
 
     /**
@@ -77,6 +82,8 @@
         memberInput.voice = null;
         memberInput.status = null;
         memberInput.role = null;
+        memberInput.isMarried = false;
+        memberInput.marriedSince = "";
     }
 
     /**
@@ -138,6 +145,16 @@
     function updateBirthdate(value) { memberInput.birthdate = value; }
 
     function updateJoined(value) { memberInput.joined = value; }
+
+    function updateIsMarried(value) {
+        memberInput.isMarried = value;
+
+        if (value === false) {
+            memberInput.marriedSince = "";
+        }
+    }
+
+    function updateMarriedSince(value) { memberInput.marriedSince = value; }
 </script>
 
 <Modal
@@ -173,15 +190,13 @@
         </div>
 
         <div class="w-full flex flex-col xl:flex-row xl:items-center gap-4">
-            <div class="flex flex-col items-start w-full">
-                <p class="text-dt-6 font-medium mb-1">Geburtsdatum</p>
-                <DefaultDatepicker onChange={updateBirthdate} />
-            </div>
+            <DefaultDatepicker title="Geburtsdatum" onChange={updateBirthdate} />
+            <YearDatepicker title="Mitglied seit" onChange={updateJoined} />
+        </div>
 
-            <div class="flex flex-col items-start w-full">
-                <p class="text-dt-6 font-medium mb-1">Mitglied seit</p>
-                <YearDatepicker onChange={updateJoined} />
-            </div>
+        <div class="w-full flex items-center gap-4">
+            <Checkbox isChecked={memberInput.isMarried} onChange={updateIsMarried} />
+            <DefaultDatepicker title="Hochzeitsdatum" disabled={!memberInput.isMarried} onChange={updateMarriedSince} />
         </div>
 
         <!-- Action Buttons -->

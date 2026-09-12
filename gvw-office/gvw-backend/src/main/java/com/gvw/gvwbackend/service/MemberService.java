@@ -352,6 +352,8 @@ public class MemberService {
     member.setStatus(request.status());
     member.setBirthdate(request.birthdate());
     member.setJoined(request.joined());
+    member.setIsMarried(request.isMarried());
+    member.setMarriedSince(request.marriedSince());
 
     return member;
   }
