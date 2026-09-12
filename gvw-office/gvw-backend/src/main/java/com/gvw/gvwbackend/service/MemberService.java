@@ -127,7 +127,7 @@ public class MemberService {
           String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.CREATE, 409)));
     }
 
-    if (request.isMarried() && request.marriedSince() == null || request.marriedSince().isBlank()) {
+    if (request.isMarried() && (request.marriedSince() == null || request.marriedSince().isBlank())) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.CREATE, 400)));
     }
@@ -234,7 +234,7 @@ public class MemberService {
    * @throws NotFoundException if the member or linked user does not exist
    */
   public List<String> updateMember(UpdateMemberRequestDTO request) {
-    if (request.isMarried() && request.marriedSince() == null || request.marriedSince().isBlank()) {
+    if (request.isMarried() && (request.marriedSince() == null || request.marriedSince().isBlank())) {
       throw new BadRequestException(
               String.valueOf(ErrorDomain.MEMBER.createCode(ErrorAction.CREATE, 400)));
     }
