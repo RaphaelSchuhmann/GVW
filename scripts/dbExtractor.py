@@ -80,6 +80,6 @@ def extract_access_direct(db_filename, output_dir):
 
 
 extract_access_direct(
-    "Weppersdorf_v09.mdv",
+    "Weppersdorf_v09.mdb",
     "output"
 )

@@ -189,6 +189,7 @@ Thumbs.db
 .angular/
 
 *.mdv
+*.mdb
 scripts/output.json
 
 db/
