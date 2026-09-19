@@ -53,7 +53,10 @@ public class LibraryService {
       return List.of();
     }
 
-    return scores.stream()
+    List<Score> sortedScores =
+        scores.stream().sorted(Comparator.comparing(Score::getTitle)).toList();
+
+    return sortedScores.stream()
         .map(
             m ->
                 new ScoreResponseDTO(
