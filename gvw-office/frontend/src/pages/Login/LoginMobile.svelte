@@ -1,5 +1,5 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import Logo from "../../assets/logo.svg";
     import Input from "../../components/Input.svelte";
     import Button from "../../components/Button.svelte";
@@ -33,11 +33,11 @@
                 if (body.changePassword) {
                     clearValue("authToken");
                     setValue("authToken_BCPW", authToken);
-                    await push(`/changePassword?firstLogin=${body.firstLogin}`);
+                    await route(`/changePassword?firstLogin=${body.firstLogin}`);
                     return;
                 }
 
-                await push("/dashboard");
+                await route("/dashboard");
             }
         };
         checkAuth();
@@ -97,10 +97,10 @@
 
             if (body.changePassword) {
                 setValue("authToken_BCPW", body.authToken);
-                await push(`/changePassword?firstLogin=${body.firstLogin}`);
+                await route(`/changePassword?firstLogin=${body.firstLogin}`);
             } else {
                 setValue("authToken", body.authToken);
-                await push("/dashboard");
+                await route("/dashboard");
             }
         } finally {
             isFetching = false;

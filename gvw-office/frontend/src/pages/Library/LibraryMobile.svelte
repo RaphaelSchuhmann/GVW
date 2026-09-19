@@ -4,7 +4,7 @@
     import { libraryStore } from "../../stores/library.svelte.js";
     import { appSettings } from "../../stores/appSettings.svelte.js";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
 
     import ToastStack from "../../components/ToastStack.svelte";
     import PageHeader from "../../components/PageHeader.svelte";
@@ -18,7 +18,6 @@
     import Input from "../../components/Input.svelte";
     import Dropdown from "../../components/Dropdown.svelte";
     import TabBar from "../../components/TabBar.svelte";
-    import Checkbox from "../../components/Checkbox.svelte";
     import FileSelector from "../../components/FileSelector.svelte";
     import MobileSidebar from "../../components/MobileSidebar.svelte";
     import Spinner from "../../components/Spinner.svelte";
@@ -306,7 +305,7 @@
             {#if libraryStore.display.length > 0}
                 <div class="flex flex-col gap-4 w-full h-fit">
                     {#each libraryStore.display as score (score.id)}
-                        <button onclick={async () => await push(`/library/details?id=${score.id}&editing=false`)}>
+                        <button onclick={async () => await route(`/library/details?id=${score.id}&editing=false`)}>
                             <Card>
                                 <div class="flex items-start justify-start gap-2 w-full">
                                     <span

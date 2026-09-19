@@ -1,15 +1,16 @@
 <script>
-    import { push } from "svelte-spa-router";
-    import Logo from "../../assets/logo.svg";
-    import Input from "../../components/Input.svelte";
-    import Button from "../../components/Button.svelte";
-    import ToastStack from "../../components/ToastStack.svelte";
+    import { route } from "../../services/utils.js";
     import { getValue, setValue, clearValue } from "../../services/store";
     import { user } from "../../stores/user.svelte";
     import { addToast } from "../../stores/toasts.svelte";
     import { changePassword } from "../../services/changePasswordService.svelte";
     import { normalizeResponse } from "../../api/http.svelte";
     import { handleGlobalApiError } from "../../api/globalErrorHandler.svelte";
+    
+    import Logo from "../../assets/logo.svg";
+    import Input from "../../components/Input.svelte";
+    import Button from "../../components/Button.svelte";
+    import ToastStack from "../../components/ToastStack.svelte";
 
     let { message = "" } = $props();
 
@@ -60,7 +61,7 @@
 
         let email = user.email;
         if (!email || email.length === 0) {
-            await push(`/?cpwErr=true`);
+            await route(`/?cpwErr=true`);
             Object.assign(user, { name: "", email: "", role: "", loaded: false });
             return;
         }
@@ -77,13 +78,13 @@
             let authToken = getValue("authToken_BCPW");
             if (!authToken) {
                 addToast({ title: "Sitzungsfehler", type: "error" });
-                await push("/");
+                await route("/");
                 return;
             }
 
             clearValue("authToken_BCPW");
             setValue("authToken", authToken);
-            await push("/dashboard");
+            await route("/dashboard");
         } finally {
             isFetching = false;
         }

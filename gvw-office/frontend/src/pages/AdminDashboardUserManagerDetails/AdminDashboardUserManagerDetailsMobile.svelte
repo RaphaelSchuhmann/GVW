@@ -1,5 +1,6 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
+    import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import { viewport } from "../../stores/viewport.svelte";
     import { resetPassword, roleMapD2I, roleMapI2D, updateUser } from "../../services/userService.svelte";
 
@@ -9,7 +10,6 @@
     import Input from "../../components/Input.svelte";
     import ConfirmDeleteModal from "../../components/ConfirmDeleteModal.svelte";
     import Dropdown from "../../components/Dropdown.svelte";
-    import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import Spinner from "../../components/Spinner.svelte";
 
     let {
@@ -128,7 +128,7 @@
      */
     async function routeToUserManager() {
         await fetchAndSetRaw();
-        await push("/admin/userManagement");
+        await route("/admin/userManagement");
     }
 
     function startDeleting() {
@@ -158,7 +158,7 @@
 <ConfirmDeleteModal expectedInput={userData.name} id={userData.id}
                     title="Benutzer löschen" subTitle="Sind Sie sich sicher das Sie diesen Benutzer löschen möchten?"
                     action="deleteUser"
-                    onClose={async () => {await push("/admin/userManagement"); await fetchAndSetRaw();}}
+                    onClose={async () => {await route("/admin/userManagement"); await fetchAndSetRaw();}}
                     onCancel={disableIsDeleting}
                     bind:this={confirmDeleteUserModal} isMobile={true}
 />

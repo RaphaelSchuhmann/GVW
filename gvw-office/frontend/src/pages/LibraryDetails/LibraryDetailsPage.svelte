@@ -1,17 +1,14 @@
 <script>
     import { viewport } from "../../stores/viewport.svelte";
-    import { push } from "svelte-spa-router";
-    import { libraryStore } from "../../stores/library.svelte";
+    import { route } from "../../services/utils.js";
 
     import LibraryDetailsDesktop from "./LibraryDetailsDesktop.svelte";
     import LibraryDetailsMobile from "./LibraryDetailsMobile.svelte";
-    import { fetchAndSetRaw, init } from "../../services/filterService.svelte";
+    import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import {getFullScore, scoreExists} from "../../services/libraryService.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
-    import Spinner from "../../components/Spinner.svelte";
-    import EventDetailsMobile from "../EventDetails/EventDetailsMobile.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     const hash = window.location.hash;
@@ -37,12 +34,12 @@
                 user.role !== "conductor"
             ) {
                 isEditing = false;
-                await push("/dashboard");
+                await route("/dashboard");
                 return;
             }
 
             if (!scoreId) {
-                await push("/library");
+                await route("/library");
                 return;
             }
 
@@ -51,7 +48,7 @@
             const result = await getFullScore(scoreId);
 
             if (!result) {
-                await push("/library");
+                await route("/library");
                 return;
             }
 
@@ -79,7 +76,7 @@
                 });
 
                 await fetchAndSetRaw();
-                await push("/library");
+                await route("/library");
             }
         })();
     });

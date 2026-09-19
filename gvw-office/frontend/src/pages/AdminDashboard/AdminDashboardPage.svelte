@@ -3,15 +3,15 @@
     import { ensureUserData } from "../../services/userService.svelte";
     import { auth } from "../../stores/auth.svelte";
     import { user } from "../../stores/user.svelte";
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { getChangelogs } from "../../services/changelogService.svelte.js";
+    import { lastRefresh } from "../../stores/sseStore.svelte.js";
+    import { untrack } from "svelte";
+    import { loadAdminDashboardData } from "../../services/dashboardService.svelte.js";
 
     import DashboardDesktop from "./AdminDashboardDesktop.svelte";
     import DashboardMobile from "./AdminDashboardMobile.svelte";
-    import { lastRefresh } from "../../stores/sseStore.svelte.js";
-    import { untrack } from "svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
-    import {loadAdminDashboardData} from "../../services/dashboardService.svelte.js";
 
     let ready = $state(false);
 
@@ -20,7 +20,7 @@
 
         (async () => {
             if (user.role !== "admin") {
-                await push("/dashboard");
+                await route("/dashboard");
                 return;
             }
 

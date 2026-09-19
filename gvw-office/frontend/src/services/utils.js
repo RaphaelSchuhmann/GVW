@@ -1,3 +1,7 @@
+import { filterServiceStore } from "../stores/filterService.svelte.js";
+import { push } from "svelte-spa-router";
+import { filterRegistry } from "../lib/filterRegistry.svelte.js";
+
 /**
  * Capitalizes the first letter of each word in a string
  * @param {string} str - String to capitalize
@@ -143,4 +147,25 @@ export function generateUUID() {
         hex.slice(8, 10).join("") + "-" +
         hex.slice(10, 16).join("")
     );
+}
+
+/**
+ * Resets active filter states for the current page and navigates to a new route.
+ *
+ * @async
+ * @param {string} route - The target route path or URL to navigate to.
+ * @returns {Promise<void>} Resolves when the route navigation completes.
+ */
+export async function route(route) {
+    if (filterServiceStore.pageKey) {
+        const entry = filterRegistry[filterServiceStore.pageKey];
+
+        entry.filterState.search = "";
+        entry.filterState.dropdown = "";
+        entry.filterState.tab = "";
+
+        filterServiceStore.pageKey = null;
+    }
+
+    await push(route);
 }

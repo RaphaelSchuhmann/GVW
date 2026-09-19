@@ -1,17 +1,15 @@
 <script>
     import { viewport } from "../../stores/viewport.svelte";
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { eventsStore } from "../../stores/events.svelte";
     import { fetchAndSetRaw, init } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
-
-    import EventDetailsDesktop from "./EventDetailsDesktop.svelte";
-    import EventDetailsMobile from "./EventDetailsMobile.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { eventExists } from "../../services/eventsService.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
-    import Spinner from "../../components/Spinner.svelte";
-    import MemberDetailsMobile from "../MemberDetails/MemberDetailsMobile.svelte";
+
+    import EventDetailsDesktop from "./EventDetailsDesktop.svelte";
+    import EventDetailsMobile from "./EventDetailsMobile.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     const hash = window.location.hash;
@@ -35,11 +33,11 @@
         if (isEditing && (user.role !== "board_member" && user.role !== "admin")) isEditing = false;
 
         if (!eventId) {
-            push("/events");
+            route("/events");
         } else if (eventsStore.raw.length === 0) {
             init("events");
         } else if (!eventData) {
-            push("/events");
+            route("/events");
         }
 
         ready = true;
@@ -62,7 +60,7 @@
                 });
 
                 await fetchAndSetRaw();
-                await push("/events");
+                await route("/events");
             }
         })();
     });

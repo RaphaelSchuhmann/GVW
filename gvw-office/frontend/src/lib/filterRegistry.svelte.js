@@ -57,7 +57,7 @@ export const filterRegistry = {
         filterState: libraryFilterState,
         get optionMap() { return appSettings.scoreCategories; },
         fuse: {
-            keys: ["title", "artist", "voices"],
+            keys: ["title", "artist", "voices", "scoreId"],
             threshold: 0.3
         },
         config: {

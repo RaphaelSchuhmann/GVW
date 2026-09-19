@@ -2,6 +2,7 @@
     import { user } from "../../stores/user.svelte";
     import { eventsStore } from "../../stores/events.svelte";
     import { typeMap, getEventOccurrenceById, } from "../../services/eventsService.svelte";
+    import { route } from "../../services/utils.js";
 
     import PageHeader from "../../components/PageHeader.svelte";
     import Button from "../../components/Button.svelte";
@@ -9,7 +10,6 @@
     import FilterTabBar from "../../components/FilterTabBar.svelte";
     import Chip from "../../components/Chip.svelte";
     import Card from "../../components/Card.svelte";
-    import { push } from "svelte-spa-router";
     import MobileSidebar from "../../components/MobileSidebar.svelte";
     import AddEventModal from "../../components/AddEventModal.svelte";
     import EmptyState from "../../components/EmptyState.svelte";
@@ -67,7 +67,7 @@
             <div
                 class="flex flex-col gap-4 overflow-y-auto overflow-x-hidden">
                 {#each eventsStore.display as event (event.id)}
-                    <button onclick={async () => { await push(`/events/details?id=${event.id}&editing=false`) }}>
+                    <button onclick={async () => { await route(`/events/details?id=${event.id}&editing=false`) }}>
                         <Card>
                             <div class="flex items-center w-full">
                                 <p class="text-gv-dark-text text-dt-5 max-w-3/4 text-nowrap truncate">{event.title}</p>

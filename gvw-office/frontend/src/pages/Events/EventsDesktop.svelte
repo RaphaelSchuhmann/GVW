@@ -1,4 +1,8 @@
 <script>
+    import { route } from "../../services/utils.js";
+    import { fetchAndSetRaw } from "../../services/filterService.svelte";
+    import { createContextMenu } from "../../lib/contextMenu.svelte";
+    import { addToast } from "../../stores/toasts.svelte";
     import { user } from "../../stores/user.svelte";
     import { eventsStore } from "../../stores/events.svelte";
     import { typeMap, updateStatus, getEventOccurrenceById } from "../../services/eventsService.svelte";
@@ -14,10 +18,6 @@
     import ContextMenu from "../../components/ContextMenu.svelte";
     import Card from "../../components/Card.svelte";
     import ConfirmDeleteModal from "../../components/ConfirmDeleteModal.svelte";
-    import { push } from "svelte-spa-router";
-    import { fetchAndSetRaw } from "../../services/filterService.svelte";
-    import { createContextMenu } from "../../lib/contextMenu.svelte";
-    import { addToast } from "../../stores/toasts.svelte";
     import AddEventModal from "../../components/AddEventModal.svelte";
     import EmptyState from "../../components/EmptyState.svelte";
 
@@ -126,12 +126,12 @@
 
 <ContextMenu bind:open={menu.data.open} x={menu.data.x} y={menu.data.y}>
     <Button type="contextMenu"
-            onclick={async () =>  await push(`/events/details?id=${menu.data.activeId}&editing=false`)}>
+            onclick={async () =>  await route(`/events/details?id=${menu.data.activeId}&editing=false`)}>
         Details
     </Button>
     {#if user.role === "board_member" || user.role === "admin"}
         <Button type="contextMenu"
-                onclick={async () =>  await push(`/events/details?id=${menu.data.activeId}&editing=true`)}>
+                onclick={async () =>  await route(`/events/details?id=${menu.data.activeId}&editing=true`)}>
             Bearbeiten
         </Button>
         <Button type="contextMenu" onclick={handleSwitchStatus}>Status ändern</Button>

@@ -1,5 +1,5 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { viewport } from "../../stores/viewport.svelte";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
@@ -12,7 +12,6 @@
     import ConfirmDeleteModal from "../../components/ConfirmDeleteModal.svelte";
     import Dropdown from "../../components/Dropdown.svelte";
     import TabBar from "../../components/TabBar.svelte";
-    import Checkbox from "../../components/Checkbox.svelte";
     import { determineChoirType } from "../../services/utils.js";
     import FileSelector from "../../components/FileSelector.svelte";
     import { appSettings } from "../../stores/appSettings.svelte";
@@ -198,7 +197,7 @@
         try {
             await fetchAndSetRaw();
         } finally {
-            await push("/library");
+            await route("/library");
         }
     }
 

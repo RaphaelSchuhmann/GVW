@@ -3,14 +3,13 @@
     import { ensureUserData } from "../../services/userService.svelte";
     import { fetchAndSetRaw, init } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
-    import { push } from "svelte-spa-router";
-
-    import MembersDesktop from "./MembersDesktop.svelte";
-    import MembersMobile from "./MembersMobile.svelte";
     import { auth } from "../../stores/auth.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { untrack } from "svelte";
-    import Spinner from "../../components/Spinner.svelte";
+    import { route } from "../../services/utils.js";
+
+    import MembersDesktop from "./MembersDesktop.svelte";
+    import MembersMobile from "./MembersMobile.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     let ready = $state(false);
@@ -19,7 +18,7 @@
         if (!user.loaded) return;
 
         if (user.role !== "admin" && user.role !== "board_member") {
-            push("/dashboard");
+            route("/dashboard");
             return;
         }
 

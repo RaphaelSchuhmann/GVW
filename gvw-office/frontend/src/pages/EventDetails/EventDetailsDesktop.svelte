@@ -1,5 +1,5 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { viewport } from "../../stores/viewport.svelte";
     import {
         getDayOfMonthFromDate,
@@ -142,7 +142,7 @@
      */
     async function routeToEvents() {
         await fetchAndSetRaw();
-        await push("/events");
+        await route("/events");
     }
 
     // ==================
@@ -199,7 +199,7 @@
                     title="Veranstaltung löschen"
                     subTitle="Sind Sie sich sicher das Sie diese Veranstaltung löschen möchten?"
                     action="deleteEvent"
-                    onClose={async () => {await push("/events")}}
+                    onClose={async () => {await route("/events")}}
                     onCancel={disableIsDeleting}
                     bind:this={confirmDeleteEventModal}
 />
