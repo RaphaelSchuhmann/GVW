@@ -22,6 +22,12 @@ public class FileController {
     return fileService.streamFilesAsZip(service, id, userId);
   }
 
-  @GetMapping("/{id}")
-  public void loadFile(@PathVariable String id) {}
+  @GetMapping("/{service}/{docId}/{id}")
+  public ResponseEntity<StreamingResponseBody> loadFile(
+      @PathVariable String service,
+      @PathVariable String docId,
+      @PathVariable String id,
+      @RequestAttribute("userId") String userId) {
+    return fileService.loadFile(service, docId, id, userId);
+  }
 }

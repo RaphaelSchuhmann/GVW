@@ -2,6 +2,7 @@ package com.gvw.gvwbackend.service;
 
 import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
+import com.gvw.gvwbackend.dto.response.FileDTO;
 import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.exception.*;
@@ -92,7 +93,9 @@ public class LibraryService {
         score.getVoices(),
         score.getVoiceCount(),
         score.getFiles() != null
-            ? score.getFiles().stream().map(File::getOriginalName).toList()
+            ? score.getFiles().stream()
+                .map(m -> new FileDTO(m.getOriginalName(), m.getId()))
+                .toList()
             : List.of());
   }
 

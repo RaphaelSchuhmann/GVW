@@ -139,14 +139,6 @@ public class ReportService {
     List<String> words =
         Arrays.stream(plainText.split("\\s+")).filter(word -> !word.isEmpty()).toList();
 
-    List<String> filenames = new ArrayList<>();
-
-    if (report.getAttachments() != null) {
-      for (File file : report.getAttachments()) {
-        filenames.add(file.getOriginalName());
-      }
-    }
-
     return new FullReportResponseDTO(
         report.getId(),
         report.getTitle(),
@@ -159,7 +151,11 @@ public class ReportService {
         report.getLastEditedBy(),
         report.getType(),
         report.getContents(),
-        filenames);
+        report.getAttachments() != null
+            ? report.getAttachments().stream()
+                .map(m -> new FileDTO(m.getOriginalName(), m.getId()))
+                .toList()
+            : List.of());
   }
 
   /**

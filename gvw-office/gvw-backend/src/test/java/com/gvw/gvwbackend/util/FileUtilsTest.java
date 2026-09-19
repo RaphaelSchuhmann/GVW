@@ -6,11 +6,13 @@ import static org.mockito.Mockito.*;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
+import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.StoredFile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -168,5 +170,57 @@ class FileUtilsTest {
       assertNotNull(entry);
       assertEquals("file-1.pdf", entry.getName());
     }
+  }
+
+  @Test
+  void streamFile_Success() throws IOException {
+    Path realFile = Files.createFile(tempDir.resolve("file-123.pdf"));
+    Files.write(realFile, "test content".getBytes());
+
+    File file = new File();
+    file.setId("file-123");
+    file.setExtension("pdf");
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    fileUtils.streamFile(file, tempDir.toString(), out, ErrorDomain.LIBRARY);
+
+    byte[] result = out.toByteArray();
+    assertEquals("test content", new String(result));
+  }
+
+  @Test
+  void streamFile_FileNotFound_ThrowsNotFoundException() {
+    File file = new File();
+    file.setId("nonexistent");
+    file.setExtension("pdf");
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+    assertThrows(
+        NotFoundException.class,
+        () -> fileUtils.streamFile(file, tempDir.toString(), out, ErrorDomain.LIBRARY));
+  }
+
+  @Test
+  void streamFile_IOException_ThrowsRuntimeException() throws IOException {
+    Path realFile = Files.createFile(tempDir.resolve("file-456.pdf"));
+    Files.write(realFile, "test content".getBytes());
+
+    File file = new File();
+    file.setId("file-456");
+    file.setExtension("pdf");
+
+    OutputStream failingOut =
+        new OutputStream() {
+          @Override
+          public void write(int b) throws IOException {
+            throw new IOException("Simulated IO error");
+          }
+        };
+
+    assertThrows(
+        RuntimeException.class,
+        () -> fileUtils.streamFile(file, tempDir.toString(), failingOut, ErrorDomain.LIBRARY));
   }
 }

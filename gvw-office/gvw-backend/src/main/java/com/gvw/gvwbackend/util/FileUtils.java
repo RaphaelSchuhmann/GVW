@@ -1,9 +1,6 @@
 package com.gvw.gvwbackend.util;
 
-import com.gvw.gvwbackend.exception.BadRequestException;
-import com.gvw.gvwbackend.exception.ErrorAction;
-import com.gvw.gvwbackend.exception.ErrorDomain;
-import com.gvw.gvwbackend.exception.ErrorResource;
+import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.StoredFile;
 import java.io.IOException;
@@ -207,12 +204,17 @@ public class FileUtils {
    */
   public void streamFilesAsZip(
       List<File> files, String filesDir, OutputStream out, ErrorDomain domain) {
-    Path root = Paths.get(filesDir);
     Set<String> usedNames = new HashSet<>();
 
     try (ZipOutputStream zip = new ZipOutputStream(out)) {
       for (File file : files) {
-        Path filePath = root.resolve(file.getId() + "." + file.getExtension());
+        Path filePath =
+            resolveFile(
+                file.getId() + "." + file.getExtension(),
+                filesDir,
+                domain,
+                ErrorAction.UTILITY,
+                ErrorResource.NONE);
 
         if (!Files.exists(filePath)) {
           log.warn("File nto found on disk, skipping: {}", filePath);
@@ -247,6 +249,41 @@ public class FileUtils {
       zip.finish();
     } catch (IOException e) {
       log.error("Error creating ZIP archive", e);
+      throw new RuntimeException(String.valueOf(domain.createCode(ErrorAction.UTILITY, 500)), e);
+    }
+  }
+
+  /**
+   * Streams a single file from disk to the provided output stream.
+   *
+   * <p>Resolves the file location on disk using its ID, extension, and base directory, verifies its
+   * existence, and copies its bytes directly to the output stream.
+   *
+   * @param file the metadata object containing the file's ID and extension
+   * @param filesDir the base directory where files are stored
+   * @param out the output stream to write the file content into
+   * @param domain the error domain used for generating localized exception codes
+   * @throws NotFoundException if the resolved file path does not exist on disk
+   * @throws RuntimeException if an I/O error occurs while reading or streaming the file content
+   */
+  public void streamFile(File file, String filesDir, OutputStream out, ErrorDomain domain) {
+    try {
+      Path filePath =
+          resolveFile(
+              file.getId() + "." + file.getExtension(),
+              filesDir,
+              domain,
+              ErrorAction.UTILITY,
+              ErrorResource.NONE);
+
+      if (!Files.exists(filePath)) {
+        log.warn("File not found on disk, skipping: {}", filePath);
+        throw new NotFoundException(String.valueOf(domain.createCode(ErrorAction.UTILITY, 404)));
+      }
+
+      Files.copy(filePath, out);
+    } catch (IOException e) {
+      log.error("Error streaming file", e);
       throw new RuntimeException(String.valueOf(domain.createCode(ErrorAction.UTILITY, 500)), e);
     }
   }
