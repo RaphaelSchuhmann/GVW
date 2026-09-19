@@ -82,7 +82,7 @@ public class SecurityConfig {
                         "/auth/changePw",
                         "/settings/get",
                         "/sync/stream",
-                        "/emergeny/use",
+                        "/emergency/use",
                         "/emergency/new")
                     .permitAll()
                     .anyRequest()
