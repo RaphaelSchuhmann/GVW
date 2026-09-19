@@ -1,5 +1,4 @@
 <script>
-    import { push } from "svelte-spa-router";
     import {
         resetMemberPassword,
         updateMember,
@@ -10,6 +9,7 @@
     } from "../../services/membersService.svelte";
     import { viewport } from "../../stores/viewport.svelte";
     import { roleMapI2D, roleMapD2I } from "../../services/userService.svelte";
+    import { route } from "../../services/utils.js";
 
     import ToastStack from "../../components/ToastStack.svelte";
     import PageHeader from "../../components/PageHeader.svelte";
@@ -131,7 +131,7 @@
      */
     async function routeToMembers() {
         await fetchAndSetRaw();
-        await push("/members");
+        await route("/members");
     }
 
     // ==================
@@ -193,7 +193,7 @@
 <ConfirmDeleteModal expectedInput={`${memberData.name} ${memberData.surname}`} id={memberData.id}
                     title="Mitglied löschen" subTitle="Sind Sie sich sicher das Sie dieses Mitglied löschen möchten?"
                     action="deleteMember"
-                    onClose={async () => {await push("/members")}}
+                    onClose={async () => {await route("/members")}}
                     onCancel={disableIsDeleting}
                     bind:this={confirmDeleteMemberModal} isMobile={true}
 />

@@ -1,10 +1,11 @@
 <script>
+    import { reportTypeMap, deleteReport } from "../services/reportService.svelte.js";
+    import { route } from "../services/utils.js";
+    import { viewport } from "../stores/viewport.svelte.js";
+    
     import Card from "./Card.svelte";
     import Chip from "./Chip.svelte";
-    import { reportTypeMap, deleteReport, highlight } from "../services/reportService.svelte.js";
-    import { push } from "svelte-spa-router";
     import SanitizedHTML from "./SanitizedHTML.svelte";
-    import { viewport } from "../stores/viewport.svelte.js";
 
     let {
         id = "",
@@ -21,7 +22,7 @@
 
     async function openReport() {
         if (isMobile) return;
-        await push(`/reports/details?id=${id}`);
+        await route(`/reports/details?id=${id}`);
     }
 </script>
 

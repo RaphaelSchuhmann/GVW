@@ -1,5 +1,5 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { viewport } from "../../stores/viewport.svelte";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
@@ -196,7 +196,7 @@
         try {
             await fetchAndSetRaw();
         } finally {
-            await push("/library");
+            await route("/library");
         }
     }
 

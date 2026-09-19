@@ -1,7 +1,7 @@
 import { addToast, toasts } from "../stores/toasts.svelte";
 import { viewport } from "../stores/viewport.svelte";
 import { logout } from "../services/userService.svelte.js";
-import { push } from "svelte-spa-router";
+import { route } from "../services/utils.js";
 
 const DOMAINS = {
     "10": { default: "Authentifizierung" },
@@ -269,6 +269,6 @@ function handleAuthFailures(result, domain, action) {
         typeId: "2"
     });
     logout();
-    push("/");
+    route("/");
     return true;
 }

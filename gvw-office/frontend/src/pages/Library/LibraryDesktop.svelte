@@ -6,7 +6,7 @@
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
     import { addToast } from "../../stores/toasts.svelte";
     import { createContextMenu } from "../../lib/contextMenu.svelte";
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { viewport } from "../../stores/viewport.svelte";
 
     import ToastStack from "../../components/ToastStack.svelte";
@@ -24,7 +24,6 @@
     import Input from "../../components/Input.svelte";
     import Dropdown from "../../components/Dropdown.svelte";
     import TabBar from "../../components/TabBar.svelte";
-    import Checkbox from "../../components/Checkbox.svelte";
     import FileSelector from "../../components/FileSelector.svelte";
     import Spinner from "../../components/Spinner.svelte";
     import ChipPicker from "../../components/ChipPicker.svelte";
@@ -301,12 +300,12 @@
 
 <ContextMenu bind:open={menu.data.open} x={menu.data.x} y={menu.data.y}>
     <Button type="contextMenu"
-            onclick={async () =>  await push(`/library/details?id=${menu.data.activeId}&editing=false`)}>
+            onclick={async () =>  await route(`/library/details?id=${menu.data.activeId}&editing=false`)}>
         Details
     </Button>
     {#if user.role === "board_member" || user.role === "admin"}
         <Button type="contextMenu"
-                onclick={async () =>  await push(`/library/details?id=${menu.data.activeId}&editing=true`)}>
+                onclick={async () =>  await route(`/library/details?id=${menu.data.activeId}&editing=true`)}>
             Bearbeiten
         </Button>
         <Button type="contextMenu" fontColor="text-gv-delete" onclick={startDeleteScore}>Löschen</Button>

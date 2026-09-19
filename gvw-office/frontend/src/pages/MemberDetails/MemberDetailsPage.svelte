@@ -1,16 +1,15 @@
 <script>
     import { viewport } from "../../stores/viewport.svelte";
     import { membersStore } from "../../stores/members.svelte";
-    import { push } from "svelte-spa-router";
     import { fetchAndSetRaw, init } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
-
-    import MemberDetailsDesktop from "./MemberDetailsDesktop.svelte";
-    import MemberDetailsMobile from "./MemberDetailsMobile.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { memberExists } from "../../services/membersService.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
-    import Spinner from "../../components/Spinner.svelte";
+    import { route } from "../../services/utils.js";
+
+    import MemberDetailsDesktop from "./MemberDetailsDesktop.svelte";
+    import MemberDetailsMobile from "./MemberDetailsMobile.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
 
     const hash = window.location.hash;
@@ -32,15 +31,15 @@
         if (!user.loaded) return;
 
         if (user.role !== "admin" && user.role !== "board_member") {
-            push("/dashboard");
+            route("/dashboard");
         }
 
         if (!memberId) {
-            push("/members");
+            route("/members");
         } else if (membersStore.raw.length === 0) {
             init("members");
         } else if (!memberData) {
-            push("/members");
+            route("/members");
         }
 
         ready = true;
@@ -63,7 +62,7 @@
                 });
 
                 await fetchAndSetRaw();
-                await push("/members");
+                await route("/members");
             }
         })();
     });

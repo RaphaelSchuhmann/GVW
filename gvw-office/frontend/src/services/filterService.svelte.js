@@ -2,6 +2,7 @@ import { filterRegistry } from "../lib/filterRegistry.svelte";
 import Fuse from "fuse.js";
 import { normalizeResponse } from "../api/http.svelte";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte";
+import { filterServiceStore } from "../stores/filterService.svelte.js";
 
 let isFetching = $state(false);
 let currentPageKey = $state("");
@@ -31,8 +32,12 @@ export async function init(pageKey) {
         cleanupEffect = null;
     }
 
-    currentPageKey = pageKey;
     entry = filterRegistry[pageKey];
+
+    // Early return if no entry found
+    if (!entry) return;
+
+    currentPageKey = pageKey;
 
     deepSearchEnabled = entry?.config.search.deepSearch;
     if (deepSearchEnabled) {
@@ -49,6 +54,8 @@ export async function init(pageKey) {
             processFilters();
         });
     });
+
+    filterServiceStore.pageKey = pageKey;
 
     // Initial fetch
     await fetchAndSetRaw();

@@ -1,12 +1,12 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { user } from "../../stores/user.svelte";
     import { logout } from "../../services/userService.svelte";
+    import { helpCenterStore } from "../../stores/helpCenterStore.svelte";
 
     import SidebarButton from "./SidebarButton.svelte";
     import ChangelogsModal from "../ChangelogsModal.svelte";
     import FeedbackModal from "../FeedbackModal.svelte";
-    import { helpCenterStore } from "../../stores/helpCenterStore.svelte";
 
     let {
         currentCategory = $bindable(""),
@@ -39,7 +39,7 @@
 
     async function handleLogout() {
         logout();
-        await push("/");
+        await route("/");
     }
 
     function openFeedbackModal() {
@@ -59,7 +59,7 @@
 <div class="flex flex-col items-center w-full flex-1 overflow-hidden">
     <div class="flex flex-col items-center w-full h-full flex-1 p-5 gap-4 overflow-y-auto">
         <button class="group cursor-pointer w-full flex items-center justify-start gap-2 p-2"
-                onclick={async () => await push("/dashboard")}>
+                onclick={async () => await route("/dashboard")}>
             <span class="material-symbols-rounded text-icon-dt-4 text-gv-dark-text">arrow_back</span>
             <span class="text-dt-3 text-gv-dark-text group-hover:underline">Dashboard</span>
         </button>

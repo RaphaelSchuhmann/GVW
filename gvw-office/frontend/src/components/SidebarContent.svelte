@@ -1,8 +1,9 @@
 <script>
-    import { push } from "svelte-spa-router";
+    import { route } from "../services/utils.js";
     import { user } from "../stores/user.svelte";
-    import SidebarButton from "./SidebarButton.svelte";
     import { logout } from "../services/userService.svelte";
+    
+    import SidebarButton from "./SidebarButton.svelte";
     import FeedbackModal from "./FeedbackModal.svelte";
     import ChangelogsModal from "./ChangelogsModal.svelte";
 
@@ -32,7 +33,7 @@
 
     async function handleLogout() {
         logout();
-        await push("/");
+        await route("/");
     }
 
     function openFeedback() {
@@ -48,42 +49,42 @@
     <div class="flex flex-col items-center w-full h-full flex-1 p-5">
         {#if user.role === "admin"}
             <SidebarButton selected={currentPage === "adminDashboard"} minimized={minimized}
-                           onclick={async () => await push("/admin/overview")}>
+                           onclick={async () => await route("/admin/overview")}>
                 <span class="material-symbols-rounded text-icon-dt-4">dashboard_2_gear</span>
                 {#if !minimized}<p class="ml-2">Admin</p>{/if}
             </SidebarButton>
         {/if}
 
         <SidebarButton selected={currentPage === "dashboard"} minimized={minimized} marginTop="5"
-                       onclick={async () => await push("/dashboard")}>
+                       onclick={async () => await route("/dashboard")}>
             <span class="material-symbols-rounded text-icon-dt-4">dashboard</span>
             {#if !minimized}<p class="ml-2">Dashboard</p>{/if}
         </SidebarButton>
 
         {#if memberAccess.includes(user.role)}
             <SidebarButton selected={currentPage === "members"} minimized={minimized} marginTop="5"
-                           onclick={async () => await push("/members")}>
+                           onclick={async () => await route("/members")}>
                 <span class="material-symbols-rounded text-icon-dt-4">group</span>
                 {#if !minimized}<p class="ml-2">Mitglieder</p>{/if}
             </SidebarButton>
         {/if}
 
         <SidebarButton selected={currentPage === "events"} minimized={minimized} marginTop="5"
-                       onclick={async () => await push("/events")}>
+                       onclick={async () => await route("/events")}>
             <span class="material-symbols-rounded text-icon-dt-4">calendar_today</span>
             {#if !minimized}<p class="ml-2">Veranstaltungen</p>{/if}
         </SidebarButton>
 
         {#if reportsAccess.includes(user.role)}
             <SidebarButton selected={currentPage === "reports"} minimized={minimized} marginTop="5"
-                           onclick={async () => await push("/reports")}>
+                           onclick={async () => await route("/reports")}>
                 <span class="material-symbols-rounded text-icon-dt-4">docs</span>
                 {#if !minimized}<p class="ml-2">Berichte</p>{/if}
             </SidebarButton>
         {/if}
 
         <SidebarButton selected={currentPage === "library"} minimized={minimized} marginTop="5"
-                       onclick={async () => await push("/library")}>
+                       onclick={async () => await route("/library")}>
             <span class="material-symbols-rounded text-icon-dt-4">music_note_2</span>
             {#if !minimized}<p class="ml-2">Notenbibliothek</p>{/if}
         </SidebarButton>
@@ -109,7 +110,7 @@
                 {#if userOptionsVisible}
                     <div
                         class="absolute bottom-22 w-full bg-white border border-gv-border rounded-1 p-2 flex flex-col items-center">
-                        <button onclick={async () => {await push("/help"); toggleUserOptions()}}
+                        <button onclick={async () => {await route("/help"); toggleUserOptions()}}
                                 class="w-full flex items-center rounded-2 cursor-pointer hover:bg-gv-hover-effect p-2 pl-3 pr-3 duration-150 text-dt-6">
                             <span class="material-symbols-rounded text-icon-dt-5 mr-2">menu_book</span>
                             Hilfe-Center
@@ -134,7 +135,7 @@
             </div>
         {:else}
             <div class="flex flex-col items-center gap-2">
-                <SidebarButton minimized={minimized} onclick={async () => {await push("/help")}}>
+                <SidebarButton minimized={minimized} onclick={async () => {await route("/help")}}>
                     <span class="material-symbols-rounded text-icon-dt-3">menu_book</span>
                 </SidebarButton>
                 <SidebarButton minimized={minimized} onclick={openFeedback}>

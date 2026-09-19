@@ -1,7 +1,7 @@
 <script>
     import { viewport } from "../../stores/viewport.svelte";
     import { membersStore } from "../../stores/members.svelte";
-    import { push } from "svelte-spa-router";
+    import { route } from "../../services/utils.js";
     import { fetchAndSetRaw, init } from "../../services/filterService.svelte";
     import { user } from "../../stores/user.svelte";
     import { userManagerStore } from "../../stores/userManager.svelte.js";
@@ -32,21 +32,21 @@
         if (!user.loaded) return;
 
         if (user.role !== "admin") {
-            push("/dashboard");
+            route("/dashboard");
         }
 
         if (!userId) {
-            push("/admin/userManagement");
+            route("/admin/userManagement");
             return;
         } else if (membersStore.raw.length === 0) {
             init("userManager");
         } else if (!userData) {
-            push("/admin/userManagement");
+            route("/admin/userManagement");
             return;
         }
 
         if (userData && !userData.isOrphan) {
-            push("/admin/userManagement");
+            route("/admin/userManagement");
             return;
         }
 
@@ -70,7 +70,7 @@
                 });
 
                 await fetchAndSetRaw();
-                await push("/admin/userManagement");
+                await route("/admin/userManagement");
             }
         })();
     });
