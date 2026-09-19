@@ -1,6 +1,7 @@
 import { filterServiceStore } from "../stores/filterService.svelte.js";
 import { push } from "svelte-spa-router";
 import { filterRegistry } from "../lib/filterRegistry.svelte.js";
+import { resetPageState } from "./filterService.svelte.js";
 
 /**
  * Capitalizes the first letter of each word in a string
@@ -165,6 +166,8 @@ export async function route(route) {
         entry.filterState.tab = "";
 
         filterServiceStore.pageKey = null;
+
+        resetPageState();
     }
 
     await push(route);
