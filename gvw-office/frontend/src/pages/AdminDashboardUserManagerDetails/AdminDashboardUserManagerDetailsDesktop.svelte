@@ -246,6 +246,7 @@
 
                     <Dropdown onChange={updateRole}
                               title="Rolle"
+                              selected={roleMapI2D[draft.type] || draft.type}
                               options={["Admin", "Mitglied", "Vorstand", "Schriftführer", "Chorleitung", "Notenwart"]} />
                 {/if}
 

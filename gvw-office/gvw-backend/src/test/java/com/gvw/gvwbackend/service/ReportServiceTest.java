@@ -11,13 +11,11 @@ import com.gvw.gvwbackend.dto.response.FullReportResponseDTO;
 import com.gvw.gvwbackend.dto.response.ReportResponseDTO;
 import com.gvw.gvwbackend.dto.response.ReportSearchResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
-import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.Report;
 import com.gvw.gvwbackend.model.TextEditorBlock;
 import com.gvw.gvwbackend.model.TextEditorBlockType;
 import com.gvw.gvwbackend.util.FileUtils;
-import java.io.OutputStream;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
@@ -227,14 +225,5 @@ class ReportServiceTest {
 
     assertEquals("2-def", result);
     assertEquals("Keine Beschreibung", report.getDescription());
-  }
-
-  @Test
-  void streamFilesAsZip_Success() {
-    OutputStream out = mock(OutputStream.class);
-
-    assertDoesNotThrow(() -> reportService.streamFilesAsZip(report.getAttachments(), out));
-    verify(fileUtils)
-        .streamFilesAsZip(eq(report.getAttachments()), isNull(), eq(out), eq(ErrorDomain.REPORT));
   }
 }

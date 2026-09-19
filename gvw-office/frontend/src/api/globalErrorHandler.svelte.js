@@ -53,6 +53,10 @@ const STATUS_TEMPLATES = {
     "409": {
         title: "Datenkonflikt",
         subTitle: "{domain} - Die Daten sind nicht aktuell oder bereits vergeben."
+    },
+    "403": {
+        title: "Zugriff verweigert",
+        subTitle: "{domain} - Sie haben nicht die Berechtigung, diese Aktion auszuführen."
     }
 };
 

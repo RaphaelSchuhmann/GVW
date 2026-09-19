@@ -121,7 +121,7 @@ export async function apiDeleteScore(id) {
  * - `body`: A {@link Blob} containing the file data on success, or the parsed error body on failure.
  */
 export async function apiDownloadScoreFiles(id) {
-    const resp = await httpGet(`${apiUrl}/library/${id}/files`);
+    const resp = await httpGet(`${apiUrl}/file/download/library/${id}/zip`);
     if (!resp) return { resp: null, body: null };
 
     let body;

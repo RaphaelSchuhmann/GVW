@@ -220,7 +220,7 @@ export async function apiUploadReportAttachments(formData, reportId) {
  * - `body`: A {@link Blob} containing the file data on success, or the parsed error body on failure.
  */
 export async function apiDownloadReportAttachments(id) {
-    const resp = await httpGet(`${apiUrl}/report/${id}/attachments`);
+    const resp = await httpGet(`${apiUrl}/file/download/report/${id}/zip`);
     if (!resp) return { resp: null, body: null };
 
     let body;
