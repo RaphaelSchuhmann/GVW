@@ -55,7 +55,7 @@ class FileUtilsTest {
   @Test
   void storeFiles_FileTooLarge_ThrowsBadRequest() throws IOException {
     MultipartFile mockFile = mock(MultipartFile.class);
-    when(mockFile.getSize()).thenReturn(25L * 1024 * 1024); // 25 MB
+    when(mockFile.getSize()).thenReturn(50L * 1024 * 1024); // 50 MB
 
     assertThrows(
         BadRequestException.class,
@@ -97,7 +97,7 @@ class FileUtilsTest {
   @Test
   void storeFile_FileTooLarge_ThrowsBadRequest() throws IOException {
     MultipartFile mockFile = mock(MultipartFile.class);
-    when(mockFile.getSize()).thenReturn(25L * 1024 * 1024); // 25 MB
+    when(mockFile.getSize()).thenReturn(50L * 1024 * 1024); // 50 MB
 
     assertThrows(
         BadRequestException.class,

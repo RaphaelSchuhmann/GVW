@@ -25,8 +25,8 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileUtils {
   private static final Logger log = LoggerFactory.getLogger(FileUtils.class);
 
-  /** The maximum allowed file size for uploads in bytes (20 MB). */
-  public static final long MAX_FILE_SIZE = 20 * 1024 * 1024;
+  /** The maximum allowed file size for uploads in bytes (40 MB). */
+  public static final long MAX_FILE_SIZE = 40 * 1024 * 1024;
 
   /**
    * Stores uploaded files and creates corresponding file metadata objects.
