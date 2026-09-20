@@ -231,7 +231,7 @@
 <main class="flex h-screen overflow-hidden">
     <DesktopSidebar currentPage="library" />
     <div class="flex flex-col min-h-0 w-full p-10 overflow-hidden">
-        <PageHeader title="Veranstaltung" subTitle={`Details der Noten: "${scoreData?.title ?? ""}"`}>
+        <PageHeader title="Notenmaterial" subTitle={`Details der Noten: "${scoreData?.title ?? ""}"`}>
             {#if viewport.width > 900}
                 {#if !isEditing}
                     <Button type="secondary" onclick={async () => await routeToLibrary()}>
