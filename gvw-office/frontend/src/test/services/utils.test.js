@@ -79,14 +79,14 @@ describe('utils.js', () => {
 
         it('creates object URL from blob', () => {
             const blob = new Blob(['test'], { type: 'application/zip' });
-            triggerFileDownload(blob, 'test-file');
+            triggerFileDownload(blob, 'test-file.zip');
             
             expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
         });
 
         it('creates anchor element with correct attributes', () => {
             const blob = new Blob(['test'], { type: 'application/zip' });
-            triggerFileDownload(blob, 'test-file');
+            triggerFileDownload(blob, 'test-file.zip');
             
             expect(document.createElement).toHaveBeenCalledWith('a');
             expect(mockAnchor.href).toBe(mockUrl);
@@ -95,14 +95,14 @@ describe('utils.js', () => {
 
         it('triggers click on anchor element', () => {
             const blob = new Blob(['test'], { type: 'application/zip' });
-            triggerFileDownload(blob, 'test-file');
+            triggerFileDownload(blob, 'test-file.zip');
             
             expect(mockAnchor.click).toHaveBeenCalled();
         });
 
         it('revokes object URL after click', () => {
             const blob = new Blob(['test'], { type: 'application/zip' });
-            triggerFileDownload(blob, 'test-file');
+            triggerFileDownload(blob, 'test-file.zip');
             
             // setTimeout with 0 delay should execute in next tick
             vi.advanceTimersByTime(0);
