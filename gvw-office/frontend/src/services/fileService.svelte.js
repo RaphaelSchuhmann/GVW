@@ -3,7 +3,10 @@ import { apiLoadFile } from "../api/apiFiles.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { addToast } from "../stores/toasts.svelte.js";
 
+export const supportedFileTypes = new Set(["pdf", "png", "jpg", "jpeg", "gif", "mp3", "wav", "midi", "mid", "xml", "musicxml", "mxl", "mscz", "mscx", "sib", "musx", "cap", "capx", "gp", "gp5", "gp3", "gp4", "gpx"]);
+
 export const supportedPreviewTypes = new Set(["pdf", "png", "jpg", "jpeg", "gif", "mp3", "wav", "gp", "gp5", "gp3", "gp4", "gpx"]);
+
 export const previewTypesMap = {
     "pdf": "PDF",
     "png": "img",
@@ -16,7 +19,7 @@ export const previewTypesMap = {
     "gp5": "at",
     "gp3": "at",
     "gp4": "at",
-    "gpx": "at",
+    "gpx": "at"
 };
 
 export async function filePreviewable(service, documentId, fileId) {
@@ -42,7 +45,12 @@ export async function filePreviewable(service, documentId, fileId) {
     const dotIndex = filename.lastIndexOf(".");
     const extension = dotIndex === -1 ? "" : filename.substring(dotIndex + 1);
 
-    return { isPreviewable: extension && supportedPreviewTypes.has(extension), extension: extension, filename: filename, blob: blob };
+    return {
+        isPreviewable: extension && supportedPreviewTypes.has(extension),
+        extension: extension,
+        filename: filename,
+        blob: blob
+    };
 }
 
 function extractFileNameFromContentDisposition(contentDisposition) {

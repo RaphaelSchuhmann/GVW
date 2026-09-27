@@ -292,8 +292,7 @@
                         {/if}
                     </div>
 
-                    <FileSelector title="Noten"
-                                  validTypes={["pdf", "gp", "gp5", "gp3", "gp4", "gpx", "cap", "capx"]} page="library"
+                    <FileSelector title="Noten" page="library"
                                   bind:files={scoreData.files} allowEditing={false} />
                 {:else}
                     <Input title="Noten ID" placeholder="T01" bind:value={draft.scoreId} />
@@ -319,8 +318,7 @@
                         {/if}
                     </div>
 
-                    <FileSelector title="Noten"
-                                  validTypes={["pdf", "gp", "gp5", "gp3", "gp4", "gpx", "cap", "capx"]} page="library"
+                    <FileSelector title="Noten" page="library"
                                   bind:files={draft.files} allowEditing={true} />
                 {/if}
 

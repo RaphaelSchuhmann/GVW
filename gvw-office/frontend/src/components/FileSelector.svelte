@@ -2,7 +2,7 @@
     import { marginMap } from "../lib/dynamicStyles";
     import { addToast } from "../stores/toasts.svelte";
     import { viewport } from "../stores/viewport.svelte";
-    import { filePreviewable } from "../services/fileService.svelte.js";
+    import { filePreviewable, supportedFileTypes } from "../services/fileService.svelte.js";
     import { triggerFileDownload } from "../services/utils.js";
     import FilePreviewModal from "./FilePreviewModal.svelte";
 
@@ -11,7 +11,7 @@
         marginTop = "",
         page = "library",
         documentId = "",
-        validTypes = [],
+        validTypes = supportedFileTypes,
         files = $bindable([]),
         wrapContent = false,
         disabled = false,

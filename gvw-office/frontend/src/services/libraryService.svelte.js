@@ -349,8 +349,8 @@ export async function addScore(score) {
  * - Displays success/error toasts
  *
  * @param {Object} score - Score data including metadata and file state
- * @param {(File|string)[]} score.files - Mixed array of new files (File) and existing file names (string)
- * @param {string[]} score.originalFiles - Original file names before modification
+ * @param {(File|Object)[]} score.files - Mixed array of new files (File) and existing files (Object with name + id)
+ * @param {Object[]} score.originalFiles - Original files before modification
  *
  * @returns {Promise<void>}
  */
@@ -362,13 +362,12 @@ export async function updateScore(score) {
         const formData = prepareScoreFormData(score);
 
         const newFiles = score.files.filter(f => f instanceof File);
+
         const existingNames = score.files
             .filter(f => !newFiles.includes(f))
-            .map(f => typeof f === "string" ? f : f.name);
+            .map(f => f.id);
 
-        const removedFiles = score.originalFiles.filter(
-            f => !existingNames.includes(f)
-        ).map(f => f.id);
+        const removedFiles = score.originalFiles.filter(f => !existingNames.includes(f.id));
 
         formData.append("removedFiles", removedFiles);
         newFiles.forEach(f => formData.append("files", f, f.name));
