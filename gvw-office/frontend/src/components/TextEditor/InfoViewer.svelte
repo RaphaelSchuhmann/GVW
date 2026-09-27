@@ -16,6 +16,7 @@
         updateDescription,
         enableAttachments = false,
         updateAttachments,
+        page = "report",
         ...restProps
     } = $props();
 
@@ -216,10 +217,8 @@
                             <Spinner width="2/5" />
                         </div>
                     {/if}
-                    <FileSelector
-                        validTypes={["pdf", "png", "jpg", "jpeg", "gif", "mp3", "wav", "midi", "mid", "xml", "musicxml", "mxl", "mscz", "mscx", "sib", "musx", "cap", "capx", "gp", "gp5", "gp3", "gp4", "gpx"]}
-                        bind:files={workingState} disabled={isSavingAttachments} wrapContent={true}
-                        onChange={saveAttachmentChanges}
+                    <FileSelector bind:files={workingState} disabled={isSavingAttachments} allowEditing={!isSavingAttachments} wrapContent={true}
+                        onChange={saveAttachmentChanges} page={page}
                     />
                 </div>
             </div>

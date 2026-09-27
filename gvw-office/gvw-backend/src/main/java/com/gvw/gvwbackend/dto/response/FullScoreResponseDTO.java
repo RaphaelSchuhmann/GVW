@@ -11,4 +11,4 @@ public record FullScoreResponseDTO(
     String type,
     List<String> voices,
     int voiceCount,
-    List<String> files) {}
+    List<FileDTO> files) {}

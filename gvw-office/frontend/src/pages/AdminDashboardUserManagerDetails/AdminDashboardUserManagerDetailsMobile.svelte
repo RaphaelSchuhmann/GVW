@@ -242,8 +242,9 @@
 
                     <Input bind:value={draft.address} title="Adresse" placeholder="Hauptstraße 1..." />
 
-                    <Dropdown onChange={updateRole} selected={roleMapI2D[draft.type] || draft.type}
+                    <Dropdown onChange={updateRole}
                               title="Rolle"
+                              selected={roleMapI2D[draft.type] || draft.type}
                               options={["Admin", "Mitglied", "Vorstand", "Schriftführer", "Chorleitung", "Notenwart"]} />
                 {/if}
 

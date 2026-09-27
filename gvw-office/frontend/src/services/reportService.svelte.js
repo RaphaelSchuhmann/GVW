@@ -1,7 +1,7 @@
 import {
     apiAddReport,
     apiCheckReport,
-    apiDeleteReport, apiDownloadReportAttachments,
+    apiDeleteReport,
     apiGetReport, apiUpdateReport,
     apiUpdateReportDescription, apiUploadReportAttachments
 } from "../api/apiReports.svelte.js";
@@ -12,6 +12,7 @@ import { viewport } from "../stores/viewport.svelte.js";
 import { sanitize, triggerFileDownload } from "./utils.js";
 import { reportsStore } from "../stores/report.svelte.js";
 import { pendingImages } from "./textEditorService.svelte.js";
+import { apiStreamFilesAsZip } from "../api/apiFiles.svelte.js";
 
 export const reportTypeMap = {
     "Jahresbericht": "annualReport",
@@ -298,7 +299,7 @@ export async function updateAttachments(reportId, rev, attachments) {
             if (item instanceof File) {
                 formData.append("files", item, item.name);
             } else {
-                attachmentIds.push(item);
+                attachmentIds.push(item.id);
             }
         }
 
@@ -348,7 +349,7 @@ export async function downloadAttachments(reportId) {
     isFetching.downloadAttachments = true;
 
     try {
-        const { resp, body } = await apiDownloadReportAttachments(reportId);
+        const { resp, body } = await apiStreamFilesAsZip("report", reportId);
         const normalized = normalizeResponse(resp);
 
         if (resp.status === 204) {
@@ -363,7 +364,7 @@ export async function downloadAttachments(reportId) {
         if (handleGlobalApiError(normalized)) return;
 
         const reportName = reportsStore.raw.find(i => i.id === reportId).title || "Bericht";
-        triggerFileDownload(body, `${reportName} - Anhänge`);
+        triggerFileDownload(body, `${reportName} - Anhänge.zip`);
 
         addToast({
             title: "Download erfolgreich",

@@ -2,15 +2,21 @@
     import { marginMap } from "../lib/dynamicStyles";
     import { addToast } from "../stores/toasts.svelte";
     import { viewport } from "../stores/viewport.svelte";
+    import { filePreviewable, supportedFileTypes } from "../services/fileService.svelte.js";
+    import { triggerFileDownload } from "../services/utils.js";
+    import FilePreviewModal from "./FilePreviewModal.svelte";
 
     let {
         title = "",
         marginTop = "",
         page = "library",
-        validTypes = [],
+        documentId = "",
+        validTypes = supportedFileTypes,
         files = $bindable([]),
-        disabled = false,
         wrapContent = false,
+        disabled = false,
+        fileDownloadDisabled = false,
+        allowEditing = false,
         onChange = (val) => {},
         ...restProps
     } = $props();
@@ -24,6 +30,8 @@
         }
         return result;
     });
+
+    let previewModal = null;
 
     /**
      * Handles file selection via a dynamic input element
@@ -41,7 +49,7 @@
             const duplicate = files.some((entry) => {
                 const existingName = typeof entry === "string" ? entry : entry.name;
                 return existingName === file.name;
-            })
+            });
 
             if (!duplicate) {
                 files = [...files, file];
@@ -52,7 +60,7 @@
                     subTitle: !viewport.isMobile
                         ? "Die von ihnen ausgewählte Datei ist bereits im Anhang."
                         : "",
-                    type: "warning",
+                    type: "warning"
                 });
             }
         };
@@ -60,9 +68,35 @@
         input.click();
     }
 
+    async function handleFileClick(file) {
+        if (allowEditing) {
+            removeFile(file);
+            return;
+        }
+
+        if (fileDownloadDisabled || !documentId || !file.id) return;
+
+        const previewableFileObject = await filePreviewable(page, documentId, file.id);
+
+        if (!previewableFileObject.isPreviewable) {
+            triggerFileDownload(previewableFileObject.blob, previewableFileObject.filename);
+            return;
+        }
+
+        const fileObject = {
+            isPreviewable: previewableFileObject.isPreviewable,
+            title: file.name,
+            extension: previewableFileObject.extension,
+            blob: previewableFileObject.blob,
+        }
+
+        previewModal.showModal();
+        previewModal.handlePreview(fileObject);
+    }
+
     /**
      * Removes a file from the list
-     * @param {File} file
+     * @param {Object} file
      */
     function removeFile(file) {
         files = files.filter((f) => f !== file);
@@ -70,13 +104,15 @@
     }
 </script>
 
+<FilePreviewModal bind:this={previewModal} />
+
 <div class={`flex flex-col items-start justify-start gap-1 w-full ${marginMap[marginTop]}`} {...restProps}>
     {#if title}
         <p class="text-dt-6 font-medium">{title}</p>
     {/if}
     <div class="flex-1 min-w-0 overflow-x-auto w-full">
         <div class={`flex items-center justify-start gap-2 ${wrapContent ? "flex-wrap" : "flex-nowrap"}`}>
-            {#if !disabled}
+            {#if !disabled && allowEditing}
                 <button
                     type="button"
                     class="shrink-0 flex items-center justify-center rounded-2 border-2 border-gv-border p-2 cursor-pointer hover:bg-gv-input-bg duration-200"
@@ -94,10 +130,11 @@
                     <button
                         type="button"
                         {disabled}
-                        class={`group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2 ${!disabled ? "hover:bg-gv-input-bg cursor-pointer" : ""} duration-200`}
-                        onclick={() => removeFile(file)}
+                        class={`group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2 cursor-pointer ${!disabled && allowEditing ? "hover:bg-gv-input-bg" : ""} duration-200`}
+                        onclick={() => handleFileClick(file)}
                     >
-                        <div class={`flex items-center gap-2 whitespace-nowrap transition-opacity duration-200 ${!disabled ? "group-hover:opacity-0" : ""}`}>
+                        <div
+                            class={`flex items-center gap-2 whitespace-nowrap transition-opacity duration-200 ${!disabled && allowEditing ? "group-hover:opacity-0" : ""}`}>
                             <span class="material-symbols-rounded text-icon-dt-6">
                                 {icon}
                             </span>
@@ -106,8 +143,9 @@
                             </p>
                         </div>
 
-                        {#if !disabled}
-                            <div class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        {#if !disabled && allowEditing}
+                            <div
+                                class="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 <span class="material-symbols-rounded text-red-600 text-icon-dt-6">
                                     attach_file_off
                                 </span>
@@ -115,13 +153,12 @@
                         {/if}
                     </button>
                 {/each}
-            {:else if disabled}
-                <div class={`group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2`}>
-                    <div class={`flex items-center gap-2 whitespace-nowrap`}>
-                        <p class="text-gv-dark-text text-dt-7">
-                            Keine Dateien angehängt
-                        </p>
-                    </div>
+            {:else if disabled || !allowEditing}
+                <div
+                    class="group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2 whitespace-nowrap">
+                    <p class="text-gv-dark-text text-dt-7">
+                        Keine Dateien angehängt
+                    </p>
                 </div>
             {/if}
         </div>

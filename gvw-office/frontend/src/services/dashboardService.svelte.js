@@ -1,4 +1,4 @@
-import {apiGetAdminDashboardData, apiGetData} from "../api/apiDashboard.js";
+import {apiGetAdminDashboardData, apiGetData} from "../api/apiDashboard.svelte.js";
 import {normalizeResponse} from "../api/http.svelte.js";
 import {handleGlobalApiError} from "../api/globalErrorHandler.svelte.js";
 import {addToast} from "../stores/toasts.svelte.js";

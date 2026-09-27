@@ -79,6 +79,14 @@ public class AuthMiddleware extends OncePerRequestFilter {
   }
 
   /**
+   * Block authentication for async dispatch requests.
+   */
+  @Override
+  protected boolean shouldNotFilterAsyncDispatch() {
+    return false;
+  }
+
+  /**
    * Determines whether authentication should be skipped for a request.
    *
    * <p>Paths matching the excluded endpoint list are allowed to continue without requiring a JWT.

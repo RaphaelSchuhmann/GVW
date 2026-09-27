@@ -4,7 +4,7 @@ import {
     apiAddScore,
     apiCheckScore,
     apiDeleteScore,
-    apiDownloadScoreFiles, apiGetFullScore,
+    apiGetFullScore,
     apiUpdateScore
 } from "../api/apiLibrary.svelte";
 import { normalizeResponse } from "../api/http.svelte";
@@ -12,6 +12,8 @@ import { handleGenericErrors, handleGlobalApiError } from "../api/globalErrorHan
 import { addToast } from "../stores/toasts.svelte";
 import { viewport } from "../stores/viewport.svelte";
 import { triggerFileDownload } from "./utils.js";
+import { apiStreamFilesAsZip } from "../api/apiFiles.svelte.js";
+import { extractFileNameFromContentDisposition } from "./fileService.svelte.js";
 
 export const voiceMap = {
     "t": "Tenor",
@@ -276,13 +278,20 @@ export async function downloadScoreFiles(id) {
     isFetching.downloadScore = true;
 
     try {
-        const { resp, body } = await apiDownloadScoreFiles(id);
+        const { resp, body } = await apiStreamFilesAsZip("library", id);
         const normalizedResponse = normalizeResponse(resp);
 
         if (handleGlobalApiError(normalizedResponse)) return;
 
-        const scoreName = libraryStore.raw.find(s => s.id === id)?.title ?? "Noten";
-        triggerFileDownload(body, scoreName);
+        const contentDisposition = resp.headers.get("Content-Disposition");
+
+        let filename = extractFileNameFromContentDisposition(contentDisposition);
+
+        if (!filename.endsWith(".zip")) {
+            filename = libraryStore.raw.find(s => s.id === id)?.title ?? "Noten.zip";
+        }
+
+        triggerFileDownload(body, filename);
 
         addToast({
             title: "Download erfolgreich",
@@ -347,8 +356,8 @@ export async function addScore(score) {
  * - Displays success/error toasts
  *
  * @param {Object} score - Score data including metadata and file state
- * @param {(File|string)[]} score.files - Mixed array of new files (File) and existing file names (string)
- * @param {string[]} score.originalFiles - Original file names before modification
+ * @param {(File|Object)[]} score.files - Mixed array of new files (File) and existing files (Object with name + id)
+ * @param {Object[]} score.originalFiles - Original files before modification
  *
  * @returns {Promise<void>}
  */
@@ -360,8 +369,12 @@ export async function updateScore(score) {
         const formData = prepareScoreFormData(score);
 
         const newFiles = score.files.filter(f => f instanceof File);
-        const existingNames = score.files.filter(f => typeof f === "string");
-        const removedFiles = score.originalFiles.filter(f => !existingNames.includes(f));
+
+        const existingFiles = new Set(score.files
+            .filter(f => !newFiles.includes(f))
+            .map(f => f.id));
+
+        const removedFiles = score.originalFiles.filter(f => !existingFiles.has(f.id)).map(f => f.id);
 
         formData.append("removedFiles", removedFiles);
         newFiles.forEach(f => formData.append("files", f, f.name));

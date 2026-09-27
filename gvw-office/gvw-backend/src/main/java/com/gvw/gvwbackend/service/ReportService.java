@@ -11,7 +11,6 @@ import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.*;
 import com.gvw.gvwbackend.util.FileUtils;
-import java.io.OutputStream;
 import java.time.Instant;
 import java.util.*;
 import org.slf4j.Logger;
@@ -91,16 +90,7 @@ public class ReportService {
    * @throws NotFoundException if no report exists with the given identifier
    */
   public void checkReport(String id) {
-    if (id == null || id.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.CHECK, 400)));
-    }
-
-    Report report = dbService.findById("reports", id, Report.class);
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.CHECK, 404)));
-    }
+    Report report = findReportById(id, ErrorAction.CHECK);
   }
 
   /**
@@ -142,30 +132,12 @@ public class ReportService {
    * @throws NotFoundException if the report does not exist
    */
   public FullReportResponseDTO getReport(String id) {
-    if (id == null || id.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.READ_ONE, 400)));
-    }
-
-    Report report = dbService.findById("reports", id, Report.class);
-
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.READ_ONE, 404)));
-    }
+    Report report = findReportById(id, ErrorAction.READ_ONE);
 
     String plainText = editorService.convertBlocksToPlainText(report.getContents());
 
     List<String> words =
         Arrays.stream(plainText.split("\\s+")).filter(word -> !word.isEmpty()).toList();
-
-    List<String> filenames = new ArrayList<>();
-
-    if (report.getAttachments() != null) {
-      for (File file : report.getAttachments()) {
-        filenames.add(file.getOriginalName());
-      }
-    }
 
     return new FullReportResponseDTO(
         report.getId(),
@@ -179,7 +151,11 @@ public class ReportService {
         report.getLastEditedBy(),
         report.getType(),
         report.getContents(),
-        filenames);
+        report.getAttachments() != null
+            ? report.getAttachments().stream()
+                .map(m -> new FileDTO(m.getOriginalName(), m.getId()))
+                .toList()
+            : List.of());
   }
 
   /**
@@ -200,11 +176,7 @@ public class ReportService {
           String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UTILITY, 400)));
     }
 
-    Report report = dbService.findById("reports", documentId, Report.class);
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UTILITY, 404)));
-    }
+    Report report = findReportById(documentId, ErrorAction.UTILITY);
 
     Set<String> linkedFileIds = editorService.extractFileIds(report.getContents());
 
@@ -225,16 +197,7 @@ public class ReportService {
    * @throws NotFoundException if the report does not exist
    */
   public void deleteReport(String id) {
-    if (id == null || id.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.DELETE, 400)));
-    }
-
-    Report report = dbService.findById("reports", id, Report.class);
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.DELETE, 404)));
-    }
+    Report report = findReportById(id, ErrorAction.DELETE);
 
     dbService.delete("reports", report.getId(), report.getRev());
 
@@ -307,11 +270,7 @@ public class ReportService {
    * @throws NotFoundException if the report does not exist
    */
   public String updateReport(UpdateReportRequestDTO request, List<MultipartFile> files) {
-    Report report = dbService.findById("reports", request.id(), Report.class);
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 404)));
-    }
+    Report report = findReportById(request.id(), ErrorAction.UPDATE);
 
     log.debug("Starting report update");
 
@@ -386,11 +345,7 @@ public class ReportService {
       description = "Keine Beschreibung";
     }
 
-    Report report = dbService.findById("reports", request.id(), Report.class);
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.TEXT_EDITOR.createCode(ErrorAction.UPDATE, 404)));
-    }
+    Report report = findReportById(request.id(), ErrorAction.UPDATE);
 
     report.setDescription(description);
     report.setRev(request.rev());
@@ -419,16 +374,7 @@ public class ReportService {
    */
   public String updateAttachments(
       UpdateDocumentAttachmentsDTO request, List<MultipartFile> files, String reportId) {
-    if (reportId == null || reportId.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 400)));
-    }
-
-    Report report = dbService.findById("reports", reportId, Report.class);
-    if (report == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UPDATE, 404)));
-    }
+    Report report = findReportById(reportId, ErrorAction.UPDATE);
 
     if (!report.getRev().equals(request.rev())) {
       throw new BadRequestException(
@@ -440,7 +386,7 @@ public class ReportService {
 
     List<File> filesToPurgeFromDisk =
         oldAttachments.stream()
-            .filter(file -> !request.attachments().contains(file.getOriginalName()))
+            .filter(file -> !request.attachments().contains(file.getId()))
             .toList();
 
     List<File> newlyWrittenFilesToDisk = new ArrayList<>();
@@ -455,17 +401,17 @@ public class ReportService {
       List<File> finalAttachmentList = new ArrayList<>();
 
       if (request.attachments() != null && !request.attachments().isEmpty()) {
-        for (String name : request.attachments()) {
+        for (String id : request.attachments()) {
           File matchedFile =
               oldAttachments.stream()
-                  .filter(old -> old.getOriginalName().equals(name))
+                  .filter(old -> old.getId().equals(id))
                   .findFirst()
                   .orElse(null);
 
           if (matchedFile == null) {
             matchedFile =
                 newlyWrittenFilesToDisk.stream()
-                    .filter(newFile -> newFile.getOriginalName().equals(name))
+                    .filter(newFile -> newFile.getId().equals(id))
                     .findFirst()
                     .orElse(null);
           }
@@ -528,16 +474,26 @@ public class ReportService {
   }
 
   /**
-   * Streams report attachments as a ZIP archive.
+   * Retrieves a {@link Report} document by its unique identifier from the reports database.
    *
-   * <p>Creates a ZIP archive directly on the provided output stream without loading all files into
-   * memory.
-   *
-   * @param files files to include in the archive
-   * @param out output stream receiving the ZIP data
-   * @throws RuntimeException if archive creation fails
+   * @param id the unique identifier of the report; must not be {@code null} or blank
+   * @param action the {@link ErrorAction} context used to generate specific error codes if lookup
+   *     fails
+   * @return the retrieved {@link Report} instance
+   * @throws BadRequestException if {@code id} is {@code null} or blank
+   * @throws NotFoundException if no {@link Report} document is found matching the provided {@code
+   *     id}
    */
-  public void streamFilesAsZip(List<File> files, OutputStream out) {
-    fileUtils.streamFilesAsZip(files, editorService.getEditorAssetsDir(), out, ErrorDomain.REPORT);
+  public Report findReportById(String id, ErrorAction action) {
+    if (id == null || id.isBlank()) {
+      throw new BadRequestException(String.valueOf(ErrorDomain.REPORT.createCode(action, 400)));
+    }
+
+    Report report = dbService.findById("reports", id, Report.class);
+    if (report == null) {
+      throw new NotFoundException(String.valueOf(ErrorDomain.REPORT.createCode(action, 404)));
+    }
+
+    return report;
   }
 }

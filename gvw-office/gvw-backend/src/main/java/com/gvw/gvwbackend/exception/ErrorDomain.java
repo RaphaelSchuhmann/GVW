@@ -42,7 +42,8 @@ public enum ErrorDomain {
   CHANGELOG(12),
   FILE_VALIDATOR(13), // Currently only used by hard-coded file validation responses
   TEXT_EDITOR(14),
-  HELP_CENTER(15);
+  HELP_CENTER(15),
+  FILE_SERVICE(16);
 
   private final int id;
 

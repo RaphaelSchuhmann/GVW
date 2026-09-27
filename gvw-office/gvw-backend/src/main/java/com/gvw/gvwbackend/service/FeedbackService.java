@@ -11,8 +11,6 @@ import com.gvw.gvwbackend.model.UserFeedback;
 import com.gvw.gvwbackend.model.UserReportMetaData;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -29,7 +27,6 @@ public class FeedbackService {
   private final DbService dbService;
   private final SseService sseService;
   private final UserService userService;
-  private static final Logger log = LoggerFactory.getLogger(FeedbackService.class);
 
   public FeedbackService(DbService dbService, SseService sseService, UserService userService) {
     this.dbService = dbService;

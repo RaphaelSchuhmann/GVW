@@ -10,7 +10,6 @@ import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.Score;
 import com.gvw.gvwbackend.util.FileUtils;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -175,15 +174,6 @@ class LibraryServiceTest {
   }
 
   @Test
-  void streamFilesAsZip_Success() {
-    OutputStream out = mock(OutputStream.class);
-
-    assertDoesNotThrow(() -> libraryService.streamFilesAsZip(score.getFiles(), out));
-    verify(fileUtils)
-        .streamFilesAsZip(eq(score.getFiles()), anyString(), eq(out), eq(ErrorDomain.LIBRARY));
-  }
-
-  @Test
   void updateScore_Success() {
     UpdateScoreRequestDTO request =
         new UpdateScoreRequestDTO(
@@ -198,7 +188,7 @@ class LibraryServiceTest {
     when(dbService.findById("library", "score-1", Score.class)).thenReturn(score);
     when(dbService.update("library", "score-1", score)).thenReturn("2-def");
 
-    String result = libraryService.updateScore(request, null, null);
+    String result = libraryService.updateScore(request, List.of(), List.of());
 
     assertEquals("2-def", result);
     verify(sseService).sendRefresh("SCORES");

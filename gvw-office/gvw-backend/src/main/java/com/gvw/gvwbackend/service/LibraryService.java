@@ -2,14 +2,17 @@ package com.gvw.gvwbackend.service;
 
 import com.gvw.gvwbackend.dto.request.AddScoreRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateScoreRequestDTO;
+import com.gvw.gvwbackend.dto.response.FileDTO;
 import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.Score;
 import com.gvw.gvwbackend.util.FileUtils;
-import java.io.OutputStream;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
  * <p>Handles score CRUD operations, file storage, ZIP streaming, duplicate detection, and
  * synchronization notifications via SSE.
  */
+@Getter
 @Service
 public class LibraryService {
   private static final Logger log = LoggerFactory.getLogger(LibraryService.class);
@@ -79,16 +83,7 @@ public class LibraryService {
    * @throws NotFoundException if the score does not exist
    */
   public FullScoreResponseDTO getFullScore(String id) {
-    if (id == null || id.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.READ_ONE, 400)));
-    }
-
-    Score score = dbService.findById("library", id, Score.class);
-    if (score == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.READ_ONE, 404)));
-    }
+    Score score = findScoreById(id, ErrorAction.READ_ONE);
 
     return new FullScoreResponseDTO(
         score.getId(),
@@ -100,7 +95,9 @@ public class LibraryService {
         score.getVoices(),
         score.getVoiceCount(),
         score.getFiles() != null
-            ? score.getFiles().stream().map(File::getOriginalName).toList()
+            ? score.getFiles().stream()
+                .map(m -> new FileDTO(m.getOriginalName(), m.getId()))
+                .toList()
             : List.of());
   }
 
@@ -115,16 +112,7 @@ public class LibraryService {
    * @throws NotFoundException if no score exists with the given identifier
    */
   public void checkScore(String id) {
-    if (id == null || id.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.CHECK, 400)));
-    }
-
-    Score score = dbService.findById("library", id, Score.class);
-    if (score == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.CHECK, 404)));
-    }
+    findScoreById(id, ErrorAction.CHECK);
   }
 
   /**
@@ -190,16 +178,7 @@ public class LibraryService {
    * @throws NotFoundException if the score does not exist
    */
   public void deleteScore(String id) {
-    if (id == null || id.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.DELETE, 400)));
-    }
-
-    Score score = dbService.findById("library", id, Score.class);
-    if (score == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.DELETE, 404)));
-    }
+    Score score = findScoreById(id, ErrorAction.DELETE);
 
     if (score.getFiles() != null) {
       for (File file : score.getFiles()) {
@@ -213,19 +192,6 @@ public class LibraryService {
   }
 
   /**
-   * Streams multiple score files as a ZIP archive.
-   *
-   * <p>Only files existing on disk are included. Missing files are skipped and logged.
-   *
-   * @param files metadata of files that should be included
-   * @param out output stream receiving the generated ZIP archive
-   * @throws RuntimeException if ZIP creation fails
-   */
-  public void streamFilesAsZip(List<File> files, OutputStream out) {
-    fileUtils.streamFilesAsZip(files, scoresDir, out, ErrorDomain.LIBRARY);
-  }
-
-  /**
    * Updates an existing score entry.
    *
    * <p>Supports metadata changes, file additions, and file removals. Newly uploaded files are
@@ -233,7 +199,7 @@ public class LibraryService {
    *
    * @param request updated score information
    * @param newFiles files to add to the score
-   * @param requestRemovedFiles names of files to remove
+   * @param requestRemovedFiles ids of files to remove
    * @return new database revision identifier
    * @throws NotFoundException if the score does not exist
    * @throws RuntimeException if updating fails
@@ -242,11 +208,7 @@ public class LibraryService {
       UpdateScoreRequestDTO request,
       List<MultipartFile> newFiles,
       List<String> requestRemovedFiles) {
-    Score score = dbService.findById("library", request.id(), Score.class);
-    if (score == null) {
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 404)));
-    }
+    Score score = findScoreById(request.id(), ErrorAction.UPDATE);
 
     List<File> newlyStoredFiles = new ArrayList<>();
     List<File> filesToPhysicallyDelete = new ArrayList<>();
@@ -255,11 +217,11 @@ public class LibraryService {
         new ArrayList<>(score.getFiles() != null ? score.getFiles() : List.of());
 
     try {
-      if (requestRemovedFiles != null && !requestRemovedFiles.isEmpty()) {
+      if (!requestRemovedFiles.isEmpty()) {
         Iterator<File> iterator = updatedFileList.iterator();
         while (iterator.hasNext()) {
           File file = iterator.next();
-          if (requestRemovedFiles.contains(file.getOriginalName())) {
+          if (requestRemovedFiles.contains(file.getId())) {
             filesToPhysicallyDelete.add(file);
             iterator.remove();
           }
@@ -313,6 +275,30 @@ public class LibraryService {
       throw new RuntimeException(
           String.valueOf(ErrorDomain.LIBRARY.createCode(ErrorAction.UPDATE, 500)), e);
     }
+  }
+
+  /**
+   * Retrieves a {@link Score} document by its unique identifier from the library database.
+   *
+   * @param id the unique identifier of the score; must not be {@code null} or blank
+   * @param action the {@link ErrorAction} context used to generate specific error codes if lookup
+   *     fails
+   * @return the retrieved {@link Score} instance
+   * @throws BadRequestException if {@code id} is {@code null} or blank
+   * @throws NotFoundException if no {@link Score} document is found matching the provided {@code
+   *     id}
+   */
+  public Score findScoreById(String id, ErrorAction action) {
+    if (id == null || id.isBlank()) {
+      throw new BadRequestException(String.valueOf(ErrorDomain.LIBRARY.createCode(action, 400)));
+    }
+
+    Score score = dbService.findById("library", id, Score.class);
+    if (score == null) {
+      throw new NotFoundException(String.valueOf(ErrorDomain.LIBRARY.createCode(action, 404)));
+    }
+
+    return score;
   }
 
   /**

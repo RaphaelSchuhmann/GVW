@@ -9,7 +9,6 @@ import com.gvw.gvwbackend.dto.response.ReportResponseDTO;
 import com.gvw.gvwbackend.dto.response.ReportSearchResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
-import com.gvw.gvwbackend.model.Report;
 import com.gvw.gvwbackend.service.DbService;
 import com.gvw.gvwbackend.service.ReportService;
 import com.gvw.gvwbackend.util.FileValidator;
@@ -20,7 +19,6 @@ import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 @RestController
 @RequestMapping("/report")
@@ -141,24 +139,5 @@ public class ReportController {
 
     String rev = reportService.updateAttachments(request, files, reportId);
     return Map.of("rev", rev);
-  }
-
-  @GetMapping("/{id}/attachments")
-  public ResponseEntity<StreamingResponseBody> downloadScoreFiles(@PathVariable String id) {
-    Report report = dbService.findById("reports", id, Report.class);
-    if (report == null)
-      throw new NotFoundException(
-          String.valueOf(ErrorDomain.REPORT.createCode(ErrorAction.UTILITY, 404)));
-    if (report.getAttachments() == null || report.getAttachments().isEmpty()) {
-      return ResponseEntity.noContent().build();
-    }
-
-    String sanitizedTitle = report.getTitle().replaceAll("[\"\r\n]", "_");
-
-    return ResponseEntity.ok()
-        .header(HttpHeaders.CONTENT_TYPE, "application/zip")
-        .header(
-            HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + sanitizedTitle + ".zip\"")
-        .body(out -> reportService.streamFilesAsZip(report.getAttachments(), out));
   }
 }
