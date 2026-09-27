@@ -299,7 +299,7 @@
 
                     <FileSelector title="Noten"
                                   validTypes={["pdf", "gp", "gp5", "gp3", "gp4", "gpx", "cap", "capx"]} page="library"
-                                  bind:files={scoreData.files} disabled={true} />
+                                  bind:files={scoreData.files} allowEditing={false} documentId={scoreData.id} />
                 {:else}
                     <Input title="Noten ID" placeholder="T01" bind:value={draft.scoreId} />
                     <Input title="Titel" placeholder="The Final Countdown" bind:value={draft.title} />
@@ -329,7 +329,7 @@
 
                     <FileSelector title="Noten"
                                   validTypes={["pdf", "gp", "gp5", "gp3", "gp4", "gpx", "cap", "capx"]} page="library"
-                                  bind:files={draft.files} />
+                                  bind:files={draft.files} allowEditing={true} />
                 {/if}
 
                 {#if viewport.width > 900 && !isEditing && (user.role === "board_member" || user.role === "admin" || user.role === "librarian" || user.role === "conductor")}

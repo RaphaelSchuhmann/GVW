@@ -253,7 +253,7 @@
 
     <FileSelector title="Noten" marginTop="5"
                   validTypes={["pdf", "gp", "gp5", "gp3", "gp4", "gpx", "cap", "capx"]} page="library"
-                  bind:files={scoreInput.files} />
+                  bind:files={scoreInput.files} allowEditing={true} fileDownloadDisabled={true} />
 
     <div class="w-full flex items-center gap-4 mt-5">
         <Button type="secondary" onclick={hideAddScoreModal}>Abbrechen</Button>

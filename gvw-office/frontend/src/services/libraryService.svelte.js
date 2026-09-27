@@ -4,7 +4,7 @@ import {
     apiAddScore,
     apiCheckScore,
     apiDeleteScore,
-    apiDownloadScoreFiles, apiGetFullScore,
+    apiGetFullScore,
     apiUpdateScore
 } from "../api/apiLibrary.svelte";
 import { normalizeResponse } from "../api/http.svelte";
@@ -12,6 +12,7 @@ import { handleGenericErrors, handleGlobalApiError } from "../api/globalErrorHan
 import { addToast } from "../stores/toasts.svelte";
 import { viewport } from "../stores/viewport.svelte";
 import { triggerFileDownload } from "./utils.js";
+import { apiStreamFilesAsZip } from "../api/apiFiles.svelte.js";
 
 export const voiceMap = {
     "t": "Tenor",
@@ -276,13 +277,14 @@ export async function downloadScoreFiles(id) {
     isFetching.downloadScore = true;
 
     try {
-        const { resp, body } = await apiDownloadScoreFiles(id);
+        const { resp, body } = await apiStreamFilesAsZip("library", id);
         const normalizedResponse = normalizeResponse(resp);
 
         if (handleGlobalApiError(normalizedResponse)) return;
 
+        // TODO: Replace scoreName with name in body
         const scoreName = libraryStore.raw.find(s => s.id === id)?.title ?? "Noten";
-        triggerFileDownload(body, scoreName);
+        triggerFileDownload(body, `${scoreName}.zip`);
 
         addToast({
             title: "Download erfolgreich",
@@ -360,8 +362,13 @@ export async function updateScore(score) {
         const formData = prepareScoreFormData(score);
 
         const newFiles = score.files.filter(f => f instanceof File);
-        const existingNames = score.files.filter(f => typeof f === "string");
-        const removedFiles = score.originalFiles.filter(f => !existingNames.includes(f));
+        const existingNames = score.files
+            .filter(f => !newFiles.includes(f))
+            .map(f => typeof f === "string" ? f : f.name);
+
+        const removedFiles = score.originalFiles.filter(
+            f => !existingNames.includes(f)
+        ).map(f => f.id);
 
         formData.append("removedFiles", removedFiles);
         newFiles.forEach(f => formData.append("files", f, f.name));

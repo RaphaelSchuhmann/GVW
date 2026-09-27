@@ -10,6 +10,8 @@ import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.Score;
 import com.gvw.gvwbackend.util.FileUtils;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,7 +199,7 @@ public class LibraryService {
    *
    * @param request updated score information
    * @param newFiles files to add to the score
-   * @param requestRemovedFiles names of files to remove
+   * @param requestRemovedFiles ids of files to remove
    * @return new database revision identifier
    * @throws NotFoundException if the score does not exist
    * @throws RuntimeException if updating fails
@@ -215,11 +217,11 @@ public class LibraryService {
         new ArrayList<>(score.getFiles() != null ? score.getFiles() : List.of());
 
     try {
-      if (requestRemovedFiles != null && !requestRemovedFiles.isEmpty()) {
+      if (!requestRemovedFiles.isEmpty()) {
         Iterator<File> iterator = updatedFileList.iterator();
         while (iterator.hasNext()) {
           File file = iterator.next();
-          if (requestRemovedFiles.contains(file.getOriginalName())) {
+          if (requestRemovedFiles.contains(file.getId())) {
             filesToPhysicallyDelete.add(file);
             iterator.remove();
           }

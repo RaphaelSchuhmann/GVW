@@ -182,7 +182,7 @@
         <div class="flex items-start w-full h-full overflow-hidden gap-4 p-2">
             <TextEditor bind:this={editorRef} isEditing={isEditing} itemData={reportData} draft={draft} page="reportEditor" />
             <InfoViewer bind:this={infoViewerRef} bind:data={reportData} categoryMap={reportTypeMap}
-                        updateDescription={updateDescription} updateAttachments={updateAttachments} enableAttachments={true} />
+                        updateDescription={updateDescription} updateAttachments={updateAttachments} enableAttachments={true} page="report" />
         </div>
     </div>
 </main>
