@@ -217,7 +217,7 @@
                             <Spinner width="2/5" />
                         </div>
                     {/if}
-                    <FileSelector bind:files={workingState} disabled={isSavingAttachments} wrapContent={true}
+                    <FileSelector bind:files={workingState} disabled={isSavingAttachments} allowEditing={!isSavingAttachments} wrapContent={true}
                         onChange={saveAttachmentChanges} page={page}
                     />
                 </div>

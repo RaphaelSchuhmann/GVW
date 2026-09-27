@@ -299,7 +299,7 @@ export async function updateAttachments(reportId, rev, attachments) {
             if (item instanceof File) {
                 formData.append("files", item, item.name);
             } else {
-                attachmentIds.push(item);
+                attachmentIds.push(item.id);
             }
         }
 

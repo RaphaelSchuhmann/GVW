@@ -386,7 +386,7 @@ public class ReportService {
 
     List<File> filesToPurgeFromDisk =
         oldAttachments.stream()
-            .filter(file -> !request.attachments().contains(file.getOriginalName()))
+            .filter(file -> !request.attachments().contains(file.getId()))
             .toList();
 
     List<File> newlyWrittenFilesToDisk = new ArrayList<>();
@@ -401,17 +401,17 @@ public class ReportService {
       List<File> finalAttachmentList = new ArrayList<>();
 
       if (request.attachments() != null && !request.attachments().isEmpty()) {
-        for (String name : request.attachments()) {
+        for (String id : request.attachments()) {
           File matchedFile =
               oldAttachments.stream()
-                  .filter(old -> old.getOriginalName().equals(name))
+                  .filter(old -> old.getId().equals(id))
                   .findFirst()
                   .orElse(null);
 
           if (matchedFile == null) {
             matchedFile =
                 newlyWrittenFilesToDisk.stream()
-                    .filter(newFile -> newFile.getOriginalName().equals(name))
+                    .filter(newFile -> newFile.getId().equals(id))
                     .findFirst()
                     .orElse(null);
           }
