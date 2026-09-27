@@ -297,7 +297,7 @@
                         {/if}
                     </div>
 
-                    <FileSelector title="Noten" page="library"
+                    <FileSelector title="Noten" page="library" wrapContent={true}
                                   bind:files={scoreData.files} allowEditing={false} documentId={scoreData.id} />
                 {:else}
                     <Input title="Noten ID" placeholder="T01" bind:value={draft.scoreId} />
