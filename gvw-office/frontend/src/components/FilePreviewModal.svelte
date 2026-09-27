@@ -4,6 +4,7 @@
     import { viewport } from "../stores/viewport.svelte.js";
     import ImagePreview from "./ImagePreview.svelte";
     import AudioPlayer from "./AudioPlayer.svelte";
+    import GuitarProViewer from "./GuitarProViewer.svelte";
 
     let {
         isMobile = viewport.isMobile
@@ -70,5 +71,7 @@
         <ImagePreview filename={file.title} blob={file.blob} />
     {:else if type === "audio"}
         <AudioPlayer filename={file.title} blob={file.blob} />
+    {:else if type === "at"}
+        <GuitarProViewer filename={file.title} blob={file.blob} />
     {/if}
 </Modal>

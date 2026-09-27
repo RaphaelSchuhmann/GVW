@@ -15,6 +15,7 @@
         displayTop = false,
         doCapitalizeWords = true,
         showDropshadow = false,
+        fillWidth = true,
         ...restProps
     } = $props();
 
@@ -74,7 +75,7 @@
 </script>
 
 <div
-    class={`flex flex-col items-start w-full ${marginMap[marginTop]} gap-1`}
+    class={`flex flex-col items-start ${fillWidth ? 'w-full' : 'w-auto'} ${marginMap[marginTop]} gap-1`}
     bind:this={dropdownRef}
     {...restProps}
 >

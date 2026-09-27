@@ -173,15 +173,6 @@ class LibraryServiceTest {
     assertThrows(NotFoundException.class, () -> libraryService.deleteScore("non-existent"));
   }
 
-  //  @Test
-  //  void streamFilesAsZip_Success() {
-  //    OutputStream out = mock(OutputStream.class);
-  //
-  //    assertDoesNotThrow(() -> libraryService.streamFilesAsZip(score.getFiles(), out));
-  //    verify(fileUtils)
-  //        .streamFilesAsZip(eq(score.getFiles()), anyString(), eq(out), eq(ErrorDomain.LIBRARY));
-  //  }
-
   @Test
   void updateScore_Success() {
     UpdateScoreRequestDTO request =
@@ -197,7 +188,7 @@ class LibraryServiceTest {
     when(dbService.findById("library", "score-1", Score.class)).thenReturn(score);
     when(dbService.update("library", "score-1", score)).thenReturn("2-def");
 
-    String result = libraryService.updateScore(request, null, null);
+    String result = libraryService.updateScore(request, List.of(), List.of());
 
     assertEquals("2-def", result);
     verify(sseService).sendRefresh("SCORES");

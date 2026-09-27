@@ -1,7 +1,6 @@
 <script>
     import Card from "./Card.svelte";
     import { triggerFileDownload } from "../services/utils.js";
-    import Button from "./Button.svelte";
     import Slider from "./Slider.svelte";
 
     let {
@@ -37,11 +36,25 @@
             currentTime = 0;
         });
 
+        window.addEventListener("keydown", handleKeyDown);
+
         return () => {
             audio.pause();
             URL.revokeObjectURL(url);
+            window.removeEventListener("keydown", handleKeyDown);
         };
     });
+
+    function handleKeyDown(e) {
+        console.log(e.key);
+        if (e.key === " ") {
+            togglePlay();
+        } else if (e.key === "ArrowRight") {
+            forward();
+        } else if (e.key === "ArrowLeft") {
+            rewind();
+        }
+    }
 
     function setCurrentPlaybackPosition(val) {
         audio.currentTime = val;
@@ -54,7 +67,7 @@
         return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
     }
 
-    async function toggleAudio() {
+    async function togglePlay() {
         if (isPlaying) {
             audio.pause();
             isPlaying = false;
@@ -88,7 +101,8 @@
         </div>
         <div class="flex items-center justify-start w-full">
             <button class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-primary-hover rounded-2 bg-gv-primary text-white"
-                    onclick={toggleAudio}>
+                    tabindex="-1"
+                    onclick={togglePlay}>
                 <span class="material-symbols-rounded text-icon-dt-4">{isPlaying ? "pause" : "play_arrow"}</span>
             </button>
             <div class="flex items-center gap-2 ml-auto">

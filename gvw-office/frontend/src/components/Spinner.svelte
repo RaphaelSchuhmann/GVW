@@ -9,19 +9,24 @@
         light = false,
         width = "3/5",
         height = "",
+        simple = false,
         ...restProps
     } = $props();
 </script>
 
-<div class="flex flex-col items-center gap-5 w-1/5">
+{#if simple}
     <img src={light ? Spinner_SVG_Light : Spinner_SVG} alt="spinner_svg" class={`animate-spin ${widthMap[width]} ${heightMap[height]}`} />
-    {#if title}
-        <div class="flex flex-col items-center">
-            <p class="text-dt-1 text-gv-dark-turquoise text-center font-semibold">{title}</p>
+{:else}
+    <div class="flex flex-col items-center gap-5 w-1/5">
+        <img src={light ? Spinner_SVG_Light : Spinner_SVG} alt="spinner_svg" class={`animate-spin ${widthMap[width]} ${heightMap[height]}`} />
+        {#if title}
+            <div class="flex flex-col items-center">
+                <p class="text-dt-1 text-gv-dark-turquoise text-center font-semibold">{title}</p>
 
-            {#if subTitle}
-                <p class="text-dt-3 text-gv-light-text text-center">{subTitle}</p>
-            {/if}
-        </div>
-    {/if}
-</div>
+                {#if subTitle}
+                    <p class="text-dt-3 text-gv-light-text text-center">{subTitle}</p>
+                {/if}
+            </div>
+        {/if}
+    </div>
+{/if}
