@@ -13,6 +13,7 @@ import { addToast } from "../stores/toasts.svelte";
 import { viewport } from "../stores/viewport.svelte";
 import { triggerFileDownload } from "./utils.js";
 import { apiStreamFilesAsZip } from "../api/apiFiles.svelte.js";
+import { extractFileNameFromContentDisposition } from "./fileService.svelte.js";
 
 export const voiceMap = {
     "t": "Tenor",
@@ -282,9 +283,15 @@ export async function downloadScoreFiles(id) {
 
         if (handleGlobalApiError(normalizedResponse)) return;
 
-        // TODO: Replace scoreName with name in body
-        const scoreName = libraryStore.raw.find(s => s.id === id)?.title ?? "Noten";
-        triggerFileDownload(body, `${scoreName}.zip`);
+        const contentDisposition = resp.headers.get("Content-Disposition");
+
+        let filename = extractFileNameFromContentDisposition(contentDisposition);
+
+        if (!filename.endsWith(".zip")) {
+            filename = libraryStore.raw.find(s => s.id === id)?.title ?? "Noten.zip";
+        }
+
+        triggerFileDownload(body, filename);
 
         addToast({
             title: "Download erfolgreich",
@@ -363,11 +370,11 @@ export async function updateScore(score) {
 
         const newFiles = score.files.filter(f => f instanceof File);
 
-        const existingFiles = score.files
+        const existingFiles = new Set(score.files
             .filter(f => !newFiles.includes(f))
-            .map(f => f.id);
+            .map(f => f.id));
 
-        const removedFiles = score.originalFiles.filter(f => !existingFiles.includes(f.id)).map(f => f.id);
+        const removedFiles = score.originalFiles.filter(f => !existingFiles.has(f.id)).map(f => f.id);
 
         formData.append("removedFiles", removedFiles);
         newFiles.forEach(f => formData.append("files", f, f.name));

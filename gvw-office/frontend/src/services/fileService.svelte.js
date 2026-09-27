@@ -53,7 +53,7 @@ export async function filePreviewable(service, documentId, fileId) {
     };
 }
 
-function extractFileNameFromContentDisposition(contentDisposition) {
+export function extractFileNameFromContentDisposition(contentDisposition) {
     if (!contentDisposition) return "";
 
     const match = contentDisposition.match(/filename="(.*?)"/);
