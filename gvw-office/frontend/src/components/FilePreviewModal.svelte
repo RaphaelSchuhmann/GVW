@@ -34,8 +34,6 @@
             modalRef.hideModal();
         }
 
-        console.log("here1");
-
         if (type === "PDF") {
             handlePDFPreview(file.blob, file.title);
             modalRef.hideModal();
@@ -46,12 +44,11 @@
         if (!blob) return;
 
         const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-        const url = URL.createObjectURL(pdfBlob);
+        const fileName = name.endsWith(".pdf") ? name : name + ".pdf";
 
-        const encodedName = encodeURIComponent(name);
-        const blobWithFilename = url + `#filename=${encodedName}`;
+        const url = URL.createObjectURL(pdfBlob) + "#" + encodeURIComponent(fileName);
 
-        window.open(`/pdfjs/web/viewer.html?file=${encodeURIComponent(blobWithFilename)}`, "_blank");
+        window.open(`/pdfjs/web/viewer.html?file=${encodeURIComponent(url)}`, "_blank");
 
         urlObjects.push(url);
     }

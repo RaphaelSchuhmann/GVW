@@ -84,7 +84,7 @@
         }
 
         const fileObject = {
-            title: file.title,
+            title: file.name,
             extension: previewableFileObject.extension,
             blob: previewableFileObject.blob,
         }
