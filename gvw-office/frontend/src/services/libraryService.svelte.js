@@ -363,11 +363,11 @@ export async function updateScore(score) {
 
         const newFiles = score.files.filter(f => f instanceof File);
 
-        const existingNames = score.files
+        const existingFiles = score.files
             .filter(f => !newFiles.includes(f))
             .map(f => f.id);
 
-        const removedFiles = score.originalFiles.filter(f => !existingNames.includes(f.id));
+        const removedFiles = score.originalFiles.filter(f => !existingFiles.includes(f.id)).map(f => f.id);
 
         formData.append("removedFiles", removedFiles);
         newFiles.forEach(f => formData.append("files", f, f.name));

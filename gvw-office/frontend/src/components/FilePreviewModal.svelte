@@ -2,6 +2,7 @@
     import Modal from "./Modal.svelte";
     import { previewTypesMap, supportedPreviewTypes } from "../services/fileService.svelte.js";
     import { viewport } from "../stores/viewport.svelte.js";
+    import ImagePreview from "./ImagePreview.svelte";
 
     let {
         isMobile = viewport.isMobile
@@ -22,7 +23,7 @@
     export function handlePreview(fileObj) {
         if (!modalRef) return;
 
-        if (!fileObj || !fileObj.title || !fileObj.extension ||
+        if (!fileObj || !fileObj.isPreviewable || !fileObj.title || !fileObj.extension ||
             !fileObj.blob || !supportedPreviewTypes.has(fileObj.extension)) {
             modalRef.hideModal();
         }
@@ -63,5 +64,10 @@
 </script>
 
 <Modal bind:this={modalRef} {isMobile} hideSubTitle={true}
-       title="Dateivorschau" width="auto" height="auto">
+       title="Dateivorschau" width="1/2" height="auto">
+    {#if type === "img"}
+        <ImagePreview filename={file.title} blob={file.blob} />
+    {:else if type === "audio"}
+
+    {/if}
 </Modal>

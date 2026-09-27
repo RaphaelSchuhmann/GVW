@@ -84,6 +84,7 @@
         }
 
         const fileObject = {
+            isPreviewable: previewableFileObject.isPreviewable,
             title: file.name,
             extension: previewableFileObject.extension,
             blob: previewableFileObject.blob,

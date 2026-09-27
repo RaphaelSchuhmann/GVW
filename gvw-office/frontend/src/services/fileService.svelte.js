@@ -46,7 +46,7 @@ export async function filePreviewable(service, documentId, fileId) {
     const extension = dotIndex === -1 ? "" : filename.substring(dotIndex + 1);
 
     return {
-        isPreviewable: extension && supportedPreviewTypes.has(extension),
+        isPreviewable: Boolean(extension) && supportedPreviewTypes.has(extension),
         extension: extension,
         filename: filename,
         blob: blob
