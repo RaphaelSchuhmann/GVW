@@ -283,17 +283,19 @@
                         {#if originalSelectedChoirType === "Männerchor"}
                             <ChipPicker title="Stimmen" options={["1. Tenor", "2. Tenor", "1. Bass", "2. Bass"]}
                                         useLock={true}
+                                        bind:selectedOptions={originalSelectedChips}
                                         lockTooltip="Bitte wählen Sie zuerst alle Stimmen ab, um den Chortyp zu ändern."
                                         disabled={true} />
                         {:else}
                             <ChipPicker title="Stimmen" options={["Tenor", "Bass", "Sopran", "Alt"]} useLock={true}
+                                        bind:selectedOptions={originalSelectedChips}
                                         lockTooltip="Bitte wählen Sie zuerst alle Stimmen ab, um den Chortyp zu ändern."
                                         disabled={true} />
                         {/if}
                     </div>
 
                     <FileSelector title="Noten" page="library"
-                                  bind:files={scoreData.files} allowEditing={false} />
+                                  bind:files={scoreData.files} allowEditing={false} documentId={scoreData.id} />
                 {:else}
                     <Input title="Noten ID" placeholder="T01" bind:value={draft.scoreId} />
                     <Input title="Titel" placeholder="The Final Countdown" bind:value={draft.title} />

@@ -3,6 +3,7 @@
     import { previewTypesMap, supportedPreviewTypes } from "../services/fileService.svelte.js";
     import { viewport } from "../stores/viewport.svelte.js";
     import ImagePreview from "./ImagePreview.svelte";
+    import AudioPlayer from "./AudioPlayer.svelte";
 
     let {
         isMobile = viewport.isMobile
@@ -68,6 +69,6 @@
     {#if type === "img"}
         <ImagePreview filename={file.title} blob={file.blob} />
     {:else if type === "audio"}
-
+        <AudioPlayer filename={file.title} blob={file.blob} />
     {/if}
 </Modal>

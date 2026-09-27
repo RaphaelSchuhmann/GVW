@@ -23,7 +23,7 @@
 <Card>
     <div class="flex flex-col w-full items-center justify-start gap-2 overflow-y-auto">
         <div class="flex items-center justify-start w-full">
-            <p class="text-gv-dark-text text-dt-4 font-medium w-full text-nowrap truncate">{filename}</p>
+            <p class="text-gv-dark-text text-dt-4 max-[1000px]:text-dt-5 font-medium w-full text-nowrap truncate">{filename}</p>
             {#if downloadable}
                 <button
                     class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-hover-effect rounded-2"
