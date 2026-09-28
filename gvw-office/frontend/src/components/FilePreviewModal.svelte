@@ -51,7 +51,7 @@
 
         const url = URL.createObjectURL(pdfBlob) + "#" + encodeURIComponent(fileName);
 
-        window.open(`/pdf/viewer.html?file=${encodeURIComponent(url)}`, "_blank");
+        window.open(`/pdf/web/viewer.html?file=${encodeURIComponent(url)}`, "_blank");
 
         urlObjects.push(url);
     }
