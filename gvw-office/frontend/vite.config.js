@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [
     svelte(),
     tailwindcss(),
-    alphaTab(),
+    alphaTab({
+      assetOutputDir: 'public/alphatab',
+    }),
   ],
   optimizeDeps: {
     exclude: ['@coderline/alphatab']
