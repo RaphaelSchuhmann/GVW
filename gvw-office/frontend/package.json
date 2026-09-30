@@ -27,6 +27,7 @@
     "dompurify": "^3.4.13",
     "event-source-polyfill": "^1.0.31",
     "fuse.js": "^7.1.0",
+    "pdfjs-dist": "^6.3.289",
     "svelte-spa-router": "^4.0.1"
   }
 }
