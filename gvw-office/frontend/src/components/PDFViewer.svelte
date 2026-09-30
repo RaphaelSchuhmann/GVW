@@ -1,9 +1,11 @@
 <script>
-    import * as pdfjs from "pdfjs-dist";
-    import { tick } from 'svelte';
+    import { tick } from "svelte";
     import { triggerFileDownload } from "../services/utils.js";
 
-    import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+    import * as pdfjs from "pdfjs-dist";
+    import pdfWorker from "pdfjs-dist/build/pdf.worker.mjs?url";
+    import Spinner from "./Spinner.svelte";
+
     pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
     let {
@@ -13,12 +15,15 @@
 
     const downloadable = $state(filename.includes("."));
 
+    let loading = $state(true);
+    const renderedPages = new Set();
+
     let container = $state(null);
-    let canvasRefs = $state([]);
     let numPages = $state(0);
     let pdfDoc = $state(null);
 
     let resizeTimeout;
+    let resizeObserver;
 
     $effect(() => {
         if (blob && container) {
@@ -26,30 +31,50 @@
         }
     });
 
+    $effect(() => {
+        if (!container || !pdfDoc) return;
+
+        resizeObserver = new ResizeObserver(() => {
+            clearTimeout(resizeTimeout);
+
+            resizeTimeout = setTimeout(() => {
+                if (pdfDoc && renderedPages > 0) rerenderVisiblePages();
+            }, 150);
+        });
+
+        resizeObserver.observe(container);
+
+        return () => {
+            resizeObserver.disconnect();
+            clearTimeout(resizeTimeout);
+        };
+    });
+
     async function loadAndRenderPdf(pdf) {
+        loading = true;
+
         const arrayBuffer = await pdf.arrayBuffer();
 
         pdfDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
         numPages = pdfDoc.numPages;
 
-        canvasRefs = new Array(numPages).fill(null);
-
+        loading = false;
         await tick();
 
-        await renderAllPages();
+        setupPageObserver();
     }
 
-    async function renderAllPages() {
-        if (!pdfDoc || !container) return;
-
-        for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+    async function rerenderVisiblePages() {
+        for (const pageNum of renderedPages) {
             await renderPage(pageNum);
         }
     }
 
     async function renderPage(pageNum) {
         const page = await pdfDoc.getPage(pageNum);
-        const canvas = canvasRefs[pageNum - 1];
+        const canvas = container.querySelector(
+            `canvas[data-page="${pageNum}"]`
+        );
         if (!canvas) return;
 
         const ctx = canvas.getContext("2d");
@@ -75,15 +100,29 @@
         await page.render({ canvasContext: ctx, transform, viewport }).promise;
     }
 
-    function handleResize() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            if (pdfDoc) renderAllPages();
-        }, 150);
+    function setupPageObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+
+                const pageNum = Number(entry.target.dataset.page);
+
+                if (renderedPages.has(pageNum)) continue;
+
+                renderedPages.add(pageNum);
+                renderPage(pageNum);
+            }
+        }, {
+            rootMargin: "1000px 0px"
+        });
+
+        const canvases = container.querySelectorAll("canvas[data-page]");
+
+        for (const canvas of canvases) {
+            observer.observe(canvas);
+        }
     }
 </script>
-
-<svelte:window onresize={handleResize} />
 
 <div class="flex flex-col items-center justify-start gap-2 w-full">
     <div class="flex items-center w-full justify-start">
@@ -97,13 +136,15 @@
             </button>
         {/if}
     </div>
-    <div class="flex flex-col items-center w-full justify-start" bind:this={container}>
-        {#if pdfDoc}
-            {#each Array(numPages) as _, i}
-                <canvas bind:this={canvasRefs[i]}></canvas>
-            {/each}
+    <div class="flex flex-col items-center w-full justify-start gap-2" bind:this={container}>
+        {#if loading || !pdfDoc}
+            <div class="pt-10 pb-10 w-full flex items-center justify-center">
+                <Spinner simple={true} width="1/6" />
+            </div>
         {:else}
-            PDF laden...
+            {#each Array(numPages) as _, i}
+                <canvas data-page={i + 1} class="border border-gv-border rounded-2"></canvas>
+            {/each}
         {/if}
     </div>
 </div>
