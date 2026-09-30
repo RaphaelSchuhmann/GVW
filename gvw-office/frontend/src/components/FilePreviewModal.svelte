@@ -5,6 +5,7 @@
     import ImagePreview from "./ImagePreview.svelte";
     import AudioPlayer from "./AudioPlayer.svelte";
     import GuitarProViewer from "./GuitarProViewer.svelte";
+    import PDFViewer from "./PDFViewer.svelte";
 
     let {
         isMobile = viewport.isMobile
@@ -36,20 +37,6 @@
         if (!type) {
             modalRef.hideModal();
         }
-
-        if (type === "PDF") {
-            handlePDFPreview(file.blob, file.title);
-            modalRef.hideModal();
-        }
-    }
-
-    function handlePDFPreview(blob, name) {
-        if (!blob) return;
-
-        const pdfBlob = new Blob([blob], { type: 'application/pdf' });
-        const fileName = name.endsWith(".pdf") ? name : name + ".pdf";
-
-        urlObjects.push(url);
     }
 
     export function showModal() {
@@ -69,5 +56,7 @@
         <AudioPlayer filename={file.title} blob={file.blob} />
     {:else if type === "at"}
         <GuitarProViewer filename={file.title} blob={file.blob} />
+    {:else if type === "PDF"}
+        <PDFViewer filename={file.title} blob={file.blob} />
     {/if}
 </Modal>
