@@ -49,10 +49,6 @@
         const pdfBlob = new Blob([blob], { type: 'application/pdf' });
         const fileName = name.endsWith(".pdf") ? name : name + ".pdf";
 
-        const url = URL.createObjectURL(pdfBlob) + "#" + encodeURIComponent(fileName);
-
-        window.open(`/pdf/web/viewer.html?file=${encodeURIComponent(url)}`, "_blank");
-
         urlObjects.push(url);
     }
 
