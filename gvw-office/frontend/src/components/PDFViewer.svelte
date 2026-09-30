@@ -16,6 +16,7 @@
     const downloadable = $state(filename.includes("."));
 
     let loading = $state(true);
+    let error = $state(true);
     const renderedPages = new Set();
 
     let container = $state(null);
@@ -24,11 +25,17 @@
 
     let resizeTimeout;
     let resizeObserver;
+    let pageObserver;
+    let loadGeneration = 0;
 
     $effect(() => {
         if (blob && container) {
             loadAndRenderPdf(blob);
         }
+
+        return () => {
+            loadGeneration++;
+        };
     });
 
     $effect(() => {
@@ -38,7 +45,7 @@
             clearTimeout(resizeTimeout);
 
             resizeTimeout = setTimeout(() => {
-                if (pdfDoc && renderedPages > 0) rerenderVisiblePages();
+                if (pdfDoc && renderedPages.size > 0) rerenderVisiblePages();
             }, 150);
         });
 
@@ -51,17 +58,37 @@
     });
 
     async function loadAndRenderPdf(pdf) {
+        const currentGeneration = ++loadGeneration;
         loading = true;
+        error = false;
 
-        const arrayBuffer = await pdf.arrayBuffer();
+        try {
+            renderedPages.clear();
+            if (pageObserver) {
+                pageObserver.disconnect();
+                pageObserver = null;
+            }
 
-        pdfDoc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
-        numPages = pdfDoc.numPages;
+            const arrayBuffer = await pdf.arrayBuffer();
 
-        loading = false;
-        await tick();
+            const doc = await pdfjs.getDocument({ data: arrayBuffer }).promise;
 
-        setupPageObserver();
+            if (currentGeneration !== loadGeneration) return;
+
+            pdfDoc = doc;
+            numPages = pdfDoc.numPages;
+
+            loading = false;
+            await tick();
+
+            if (currentGeneration !== loadGeneration) return;
+
+            setupPageObserver();
+        } catch (e) {
+            if (currentGeneration !== loadGeneration) return;
+            error = true;
+            loading = false;
+        }
     }
 
     async function rerenderVisiblePages() {
@@ -101,7 +128,7 @@
     }
 
     function setupPageObserver() {
-        const observer = new IntersectionObserver((entries) => {
+        pageObserver = new IntersectionObserver((entries) => {
             for (const entry of entries) {
                 if (!entry.isIntersecting) continue;
 
@@ -119,7 +146,7 @@
         const canvases = container.querySelectorAll("canvas[data-page]");
 
         for (const canvas of canvases) {
-            observer.observe(canvas);
+            pageObserver.observe(canvas);
         }
     }
 </script>
@@ -140,6 +167,11 @@
         {#if loading || !pdfDoc}
             <div class="pt-10 pb-10 w-full flex items-center justify-center">
                 <Spinner simple={true} width="1/6" />
+            </div>
+        {:else if error}
+            <div class="pt-10 pb-10 w-full flex items-center justify-center gap-2">
+                <span class="material-symbols-rounded text-gv-toast-error text-icon-dt-5">do_not_disturb_on</span>
+                <p class="text-gv-dark-text text-dt-4">Beim laden der PDF ist ein Fehler aufgetreten...</p>
             </div>
         {:else}
             {#each Array(numPages) as _, i}
