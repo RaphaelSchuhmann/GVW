@@ -46,7 +46,6 @@
     });
 
     function handleKeyDown(e) {
-        console.log(e.key);
         if (e.key === " ") {
             togglePlay();
         } else if (e.key === "ArrowRight") {
@@ -102,7 +101,10 @@
         <div class="flex items-center justify-start w-full">
             <button class="flex items-center justify-center p-2 cursor-pointer hover:bg-gv-primary-hover rounded-2 bg-gv-primary text-white"
                     tabindex="-1"
-                    onclick={togglePlay}>
+                    onclick={(event) => {
+                        togglePlay();
+                        event.currentTarget.blur();
+                    }}>
                 <span class="material-symbols-rounded text-icon-dt-4">{isPlaying ? "pause" : "play_arrow"}</span>
             </button>
             <div class="flex items-center gap-2 ml-auto">
