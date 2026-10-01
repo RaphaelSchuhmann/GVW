@@ -17,7 +17,9 @@
 
     let loading = $state(true);
     let error = $state(true);
+
     const renderedPages = new Set();
+    const pageStates = new Map();
 
     let container = $state(null);
     let numPages = $state(0);
@@ -57,6 +59,30 @@
         };
     });
 
+    async function requestPageRender(pageNumber) {
+        if (!pageNumber) return;
+
+        const state = pageStates.get(pageNumber);
+
+        if (state.rendering) {
+            state.dirty = true;
+            return;
+        }
+
+        state.rendering = true;
+
+        try {
+            await renderPage(pageNumber);
+        } finally {
+            state.rendering = false;
+
+            if (state.dirty) {
+                state.dirty = false;
+                await requestPageRender(pageNumber);
+            }
+        }
+    }
+
     async function loadAndRenderPdf(pdf) {
         const currentGeneration = ++loadGeneration;
         loading = true;
@@ -78,6 +104,12 @@
             pdfDoc = doc;
             numPages = pdfDoc.numPages;
 
+            pageStates.clear();
+
+            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+                pageStates.set(pageNum, { dirty: false, rendering: false });
+            }
+
             loading = false;
             await tick();
 
@@ -93,7 +125,7 @@
 
     async function rerenderVisiblePages() {
         for (const pageNum of renderedPages) {
-            await renderPage(pageNum);
+            await requestPageRender(pageNum);
         }
     }
 
@@ -137,7 +169,7 @@
                 if (renderedPages.has(pageNum)) continue;
 
                 renderedPages.add(pageNum);
-                renderPage(pageNum);
+                requestPageRender(pageNum);
             }
         }, {
             rootMargin: "1000px 0px"

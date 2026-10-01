@@ -25,4 +25,4 @@ dist-electron
 *.sw?
 .svelte-doctor/*
 
-pdfjs-old
+public/alphatab
