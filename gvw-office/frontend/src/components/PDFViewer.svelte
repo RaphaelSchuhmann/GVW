@@ -62,7 +62,9 @@
     async function requestPageRender(pageNumber) {
         if (!pageNumber) return;
 
+        const generation = loadGeneration;
         const state = pageStates.get(pageNumber);
+        if (!state) return;
 
         if (state.rendering) {
             state.dirty = true;
@@ -76,7 +78,7 @@
         } finally {
             state.rendering = false;
 
-            if (state.dirty) {
+            if (state.dirty && generation === loadGeneration) {
                 state.dirty = false;
                 await requestPageRender(pageNumber);
             }

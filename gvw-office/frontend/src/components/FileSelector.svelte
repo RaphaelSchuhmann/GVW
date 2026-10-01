@@ -78,7 +78,9 @@
 
         if (fileDownloadDisabled || !documentId || !file.id) return;
 
-        loadingFileKey = file.id || file.name || file;
+        if (loadingFileKey !== null) return;
+        const key = file.id || file.name || file;
+        loadingFileKey = key;
 
         try {
             const previewableFileObject = await filePreviewable(page, documentId, file.id);
@@ -92,13 +94,13 @@
                 isPreviewable: previewableFileObject.isPreviewable,
                 title: file.name,
                 extension: previewableFileObject.extension,
-                blob: previewableFileObject.blob,
+                blob: previewableFileObject.blob
             };
 
             previewModal.showModal();
             previewModal.handlePreview(fileObject);
         } finally {
-            loadingFileKey = null;
+            if (loadingFileKey === key) loadingFileKey = null;
         }
     }
 
