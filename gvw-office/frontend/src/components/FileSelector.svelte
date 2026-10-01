@@ -33,6 +33,8 @@
 
     let previewModal = null;
 
+    let loadingFileKey = $state(null);
+
     /**
      * Handles file selection via a dynamic input element
      */
@@ -76,22 +78,30 @@
 
         if (fileDownloadDisabled || !documentId || !file.id) return;
 
-        const previewableFileObject = await filePreviewable(page, documentId, file.id);
+        if (loadingFileKey !== null) return;
+        const key = file.id || file.name || file;
+        loadingFileKey = key;
 
-        if (!previewableFileObject.isPreviewable) {
-            triggerFileDownload(previewableFileObject.blob, previewableFileObject.filename);
-            return;
+        try {
+            const previewableFileObject = await filePreviewable(page, documentId, file.id);
+
+            if (!previewableFileObject.isPreviewable) {
+                triggerFileDownload(previewableFileObject.blob, previewableFileObject.filename);
+                return;
+            }
+
+            const fileObject = {
+                isPreviewable: previewableFileObject.isPreviewable,
+                title: file.name,
+                extension: previewableFileObject.extension,
+                blob: previewableFileObject.blob
+            };
+
+            previewModal.showModal();
+            previewModal.handlePreview(fileObject);
+        } finally {
+            if (loadingFileKey === key) loadingFileKey = null;
         }
-
-        const fileObject = {
-            isPreviewable: previewableFileObject.isPreviewable,
-            title: file.name,
-            extension: previewableFileObject.extension,
-            blob: previewableFileObject.blob,
-        }
-
-        previewModal.showModal();
-        previewModal.handlePreview(fileObject);
     }
 
     /**
@@ -127,10 +137,14 @@
 
             {#if files.length > 0}
                 {#each files as file (file.name || file)}
+                    {@const fileKey = file.id || file.name || file}
+                    {@const isLoading = loadingFileKey === fileKey}
                     <button
                         type="button"
                         {disabled}
-                        class={`group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2 cursor-pointer ${!disabled && allowEditing ? "hover:bg-gv-input-bg" : ""} duration-200`}
+                        class={`group shrink-0 relative flex items-center justify-center rounded-2 border-2 border-gv-border p-2
+                                ${disabled || isLoading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+                                ${!disabled && allowEditing ? "hover:bg-gv-input-bg" : ""} duration-200`}
                         onclick={() => handleFileClick(file)}
                     >
                         <div
