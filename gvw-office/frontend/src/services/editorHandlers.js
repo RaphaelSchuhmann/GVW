@@ -32,7 +32,7 @@ export function createEditorHandlers(contentStore) {
         let content = contentStore.value;
         const index = content.findIndex(i => i.id === currentBlock.dataset.id);
 
-        handleAutoLink(e, currentBlock, (updatedHtml) => {
+        void handleAutoLink(e, currentBlock, (updatedHtml) => {
             content[index].data = updatedHtml;
         });
 

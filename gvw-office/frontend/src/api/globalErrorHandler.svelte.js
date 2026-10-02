@@ -161,14 +161,14 @@ export function handleGlobalApiError(result) {
  *
  * @returns {boolean} Whether the error was handled.
  */
-export function handleGenericErrors(result) {
+export async function handleGenericErrors(result) {
     if (result.ok) return false;
 
     const codeStr = result.message || "0000500";
     const domain = codeStr.substring(0, 2);
     const action = codeStr.substring(2, 4);
 
-    if (handleAuthFailures(result, domain, action)) return true;
+    if (void handleAuthFailures(result, domain, action)) return true;
 
     if (codeStr === "0000000" || result.errorType === "NETWORK") {
         return dispatchInfraToast(INFRA_ERRORS.NETWORK);
@@ -249,7 +249,7 @@ function dispatchInfraToast(config) {
  * @private
  * @returns {boolean} Whether an authentication-related error was handled.
  */
-function handleAuthFailures(result, domain, action) {
+async function handleAuthFailures(result, domain, action) {
     if (result.errorType !== "UNAUTHORIZED") return false;
 
     // Explicit Login Failure
@@ -273,6 +273,6 @@ function handleAuthFailures(result, domain, action) {
         typeId: "2"
     });
     logout();
-    route("/");
+    await route("/");
     return true;
 }
