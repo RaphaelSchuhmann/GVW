@@ -33,7 +33,7 @@ export async function initSettingsSync() {
             const _trigger = lastRefresh.SETTINGS;
 
             untrack(() => {
-                loadAppSettings();
+                void loadAppSettings();
             });
         });
     });

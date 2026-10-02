@@ -273,6 +273,6 @@ function handleAuthFailures(result, domain, action) {
         typeId: "2"
     });
     logout();
-    route("/");
+    void route("/");
     return true;
 }
