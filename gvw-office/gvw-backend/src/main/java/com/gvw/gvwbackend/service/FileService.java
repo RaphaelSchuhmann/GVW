@@ -168,7 +168,8 @@ public class FileService {
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_TYPE, mimeType)
         .header(
-            HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getOriginalName() + "\"")
+            HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"" + file.getOriginalName() + "\"")
         .body(
             out -> fileUtils.streamFile(file, payload.directory(), out, ErrorDomain.FILE_SERVICE));
   }
