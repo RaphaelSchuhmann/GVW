@@ -4,7 +4,8 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalTime;
 
 public record UpdateDeploymentInformationRequestDTO(
-    @NotNull String deploymentId,
+    @NotNull String id,
+    @NotNull String rev,
     @NotNull String title,
     @NotNull String version,
     @NotNull String date,

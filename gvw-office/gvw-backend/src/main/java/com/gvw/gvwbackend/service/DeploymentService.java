@@ -123,14 +123,14 @@ public class DeploymentService {
 
     if (deploymentValidator.isTodayAndAlreadyStarted(request.date(), request.startTime())) {
       throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 400, ErrorResource.DEPLOYMENT)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 400)));
     }
 
     // Check if the time of the new deployment has any time overlaps with other deployments
     if (deploymentValidator.hasOverlap(
         deployments, request.date(), request.startTime(), request.endTime())) {
       throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 400, ErrorResource.DEPLOYMENT)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 400)));
     }
 
     Deployment deployment =
@@ -181,27 +181,28 @@ public class DeploymentService {
   }
 
   public void updateDeploymentInformation(UpdateDeploymentInformationRequestDTO request) {
-    Deployment deployment = findDeploymentById(request.deploymentId());
+    Deployment deployment = findDeploymentById(request.id());
 
     List<Deployment> allDeployments = dbService.findAll("deployments", Deployment.class);
     List<Deployment> filteredDeployments = allDeployments.stream().filter(dep -> !Objects.equals(dep.getId(), deployment.getId())).toList();
 
     if (deployment.getStatus() != DeploymentStatus.SCHEDULED && deployment.getStatus() != DeploymentStatus.CANCELLED && deployment.getStatus() != DeploymentStatus.FAILED) {
-      throw new BadRequestException(String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400, ErrorResource.DEPLOYMENT)));
+      throw new BadRequestException(String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     if (deploymentValidator.isTodayAndAlreadyStarted(request.date(), request.startTime())) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400, ErrorResource.DEPLOYMENT)));
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     // Check if the time of the new deployment has any time overlaps with other deployments
     if (deploymentValidator.hasOverlap(
             filteredDeployments, request.date(), request.startTime(), request.endTime())) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400, ErrorResource.DEPLOYMENT)));
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
+    deployment.setRev(request.rev());
     deployment.setTitle(request.title());
     deployment.setAppVersion(request.version());
     deployment.setDate(request.date());
@@ -243,7 +244,7 @@ public class DeploymentService {
       throw new BadRequestException(
           String.valueOf(
               ErrorDomain.DEPLOYMENT.createCode(
-                  ErrorAction.READ_ONE, 400, ErrorResource.DEPLOYMENT)));
+                  ErrorAction.READ_ONE, 400)));
     }
 
     Deployment deployment = dbService.findById("deployments", id, Deployment.class);
@@ -251,7 +252,7 @@ public class DeploymentService {
       throw new NotFoundException(
           String.valueOf(
               ErrorDomain.DEPLOYMENT.createCode(
-                  ErrorAction.READ_ONE, 404, ErrorResource.DEPLOYMENT)));
+                  ErrorAction.READ_ONE, 404)));
     }
 
     return deployment;

@@ -60,14 +60,14 @@ public class DeploymentController {
     deploymentService.addMigration(request);
   }
 
-  @DeleteMapping("/{id}")
+  @DeleteMapping("/delete/{id}")
   @PreAuthorize("hasAnyRole('ADMIN')")
   @ResponseStatus(HttpStatus.OK)
   public void removeDeployment(@PathVariable String id) {
     deploymentService.removeDeployment(id);
   }
 
-  @DeleteMapping("/{deployment}/{migrationId}")
+  @DeleteMapping("/delete/{deployment}/{migrationId}")
   @PreAuthorize("hasAnyRole('ADMIN')")
   @ResponseStatus(HttpStatus.OK)
   public void removeMigration(@PathVariable String deploymentId, @PathVariable String migrationId) {
