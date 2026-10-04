@@ -170,3 +170,13 @@ export const roundedMap = {
     "full": "rounded-full",
     "": "rounded-none"
 }
+
+export const chipColorMap = {
+    "": "text-gv-secondary-text bg-gv-secondary",
+    "default": "text-gv-secondary-text bg-gv-secondary",
+    "scheduled": "text-gv-toast-info bg-gv-toast-info/20",
+    "running": "text-gv-toast-info bg-gv-toast-info/20",
+    "successful": "text-gv-toast-success bg-gv-toast-success/20",
+    "cancelled": "text-gv-toast-warning bg-gv-toast-warning/20",
+    "failed": "text-gv-toast-error bg-gv-toast-error/20",
+}

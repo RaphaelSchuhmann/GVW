@@ -12,6 +12,9 @@ import { apiGetUsersAD } from "../api/apiUser.svelte";
 import { reportTypeFilterMap } from "../services/reportService.svelte.js";
 import { apiDeepSearchReport, apiGetReports } from "../api/apiReports.svelte.js";
 import { reportDeepSearchStore, reportsFilterState, reportsStore } from "../stores/report.svelte.js";
+import { apiGetAllDeployments } from "../api/apiDeployments.svelte.js";
+import { deploymentFilterState, deploymentStore } from "../stores/deployments.svelte.js";
+import { deploymentTypeFilterMap } from "../services/deploymentService.svelte.js";
 
 /**
  * Filter registry containing both filter and search configurations
@@ -124,5 +127,21 @@ export const filterRegistry = {
                 deepSearch: false
             }
         }
-    }
+    },
+    deployments: {
+        fetch: apiGetAllDeployments,
+        store: deploymentStore,
+        filterState: deploymentFilterState,
+        get optionMap() { return deploymentTypeFilterMap; },
+        fuse: {
+            keys: ["title", "hash"],
+            threshold: 0.3
+        },
+        config: {
+            search: {
+                placeholder: "Deployments durchsuchen...",
+                deepSearch: false,
+            },
+        }
+    },
 }

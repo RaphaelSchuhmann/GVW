@@ -29,8 +29,9 @@ public class DeploymentController {
 
   @GetMapping("/all")
   @PreAuthorize("hasAnyRole('ADMIN')")
-  public List<DeploymentResponseDTO> getAllDeployments() {
-    return deploymentService.getAllDeployments();
+  public Map<String, List<DeploymentResponseDTO>> getAllDeployments() {
+    List<DeploymentResponseDTO> resp = deploymentService.getAllDeployments();
+    return Map.of("data", resp);
   }
 
   @GetMapping("/{id}")

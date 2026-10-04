@@ -73,7 +73,7 @@ public class DeploymentService {
   }
 
   public List<DeploymentResponseDTO> getAllDeployments() {
-    List<Deployment> deployments = dbService.findAll("deployment", Deployment.class);
+    List<Deployment> deployments = dbService.findAll("deployments", Deployment.class);
 
     if (deployments == null || deployments.isEmpty()) {
       return List.of();

@@ -17,6 +17,8 @@
     import AdminDashboardReportHub from "./pages/AdminDashboardReportHub/AdminDashboardReportHubPage.svelte";
     import AdminDashboardUserManagement from "./pages/AdminDashboardUserManager/AdminDashboardUserManagerPage.svelte";
     import AdminDashboardUserManagerDetails from "./pages/AdminDashboardUserManagerDetails/AdminDashboardUserManagerDetailsPage.svelte";
+    import AdminDashboardDeployments from "./pages/AdminDashboardDeployments/AdminDashboardDeploymentsPage.svelte";
+    import AdminDashboardDeploymentDetails from "./pages/AdminDashboardDeploymentDetails/AdminDashboardDeploymentDetailsPage.svelte";
     import HelpCenter from "./pages/HelpCenter/HelpCenterPage.svelte";
     import NotFound from "./pages/NotFound/NotFoundPage.svelte";
 
@@ -43,6 +45,8 @@
         "/admin/reportHub": AdminDashboardReportHub,
         "/admin/userManagement": AdminDashboardUserManagement,
         "/admin/userManagement/details": AdminDashboardUserManagerDetails,
+        "/admin/deployments": AdminDashboardDeployments,
+        "/admin/deployment/details": AdminDashboardDeploymentDetails,
         "/help": HelpCenter,
         "*": NotFound
     };

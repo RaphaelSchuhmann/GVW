@@ -27,6 +27,10 @@ const DOMAINS = {
     "15": {
         default: "Artikel",
         "001": "Hilfe-Center Kategorie"
+    },
+    "16": {
+        default: "Deployment",
+        "006": "Migration",
     }
 };
 
@@ -86,10 +90,11 @@ const INFRA_ERRORS = {
  * generate a user-friendly error message from the backend error code.
  *
  * Error code format:
- * - DD AA SSS
+ * - DD AA SSS RRR
  * - DD  = domain
  * - AA  = action
  * - SSS = status
+ * - RRR = resource
  *
  * Returns `true` when a toast was shown or another global action was
  * performed and no further error handling should occur.
