@@ -11,11 +11,16 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
+
+import com.gvw.gvwbackend.service.DeploymentService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 @Component
 public class DeploymentValidator {
   private final HttpClient httpClient = HttpClient.newHttpClient();
+  private static final Logger log = LoggerFactory.getLogger(DeploymentValidator.class);
 
   public boolean isTodayAndAlreadyStarted(String targetIsoDate, LocalTime targetStart) {
     if (targetIsoDate == null || targetStart == null) {
@@ -31,7 +36,12 @@ public class DeploymentValidator {
 
     LocalTime currentTime = LocalTime.now(ZoneOffset.UTC);
 
-    return !currentTime.isBefore(targetStart);
+    boolean result = !currentTime.isBefore(targetStart);
+    if (result) {
+      log.debug("A past date or startTime was passed");
+    }
+
+    return result;
   }
 
   public boolean hasOverlap(
@@ -49,7 +59,7 @@ public class DeploymentValidator {
 
     LocalDate targetDate = extractLocalDate(targetIsoDate);
 
-    return deployments.stream()
+    boolean result = deployments.stream()
         .anyMatch(
             existing -> {
               if (existing.getDate() == null
@@ -67,9 +77,16 @@ public class DeploymentValidator {
               return targetStart.isBefore(existing.getEndTime())
                   && targetEnd.isAfter(existing.getStartTime());
             });
+
+    if (result) {
+      log.debug("A time overlap was detected");
+    }
+
+    return result;
   }
 
   public boolean isCommitHashValid(String hash) {
+    log.debug("Validating commit hash {}", hash);
     String url = "https://api.github.com/repos/raphaelschuhmann/gvw/commits/" + hash;
     HttpRequest request = HttpRequest.newBuilder()
             .uri(URI.create(url))
@@ -82,6 +99,7 @@ public class DeploymentValidator {
       HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
       return response.statusCode() == 200;
     } catch (Exception e) {
+      log.debug("Invalid commit hash passed");
       return false;
     }
   }

@@ -1,7 +1,7 @@
 <script>
     import { deploymentStore } from "../../stores/deployments.svelte.js";
     import { viewport } from "../../stores/viewport.svelte";
-    import { formatISODateString, } from "../../services/dateTimeUtils.js";
+    import { formatISODateString } from "../../services/dateTimeUtils.js";
     import { addDeployment } from "../../services/deploymentService.svelte.js";
 
     import ToastStack from "../../components/ToastStack.svelte";
@@ -199,12 +199,18 @@
                         </td>
                         <td class="px-6 py-4">
                             {#if deployment.commit}
-                                <a class="flex items-center justify-center gap-2 cursor-pointer rounded-2 p-2 text-gv-dark-text border-2 border-gv-border hover:bg-gv-hover-effect no-underline">
-                                    <span>{deployment.commit}</span>
+                                <a class="flex items-center w-min justify-center gap-2 cursor-pointer rounded-2 p-2 pl-4 pr-4 text-gv-dark-text border-2 border-gv-border hover:bg-gv-hover-effect no-underline"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   href={`https://github.com/RaphaelSchuhmann/GVW/tree/${deployment.commit}`}
+                                   onclick={(e) => e.stopPropagation()}>
+                                    <span>{deployment.commit.substring(0, 7)}</span>
                                     <span class="material-symbols-rounded text-dt-4">open_in_new</span>
                                 </a>
                             {:else}
-                                <p class="min-[1300px]:text-dt-5 text-dt-7 text-gv-dark-text text-nowrap truncate">N/A</p>
+                                <p class="min-[1300px]:text-dt-5 text-dt-7 text-gv-dark-text text-nowrap truncate">
+                                    N/A
+                                </p>
                             {/if}
                         </td>
                         <td class="px-6 py-4">
@@ -214,7 +220,8 @@
                 {/snippet}
 
                 {#snippet mobileItem(deployment, index)}
-                    <div class="flex items-start justify-start p-5 gap-2 w-full {deploymentStore.display.length - 1 === index ? '' : 'border-b'} border-gv-border">
+                    <div
+                        class="flex items-start justify-start p-5 gap-2 w-full {deploymentStore.display.length - 1 === index ? '' : 'border-b'} border-gv-border">
                         <p class="text-gv-dark-text text-dt-5">{deployment.title}</p>
                         <div class="ml-auto">
                             <Chip text={deployment.type} colorType={deployment.type.toLowerCase()} />

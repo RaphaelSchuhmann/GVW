@@ -18,6 +18,7 @@
         onChange = () => {},
         disabled = $bindable(false),
         title = "",
+        position = "top" // "top" | "bottom"
     } = $props();
 
     let open = $state(false);
@@ -105,11 +106,16 @@
         if (!datepickerRef) return;
         const rect = datepickerRef.getBoundingClientRect();
 
-        // Match popup height offset dynamically
         const popupHeight = 350;
-        const top = rect.top + window.scrollY - popupHeight - 4;
         const left = rect.left + window.scrollX;
         const width = rect.width;
+
+        let top;
+        if (position === "bottom") {
+            top = rect.bottom + window.scrollY + 4;
+        } else {
+            top = rect.top + window.scrollY - popupHeight - 4;
+        }
 
         popupStyle = `position: absolute; top: ${top}px; left: ${left}px; width: ${width}px; z-index: 99999;`;
     }
@@ -231,7 +237,7 @@
                             selected={monthOptions[usedMonth]}
                             onChange={updateUsedMonth}
                             disableMinWidth={true}
-                            displayTop={true}
+                            displayTop={position === "bottom"}
                         />
                         <Dropdown
                             bgWhite={true}
@@ -240,7 +246,7 @@
                             selected={String(usedYear)}
                             onChange={updateUsedYear}
                             disableMinWidth={true}
-                            displayTop={true}
+                            displayTop={position === "bottom"}
                         />
                     </div>
 

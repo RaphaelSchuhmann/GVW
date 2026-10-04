@@ -17,4 +17,4 @@ public record DeploymentResponseDTO(
     String commit,
     String hash,
     List<Migration> migrations,
-    String appVersion) {}
+    String version) {}

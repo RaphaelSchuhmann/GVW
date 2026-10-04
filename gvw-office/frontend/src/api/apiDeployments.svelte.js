@@ -80,7 +80,7 @@ export async function apiUpdateDeploymentInformation(deploymentInformation) {
         date: deploymentInformation.date,
         startTime: deploymentInformation.startTime,
         endTime: deploymentInformation.endTime,
-        commitHash: deploymentInformation.commitHash,
+        commit: deploymentInformation.commit,
     });
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);

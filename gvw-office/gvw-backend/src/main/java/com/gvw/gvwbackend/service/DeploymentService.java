@@ -209,8 +209,10 @@ public class DeploymentService {
     deployment.setStartTime(request.startTime());
     deployment.setEndTime(request.endTime());
 
-    if (deploymentValidator.isCommitHashValid(request.commitHash())) {
-      deployment.setCommit(request.commitHash());
+    if (request.commit() != null && !request.commit().isBlank() && deploymentValidator.isCommitHashValid(request.commit())) {
+      // TODO: If the commit was validated automatically run a build
+
+      deployment.setCommit(request.commit());
     }
 
     dbService.update("deployments", deployment.getId(), deployment);

@@ -11,4 +11,4 @@ public record UpdateDeploymentInformationRequestDTO(
     @NotNull String date,
     @NotNull LocalTime startTime,
     @NotNull LocalTime endTime,
-    String commitHash) {}
+    String commit) {}
