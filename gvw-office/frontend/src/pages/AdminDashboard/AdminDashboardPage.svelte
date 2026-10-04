@@ -4,7 +4,6 @@
     import { auth } from "../../stores/auth.svelte";
     import { user } from "../../stores/user.svelte";
     import { route } from "../../services/utils.js";
-    import { getChangelogs } from "../../services/changelogService.svelte.js";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { untrack } from "svelte";
     import { loadAdminDashboardData } from "../../services/dashboardService.svelte.js";
@@ -26,7 +25,6 @@
 
             await ensureUserData();
             if (!auth.token) return;
-            await getChangelogs();
             ready = true;
         })();
     });
@@ -36,11 +34,11 @@
         const _triggerUser = lastRefresh.USER;
         const _triggerFeedback = lastRefresh.FEEDBACK;
         const _triggerBug = lastRefresh.BUG;
+        const _triggerDeployments = lastRefresh.DEPLOYMENTS;
 
         if (!ready) return;
 
         untrack(() => {
-            getChangelogs();
             loadAdminDashboardData();
         });
     });

@@ -18,7 +18,7 @@ const DOMAINS = {
     "80": { default: "Noteneintrag", },
     "90": { default: "Feedback" },
     "11": { default: "Fehlerbericht" },
-    "12": { default: "Changelog" },
+    // #12 -> (originally changelog) unused
     "13": { default: "Datei" },
     "14": {
         default: "Dokument",

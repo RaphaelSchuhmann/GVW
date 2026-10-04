@@ -39,7 +39,7 @@ public enum ErrorDomain {
   LIBRARY(80),
   FEEDBACK(90),
   BUG_REPORT(11),
-  CHANGELOG(12),
+  // #12 -> (originally changelog) unused
   FILE_VALIDATOR(13), // Currently only used by hard-coded file validation responses
   TEXT_EDITOR(14),
   HELP_CENTER(15),
