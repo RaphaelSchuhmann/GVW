@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record AddMigrationRequestDTO(
     @NotNull String deploymentId,
+    @NotNull String rev,
     @NotNull String database,
     String field,
     @NotNull MigrationAction action,

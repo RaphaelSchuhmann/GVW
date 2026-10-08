@@ -1,13 +1,15 @@
 import {
-    apiAddDeployment,
+    apiAddDeployment, apiAddMigration,
     apiCheckDeployment,
-    apiDeleteDeployment,
+    apiDeleteDeployment, apiDeleteMigration,
     apiGetDeployment, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGenericErrors, handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
 import { addToast } from "../stores/toasts.svelte.js";
 import { viewport } from "../stores/viewport.svelte.js";
+
+export const migrationActions = new Set(["ADD", "DELETE", "RENAME", "CONDITIONAL"]);
 
 export const deploymentTypeFilterMap = {
     "": "all",
@@ -161,5 +163,47 @@ export async function updateDeployment(data) {
         });
     } finally {
         isFetching.updateDeployment = false;
+    }
+}
+
+export async function addMigration(data) {
+    if (isFetching.addMigration) return;
+
+    isFetching.addMigration = true;
+
+    try {
+        const { resp } = await apiAddMigration(data);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return;
+
+        addToast({
+            title: "Migration hinzugefügt",
+            subTitle: viewport.isMobile ? "" : "Die neue Migration wurde erfolgreich zum Deployment hinzugefügt.",
+            type: "success"
+        });
+    } finally {
+        isFetching.addMigration = false;
+    }
+}
+
+export async function deleteMigration(deploymentId, migrationId) {
+    if (!deploymentId || !migrationId || isFetching.removeMigration) return;
+
+    isFetching.removeMigration = true;
+
+    try {
+        const { resp } = await apiDeleteMigration(deploymentId, migrationId);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return;
+
+        addToast({
+            title: "Migration gelöscht",
+            subTitle: viewport.isMobile ? "" : "Die Migration wurde erfolgreich aus dem Deployment entfernt.",
+            type: "success"
+        })
+    } finally {
+        isFetching.removeMigration = false;
     }
 }

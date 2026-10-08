@@ -1,7 +1,13 @@
 <script>
     import { route } from "../../services/utils.js";
     import { viewport } from "../../stores/viewport.svelte";
-    import { getFullDeployment, updateDeployment } from "../../services/deploymentService.svelte.js";
+    import {
+        getFullDeployment,
+        updateDeployment,
+        migrationActions,
+        addMigration,
+        deleteMigration,
+    } from "../../services/deploymentService.svelte.js";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
 
     import ToastStack from "../../components/ToastStack.svelte";
@@ -14,6 +20,10 @@
     import DefaultDatepicker from "../../components/DefaultDatepicker.svelte";
     import { formatISODateString } from "../../services/dateTimeUtils.js";
     import TimePicker from "../../components/TimePicker.svelte";
+    import Modal from "../../components/Modal.svelte";
+    import Dropdown from "../../components/Dropdown.svelte";
+    import Checkbox from "../../components/Checkbox.svelte";
+    import Migration from "../../components/Migration.svelte";
 
     let {
         deploymentData,
@@ -33,8 +43,22 @@
         commit: ""
     });
 
+    let addMigrationInputs = $state({
+        database: "",
+        field: "",
+        action: "",
+        conditional: {
+            condition: { field: "", value: "" },
+            truePath: { field: "", value: "" },
+            falsePath: { field: "", value: "" },
+            negated: false
+        },
+        value: ""
+    });
+
     let isSubmittingInformationChanges = $state(false);
     let isRunningMigrationTests = $state(false);
+    let isSubmittingMigration = $state(false);
 
     /**
      * Initializes edit mode for the current user.
@@ -97,8 +121,8 @@
             const now = new Date();
             const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-            const [startHours, startMins] = startTime.split(':').map(Number);
-            const [endHours, endMins] = endTime.split(':').map(Number);
+            const [startHours, startMins] = startTime.split(":").map(Number);
+            const [endHours, endMins] = endTime.split(":").map(Number);
 
             const startMinutes = startHours * 60 + startMins;
             const endMinutes = endHours * 60 + endMins;
@@ -135,6 +159,36 @@
         }
 
         return isDifferent;
+    });
+
+    const isNonEmpty = (str) => typeof str === "string" && str.trim().length > 0;
+
+    const isAddMigrationDisabled = $derived.by(() => {
+        const { database, action, field, value, conditional } = addMigrationInputs;
+
+        if (!isNonEmpty(database)) return true;
+        if (!isNonEmpty(action) || action.toLowerCase() === "wählen") return true;
+
+        const actionUpper = action.toUpperCase();
+
+        switch (actionUpper) {
+            case "ADD":
+            case "DELETE":
+                return !isNonEmpty(field);
+
+            case "RENAME":
+                return !isNonEmpty(field) || !isNonEmpty(value);
+
+            case "CONDITIONAL":
+                return (
+                    !isNonEmpty(conditional.condition.field) ||
+                    !isNonEmpty(conditional.truePath.field) ||
+                    !isNonEmpty(conditional.falsePath.field)
+                );
+
+            default:
+                return true;
+        }
     });
 
     /**
@@ -191,14 +245,82 @@
         await route("/admin/deployments");
     }
 
-    function startDeleting() {
+    function startDeletingDeployment() {
         onChangeIsDeleting(true);
         confirmDeleteUserModal.startDelete();
     }
 
+    async function submitMigration() {
+        isSubmittingMigration = true;
+
+        const data = {
+            deploymentId: deploymentData.id,
+            rev: deploymentData.rev,
+            ...addMigrationInputs
+        };
+
+        if (data.action !== "CONDITIONAL") {
+            data.conditional = null;
+        }
+
+        if (data.action !== "RENAME") {
+            data.value = null;
+        }
+
+        if (data.action === "CONDITIONAL") {
+            data.field = null;
+        }
+
+        try {
+            await addMigration(data);
+            deploymentData = await getFullDeployment(deploymentData.id);
+        } finally {
+            isSubmittingMigration = false;
+            addMigrationModal.hideModal();
+        }
+    }
+
+    function resetAddMigrationInputs() {
+        addMigrationInputs = {
+            database: "",
+            field: "",
+            action: "",
+            conditional: {
+                condition: { field: "", value: "" },
+                truePath: { field: "", value: "" },
+                falsePath: { field: "", value: "" },
+                negated: false
+            },
+            value: ""
+        };
+    }
+
+    async function deleteMigrationAndRefresh(migrationId) {
+        await deleteMigration(deploymentData.id, migrationId);
+        deploymentData = await getFullDeployment(deploymentData.id);
+    }
+
+    // Update deployment info
     function updateDate(val) { informationDraft.date = val; }
+
     function updateStartTime(val) { informationDraft.startTime = val; }
+
     function updateEndTime(val) { informationDraft.endTime = val; }
+
+    // Update add migration
+    function updateMigrationAction(val) {
+        // Note no map required as the internal value is also the display value
+        addMigrationInputs.action = val;
+
+        if (val === "CONDITIONAL") {
+            addMigrationInputs.field = "";
+        }
+
+        if (val !== "RENAME") {
+            addMigrationInputs.value = "";
+        }
+    }
+    function updateMigrationNegated(val) { addMigrationInputs.conditional.negated = val; }
 
     // ==================
     // MODAL REFERENCES
@@ -210,18 +332,80 @@
      */
     let confirmDeleteUserModal = null;
 
+    /**
+     * Reference to the add migration modal.
+     * Used to execute the add migration flow.
+     * @type {import("../../components/Modal.svelte").default}
+     */
+    let addMigrationModal = $state(null);
+
     function disableIsDeleting() { onChangeIsDeleting(false); }
 </script>
 
 <ToastStack />
 
 <ConfirmDeleteModal expectedInput={deploymentData.title} id={deploymentData.id}
-                    title="Deployment löschen" subTitle="Sind Sie sich sicher das Sie dieses Deployment löschen möchten?"
+                    title="Deployment löschen"
+                    subTitle="Sind Sie sich sicher das Sie dieses Deployment löschen möchten?"
                     action="deleteDeployment"
                     onClose={routeToDeployments}
                     onCancel={disableIsDeleting}
                     bind:this={confirmDeleteUserModal}
 />
+
+<Modal bind:this={addMigrationModal} extraFunction={resetAddMigrationInputs}
+       title="Migration hinzufügen" subTitle="Erfassen Sie hier die Migrationdaten">
+    <div class="flex flex-col items-center w-full gap-4">
+        <div class="flex items-center gap-4 w-full">
+            <Input title="Database" bind:value={addMigrationInputs.database} placeholder="members" />
+            {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action !== "CONDITIONAL"}
+                <Input title="Feld" bind:value={addMigrationInputs.field} placeholder="status" />
+            {/if}
+        </div>
+        <Dropdown title="Aktion" options={Array.from(migrationActions.values())} onChange={updateMigrationAction} />
+        {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "RENAME"}
+            <Input title="Neuer Feld Name" bind:value={addMigrationInputs.value} placeholder="isActive" />
+        {/if}
+
+        {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "CONDITIONAL"}
+            <div class="w-full flex flex-col items-start justify-start gap-2">
+                <p class="text-dt-6 font-medium">Bedingung</p>
+                <div class="flex items-center gap-4 w-full">
+                    <Input title="Feld" bind:value={addMigrationInputs.conditional.condition.field} placeholder="status" />
+                    <Input title="Erwarteter Wert" bind:value={addMigrationInputs.conditional.condition.value} placeholder="active" />
+                </div>
+                <Checkbox title="Negiert" onChange={updateMigrationNegated} />
+            </div>
+
+            <div class="w-full flex flex-col items-start justify-start gap-2">
+                <p class="text-dt-6 font-medium">True Branch</p>
+                <div class="flex items-center gap-4 w-full">
+                    <Input title="Feld" bind:value={addMigrationInputs.conditional.truePath.field} placeholder="isActive" />
+                    <Input title="Wert" bind:value={addMigrationInputs.conditional.truePath.value} placeholder="true" />
+                </div>
+            </div>
+
+            <div class="w-full flex flex-col items-start justify-start gap-2">
+                <p class="text-dt-6 font-medium">False Branch</p>
+                <div class="flex items-center gap-4 w-full">
+                    <Input title="Feld" bind:value={addMigrationInputs.conditional.falsePath.field} placeholder="isActive" />
+                    <Input title="Wert" bind:value={addMigrationInputs.conditional.falsePath.value} placeholder="false" />
+                </div>
+            </div>
+        {/if}
+        <div class="w-full flex items-center justify-end mt-5 gap-4">
+            <Button type="secondary" onclick={addMigrationModal.hideModal}>Abbrechen</Button>
+            <Button type="primary" disabled={isAddMigrationDisabled} onclick={submitMigration}>
+                {#if isSubmittingMigration}
+                    <Spinner light={true} />
+                    <p>Speichern...</p>
+                {:else}
+                    Hinzufügen
+                {/if}
+            </Button>
+        </div>
+    </div>
+</Modal>
 
 <main class="flex h-screen overflow-hidden">
     <DesktopSidebar currentPage="adminDashboard" />
@@ -261,25 +445,26 @@
                         <Input value={deploymentData.version} title="Version" />
                     </div>
 
-                    <Input value={formatISODateString(deploymentData.date)} title="Datum" readonly={true}/>
+                    <Input value={formatISODateString(deploymentData.date)} title="Datum" readonly={true} />
 
                     <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <Input value={deploymentData.startTime} title="Start" readonly={true}/>
-                        <Input value={deploymentData.endTime} title="Ende" readonly={true}/>
+                        <Input value={deploymentData.startTime} title="Start" readonly={true} />
+                        <Input value={deploymentData.endTime} title="Ende" readonly={true} />
                     </div>
 
-                    <Input value={deploymentData.commit} title="Commit" placeholder="Commit hash" readonly={true}/>
+                    <Input value={deploymentData.commit} title="Commit" placeholder="Commit hash" readonly={true} />
                 {:else}
                     <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <Input bind:value={informationDraft.title} title="Titel" readonly={true}/>
-                        <Input bind:value={informationDraft.version} title="Version" readonly={true}/>
+                        <Input bind:value={informationDraft.title} title="Titel" readonly={true} />
+                        <Input bind:value={informationDraft.version} title="Version" readonly={true} />
                     </div>
 
-                    <DefaultDatepicker title="Datum" position="bottom" onChange={updateDate} selected={formatISODateString(informationDraft.date)}/>
+                    <DefaultDatepicker title="Datum" position="bottom" onChange={updateDate}
+                                       selected={formatISODateString(informationDraft.date)} />
 
                     <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <TimePicker title="Start" onChange={updateStartTime} selected={informationDraft.startTime}/>
-                        <TimePicker title="End" onChange={updateEndTime} selected={informationDraft.endTime}/>
+                        <TimePicker title="Start" onChange={updateStartTime} selected={informationDraft.startTime} />
+                        <TimePicker title="End" onChange={updateEndTime} selected={informationDraft.endTime} />
                     </div>
 
                     <Input bind:value={informationDraft.commit} title="Commit" placeholder="Commit hash" />
@@ -287,7 +472,7 @@
 
                 {#if !isEditing}
                     <div class="flex items-center gap-4 w-full">
-                        <Button type="delete" onclick={startDeleting} disabled={isRunningMigrationTests}>
+                        <Button type="delete" onclick={startDeletingDeployment} disabled={isRunningMigrationTests}>
                             <span class="material-symbols-rounded mr-2">delete</span>
                             Löschen
                         </Button>
@@ -321,12 +506,21 @@
                 </div>
 
                 {#if !isEditing}
+                    <div class="flex w-full flex-col items-start justify-start gap-4 overflow-y-auto">
+                        {#each deploymentData.migrations as migration, index (migration.id)}
+                            <Migration migrationData={migration} deleteMigration={deleteMigrationAndRefresh} />
+                            <div class="w-full h-0.5 bg-gv-border"></div>
+                        {/each}
+                    </div>
+
                     <div class="flex items-center gap-4 w-full">
-                        <Button type="primary" onclick={startDeleting} disabled={isRunningMigrationTests}>
+                        <Button type="primary" onclick={addMigrationModal?.showModal}
+                                disabled={isRunningMigrationTests}>
                             <span class="material-symbols-rounded mr-2">add</span>
                             Migration erstellen
                         </Button>
-                        <Button type="primary" onclick={() => {}} disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests}>
+                        <Button type="primary" onclick={() => {}}
+                                disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests}>
                             {#if isRunningMigrationTests}
                                 <Spinner light={true} />
                                 <p>Testen...</p>

@@ -27,6 +27,8 @@ public class MigrationValidator {
       return false;
     }
 
+    System.out.println(conditional);
+
     return isValidBranch(conditional.getCondition())
         && isValidBranch(conditional.getTruePath())
         && isValidBranch(conditional.getFalsePath());
@@ -36,7 +38,7 @@ public class MigrationValidator {
     if (branch == null) {
       return false;
     }
-    return isNonBlank(branch.getField()) && isNonBlank(branch.getValue());
+    return isNonBlank(branch.getField());
   }
 
   private boolean isNonBlank(String str) {

@@ -14,10 +14,7 @@ import com.gvw.gvwbackend.util.MigrationValidator;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -160,6 +157,7 @@ public class DeploymentService {
 
     Migration newMigration =
         Migration.builder()
+                .id(UUID.randomUUID().toString())
             .database(request.database())
             .action(request.action())
             .field(request.field())
@@ -176,7 +174,12 @@ public class DeploymentService {
               ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400, ErrorResource.MIGRATION)));
     }
 
-    deployment.getMigrations().add(newMigration);
+    deployment.setRev(request.rev());
+
+    List<Migration> migrations = deployment.getMigrations();
+    migrations.add(newMigration);
+    deployment.setMigrations(migrations);
+
     dbService.update("deployments", deployment.getId(), deployment);
   }
 

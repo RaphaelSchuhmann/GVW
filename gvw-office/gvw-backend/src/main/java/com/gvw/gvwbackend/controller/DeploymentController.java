@@ -68,7 +68,7 @@ public class DeploymentController {
     deploymentService.removeDeployment(id);
   }
 
-  @DeleteMapping("/delete/{deployment}/{migrationId}")
+  @DeleteMapping("/delete/{deploymentId}/{migrationId}")
   @PreAuthorize("hasAnyRole('ADMIN')")
   @ResponseStatus(HttpStatus.OK)
   public void removeMigration(@PathVariable String deploymentId, @PathVariable String migrationId) {

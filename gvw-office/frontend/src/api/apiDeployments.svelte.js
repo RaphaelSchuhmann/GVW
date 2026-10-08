@@ -46,6 +46,7 @@ export async function apiAddDeployment(deployment) {
 export async function apiAddMigration(migration) {
     const resp = await httpPost(`${apiUrl}/deployment/add/migration`, {
         deploymentId: migration.deploymentId,
+        rev: migration.rev,
         database: migration.database,
         field: migration.field,
         action: migration.action,
