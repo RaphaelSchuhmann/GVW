@@ -18,7 +18,6 @@
         onChange = () => {},
         disabled = $bindable(false),
         title = "",
-        position = "top" // "top" | "bottom"
     } = $props();
 
     let open = $state(false);
@@ -66,7 +65,12 @@
 
     $effect(() => {
         const handleClickOutside = (event) => {
-            if (datepickerRef && !datepickerRef.contains(event.target) && !event.target.closest('.datepicker-portal-popup')) {
+            if (
+                datepickerRef &&
+                !datepickerRef.contains(event.target) &&
+                !event.target.closest('.datepicker-portal-popup') &&
+                !event.target.closest('.dropdown-portal-popup') // <-- Add this line
+            ) {
                 open = false;
             }
         };
@@ -110,12 +114,7 @@
         const left = rect.left + window.scrollX;
         const width = rect.width;
 
-        let top;
-        if (position === "bottom") {
-            top = rect.bottom + window.scrollY + 4;
-        } else {
-            top = rect.top + window.scrollY - popupHeight - 4;
-        }
+        let top = rect.top + window.scrollY - popupHeight - 4;
 
         popupStyle = `position: absolute; top: ${top}px; left: ${left}px; width: ${width}px; z-index: 99999;`;
     }
@@ -237,7 +236,8 @@
                             selected={monthOptions[usedMonth]}
                             onChange={updateUsedMonth}
                             disableMinWidth={true}
-                            displayTop={position === "bottom"}
+                            displayTop={true}
+                            usePortal={false}
                         />
                         <Dropdown
                             bgWhite={true}
@@ -246,7 +246,8 @@
                             selected={String(usedYear)}
                             onChange={updateUsedYear}
                             disableMinWidth={true}
-                            displayTop={position === "bottom"}
+                            displayTop={true}
+                            usePortal={false}
                         />
                     </div>
 

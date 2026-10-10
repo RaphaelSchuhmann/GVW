@@ -478,7 +478,7 @@
                         <Input bind:value={informationDraft.version} title="Version" readonly={true} />
                     </div>
 
-                    <DefaultDatepicker title="Datum" position="bottom" onChange={updateDate}
+                    <DefaultDatepicker title="Datum" onChange={updateDate}
                                        selected={formatISODateString(informationDraft.date)} />
 
                     <div class="flex items-center gap-4 w-full max-[900px]:flex-col">

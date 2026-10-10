@@ -16,6 +16,7 @@
         doCapitalizeWords = true,
         showDropshadow = false,
         fillWidth = true,
+        usePortal = true,
         ...restProps
     } = $props();
 
@@ -23,7 +24,6 @@
     let dropdownRef = $state(null);
     let buttonRef = $state(null); // Ref specifically for the button bounding rect
     let menuRef = $state(null);
-    let menuStyle = $state("");
 
     const minWidth = $derived.by(() => {
         if (disableMinWidth || options.length === 0) return 0;
@@ -39,24 +39,25 @@
         return Math.max(longestLength * 8 + 80, 120);
     });
 
+
     function calculatePortalPosition() {
-        if (!buttonRef) return;
+        if (!buttonRef || !menuRef) return;
+
         const rect = buttonRef.getBoundingClientRect();
+        const menuHeight = menuRef.getBoundingClientRect().height;
 
-        const left = rect.left + window.scrollX;
-        const width = rect.width;
-        const widthStyle = minWidth > 0 ? `width: ${Math.max(width, minWidth)}px;` : `width: ${width}px;`;
-
-        let top;
-        if (displayTop) {
-            const menuHeight = menuRef?.offsetHeight || 0;
-            top = rect.top + window.scrollY - menuHeight;
-        } else {
-            top = rect.bottom + window.scrollY;
-        }
-
-        menuStyle = `position: absolute; top: ${top}px; left: ${left}px; ${widthStyle} z-index: 99999;`;
+        Object.assign(menuRef.style, {
+            position: "fixed",
+            top: `${displayTop ? rect.top - menuHeight : rect.bottom}px`,
+            left: `${rect.left}px`,
+            width: `${Math.max(rect.width, minWidth)}px`,
+            minWidth: "0",
+            boxSizing: "border-box",
+            margin: "0",
+            zIndex: "99999"
+        });
     }
+
 
     function selectOption(event) {
         const option = event.currentTarget.dataset.option;
@@ -71,7 +72,7 @@
             if (
                 dropdownRef &&
                 !dropdownRef.contains(event.target) &&
-                !event.target.closest('.dropdown-portal-menu')
+                !event.target.closest(".dropdown-portal-menu")
             ) {
                 open = false;
             }
@@ -140,23 +141,36 @@
         </button>
 
         {#if open && options.length > 0}
-            <div
-                use:portal
-                bind:this={menuRef}
-                style={menuStyle}
-                class={`dropdown-portal-menu ${showDropshadow ? dropShadow : ""} ${bgWhite ? "bg-white" : "bg-gv-input-bg"} ${displayTop ? "rounded-t-1" : "rounded-b-1"} max-h-[20vh] flex flex-col items-center overflow-y-auto border border-gv-border`}
-            >
-                {#each options as option, i (i)}
-                    <button
-                        type="button"
-                        class={`text-left p-2 pl-4 pr-4 cursor-pointer hover:bg-gv-hover-effect w-full rounded-1 ${textWrap ? "text-wrap" : "text-nowrap"}`}
-                        data-option={option}
-                        onclick={selectOption}
-                    >
-                        {doCapitalizeWords ? capitalizeWords(option) : option}
-                    </button>
-                {/each}
-            </div>
+            {#if usePortal}
+                <div
+                    use:portal
+                    bind:this={menuRef}
+                    class={`dropdown-portal-menu ${showDropshadow ? dropShadow : ""} ${bgWhite ? "bg-white" : "bg-gv-input-bg"} ${displayTop ? "rounded-t-1" : "rounded-b-1"} max-h-[20vh] flex flex-col items-center overflow-y-auto`}
+                >
+                    {@render dropdownItems()}
+                </div>
+            {:else}
+                <div
+                    bind:this={menuRef}
+                    class={`absolute ${showDropshadow ? dropShadow : ""} w-full ${bgWhite ? "bg-white" : "bg-gv-input-bg"} ${displayTop ? "bottom-10.5 rounded-t-1" : "rounded-b-1"} max-h-[20vh] flex flex-col items-center z-999 overflow-y-auto`}
+                    {...minWidth > 0 ? { style: `min-width: ${minWidth}px` } : {}}
+                >
+                    {@render dropdownItems()}
+                </div>
+            {/if}
         {/if}
     </div>
 </div>
+
+{#snippet dropdownItems()}
+    {#each options as option, i (i)}
+        <button
+            type="button"
+            class={`text-left p-2 pl-4 pr-4 cursor-pointer hover:bg-gv-hover-effect w-full self-stretch rounded-1 ${textWrap ? "text-wrap" : "text-nowrap"}`}
+            data-option={option}
+            onclick={selectOption}
+        >
+            {doCapitalizeWords ? capitalizeWords(option) : option}
+        </button>
+    {/each}
+{/snippet}

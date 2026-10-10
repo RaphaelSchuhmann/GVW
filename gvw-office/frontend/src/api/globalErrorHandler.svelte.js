@@ -28,7 +28,8 @@ const DOMAINS = {
         default: "Artikel",
         "001": "Hilfe-Center Kategorie"
     },
-    "16": {
+    "16": { default: "Datei" },
+    "17": {
         default: "Deployment",
         "006": "Migration",
     }

@@ -31,8 +31,7 @@
     });
 
     export function hide() {
-        visible = false;
-        if (extraFunctionOnClose) extraFunction();
+        times = [];
     }
 </script>
 
