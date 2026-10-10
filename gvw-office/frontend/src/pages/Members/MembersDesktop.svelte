@@ -18,6 +18,7 @@
     import ContextMenu from "../../components/ContextMenu.svelte";
     import ConfirmDeleteModal from "../../components/ConfirmDeleteModal.svelte";
     import AddMemberModal from "../../components/AddMemberModal.svelte";
+    import Table from "../../components/Table.svelte";
 
     // ==================
     // MODAL REFERENCES
@@ -168,111 +169,90 @@
 
         <SearchBar placeholder="Mitglieder durchsuchen..." page="members" marginTop="5" />
 
-        <Card padding="0" marginTop="5" borderThickness={viewport.width > 1300 ? "2" : "1"}>
-            <div class="flex-1 min-h-0 overflow-y-auto w-full">
-                {#if membersStore.display.length !== 0}
-                    {#if viewport.width > 1300}
-                        <table class="w-full text-left border-gv-border">
-                            <thead
-                                class="sticky top-0 z-10 bg-white min-[1300px]:text-dt-4 text-dt-6 text-gv-dark-text">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 font-bold">
-                                    Name
-                                </th>
-                                <th scope="col" class="px-6 py-3 font-bold">
-                                    Stimmlage
-                                </th>
-                                <th scope="col" class="px-6 py-3 font-bold">
-                                    Kontakt
-                                </th>
-                                <th scope="col" class="px-6 py-3 font-bold text-nowrap">
-                                    Mitglied seit
-                                </th>
-                                <th scope="col" class="px-6 py-3 font-bold">
-                                    Status
-                                </th>
-                                <th scope="col" class="px-6 py-3">
-                                    <button
-                                        class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
-                                        onclick={fetchAndSetRaw}
-                                    >
-                                        <span
-                                            class="material-symbols-rounded min-[1300px]:text-icon-dt-5 text-icon-dt-6 font-bold text-gv-dark-text">refresh</span>
-                                    </button>
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {#each membersStore.display as member (member.id)}
-                                <tr class="border-t-2 border-gv-border"
-                                    data-id={member.id}
-                                    oncontextmenu={handleMenuOpenFromEvent}>
-                                    <td class="px-6 py-4">
-                                        <div class="flex flex-col items-start h-full overflow-hidden gap-1">
-                                            <p class="min-[1300px]:text-dt-6 text-dt-7 text-gv-dark-text text-nowrap truncate">{`${member.name} ${member.surname}`}</p>
-                                            <p class="min-[1300px]:text-dt-8 text-dt-8 text-gv-light-text text-nowrap truncate">{member.address}</p>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <p class="min-[1300px]:text-dt-4 text-dt-7 text-gv-dark-text text-nowrap truncate">{voiceMapI2D[member.voice] || member.voice}</p>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <div class="flex flex-col items-start  h-full overflow-hidden gap-2">
-                                            <div class="flex items-center justify-start gap-2">
-                                                <span
-                                                    class="material-symbols-rounded min-[1300px]:text-icon-dt-6 text-icon-dt-7 text-gv-dark-turquoise">mail</span>
-                                                <p class="min-[1300px]:text-dt-7 text-dt-8 text-gv-dark-turquoise">{member.email}</p>
-                                            </div>
-                                            <div class="flex items-center justify-start gap-2">
-                                                <span
-                                                    class="material-symbols-rounded min-[1300px]:text-icon-dt-6 text-icon-dt-7 text-gv-light-text">phone</span>
-                                                <p class="min-[1300px]:text-dt-7 text-dt-8 text-gv-light-text">{member.phone}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <p class="min-[1300px]:text-dt-4 text-dt-7 text-gv-dark-text text-nowrap truncate">{getYearFromISOString(member.joined)}</p>
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <Chip text={statusMapI2D[member.status] || member.status} />
-                                    </td>
-                                    <td class="px-6 py-4">
-                                        <button
-                                            class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
-                                            data-id={member.id}
-                                            onclick={handleMenuOpenFromBtn}>
-                                                    <span
-                                                        class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">
-                                                        more_horiz
-                                                    </span>
-                                        </button>
-                                    </td>
-                                </tr>
-                            {/each}
-                            </tbody>
-                        </table>
-                    {:else}
-                        {#each membersStore.display as member (member.id)}
-                            <button
-                                class={`flex items-center w-full ${membersStore.display.indexOf(member) !== membersStore.display.length - 1 ? "border-b" : "border-none"} border-gv-border p-2`}
-                                onclick={async () =>  await push(`/members/details?id=${member.id}&editing=false`)}>
-                                <div class="flex flex-col items-start justify-between mr-auto max-w-3/4">
-                                    <p class="text-gv-dark-text text-dt-7">{`${member.name} ${member.surname}`}</p>
-                                    <div class="flex items-center justify-start gap-2">
-                                        <span class="material-symbols-rounded text-icon-dt-7 text-gv-dark-turquoise">mail</span>
-                                        <p class="text-dt-8 text-gv-dark-turquoise text-nowrap truncate">{member.email}</p>
-                                    </div>
-                                </div>
+        <Table items={membersStore.display} marginTop="5" breakpoint={1300} emptyText="Es wurden keine Mitglieder gefunden!">
+            {#snippet header()}
+                <th scope="col" class="px-6 py-3 font-bold">Name</th>
+                <th scope="col" class="px-6 py-3 font-bold">Stimmlage</th>
+                <th scope="col" class="px-6 py-3 font-bold">Kontakt</th>
+                <th scope="col" class="px-6 py-3 font-bold text-nowrap">Mitglied seit</th>
+                <th scope="col" class="px-6 py-3 font-bold">Status</th>
+                <th scope="col" class="px-6 py-3">
+                    <button
+                        class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                        onclick={fetchAndSetRaw}
+                    >
+                        <span
+                            class="material-symbols-rounded min-[1300px]:text-icon-dt-5 text-icon-dt-6 font-bold text-gv-dark-text">
+                            refresh
+                        </span>
+                    </button>
+                </th>
+            {/snippet}
+            {#snippet row(member)}
+                <tr class="border-t-2 border-gv-border"
+                    data-id={member.id}
+                    oncontextmenu={handleMenuOpenFromEvent}>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col items-start h-full overflow-hidden gap-1">
+                            <p class="min-[1300px]:text-dt-6 text-dt-7 text-gv-dark-text text-nowrap truncate">{`${member.name} ${member.surname}`}</p>
+                            <p class="min-[1300px]:text-dt-8 text-dt-8 text-gv-light-text text-nowrap truncate">{member.address}</p>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="min-[1300px]:text-dt-4 text-dt-7 text-gv-dark-text text-nowrap truncate">{voiceMapI2D[member.voice] || member.voice}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex flex-col items-start  h-full overflow-hidden gap-2">
+                            <div class="flex items-center justify-start gap-2">
+                                <span
+                                    class="material-symbols-rounded min-[1300px]:text-icon-dt-6 text-icon-dt-7 text-gv-dark-turquoise">
+                                    mail
+                                </span>
+                                <p class="min-[1300px]:text-dt-7 text-dt-8 text-gv-dark-turquoise">{member.email}</p>
+                            </div>
+                            <div class="flex items-center justify-start gap-2">
+                                <span
+                                    class="material-symbols-rounded min-[1300px]:text-icon-dt-6 text-icon-dt-7 text-gv-light-text">
+                                    phone
+                                </span>
+                                <p class="min-[1300px]:text-dt-7 text-dt-8 text-gv-light-text">{member.phone}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <p class="min-[1300px]:text-dt-4 text-dt-7 text-gv-dark-text text-nowrap truncate">{getYearFromISOString(member.joined)}</p>
+                    </td>
+                    <td class="px-6 py-4">
+                        <Chip text={statusMapI2D[member.status] || member.status} />
+                    </td>
+                    <td class="px-6 py-4">
+                        <button
+                            class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                            data-id={member.id}
+                            onclick={handleMenuOpenFromBtn}>
+                            <span class="material-symbols-rounded text-icon-dt-6 text-gv-dark-text">
+                                more_horiz
+                            </span>
+                        </button>
+                    </td>
+                </tr>
+            {/snippet}
 
-                                <Chip text={statusMapI2D[member.status] || member.status} fontSize="7" />
-                            </button>
-                        {/each}
-                    {/if}
-                {:else}
-                    <p class="text-dt-3 text-gv-dark-text text-center w-full h-full p-10 font-semibold">Es wurden keine
-                        Mitglieder gefunden!</p>
-                {/if}
-            </div>
-        </Card>
+            {#snippet mobileItem(member, index)}
+                <button
+                    class={`flex items-center w-full ${index !== membersStore.display.length - 1 ? "border-b" : "border-none"} border-gv-border p-2`}
+                    onclick={async () =>  await push(`/members/details?id=${member.id}&editing=false`)}>
+                    <div class="flex flex-col items-start justify-between mr-auto max-w-3/4">
+                        <p class="text-gv-dark-text text-dt-7">{`${member.name} ${member.surname}`}</p>
+                        <div class="flex items-center justify-start gap-2">
+                            <span class="material-symbols-rounded text-icon-dt-7 text-gv-dark-turquoise">mail</span>
+                            <p class="text-dt-8 text-gv-dark-turquoise text-nowrap truncate">{member.email}</p>
+                        </div>
+                    </div>
+
+                    <Chip text={statusMapI2D[member.status] || member.status} fontSize="7" />
+                </button>
+            {/snippet}
+        </Table>
     </div>
 </main>

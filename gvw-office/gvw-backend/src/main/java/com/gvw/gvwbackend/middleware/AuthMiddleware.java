@@ -78,9 +78,7 @@ public class AuthMiddleware extends OncePerRequestFilter {
     response.sendError(HttpServletResponse.SC_UNAUTHORIZED, code);
   }
 
-  /**
-   * Block authentication for async dispatch requests.
-   */
+  /** Block authentication for async dispatch requests. */
   @Override
   protected boolean shouldNotFilterAsyncDispatch() {
     return false;

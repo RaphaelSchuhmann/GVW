@@ -179,13 +179,28 @@ public class DashboardService {
             .filter(m -> m == null || m.isBlank() || !existingMemberIds.contains(m))
             .count();
 
+    List<Deployment> deployments = dbService.findAll("deployments", Deployment.class);
+    List<Map<String, String>> deploymentResponse =
+        deployments.stream()
+            .map(
+                m ->
+                    Map.of(
+                        "title",
+                        Objects.toString(m.getTitle(), ""),
+                        "type",
+                        m.getStatus() == null ? "" : m.getStatus().name(),
+                        "id",
+                        Objects.toString(m.getId(), "")))
+            .toList();
+
     return new AdminDashboardResponseDTO(
         feedbacks.size(),
         bugReports.size(),
         averageSentiment,
         mostUsedHash,
         users.size(),
-        totalOrphaned);
+        totalOrphaned,
+        deploymentResponse);
   }
 
   private List<Member> sortMembersByUpcomingBirthday(List<Member> members) {

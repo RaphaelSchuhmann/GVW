@@ -395,7 +395,7 @@ export async function updateScore(score) {
 
         addToast({
             title: "Änderungen gespeichert",
-            subTitle: "Ihre Änderungen wurden erfolgreich gespeichert.",
+            subTitle: viewport.isMobile ? "" : "Ihre Änderungen wurden erfolgreich gespeichert.",
             type: "success"
         });
     } finally {

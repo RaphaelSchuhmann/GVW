@@ -132,7 +132,8 @@ export async function loadAdminDashboardData() {
             !Number.isFinite(body?.averageSentiment) || body.averageSentiment < 0 ||
             !Number.isFinite(body?.userCount) || body.userCount < 0 ||
             !Number.isFinite(body?.orphanedUserCount) || body.orphanedUserCount < 0 ||
-            typeof body?.mostUsedHash !== "string"
+            typeof body?.mostUsedHash !== "string" ||
+            !Array.isArray(body?.deployments)
         ) {
             addToast({
                 title: "Fehler beim laden",
@@ -148,6 +149,7 @@ export async function loadAdminDashboardData() {
         adminDashboardStore.reportHub.mostUsedHash = body.mostUsedHash || "N/A";
         adminDashboardStore.userManagement.userCount = body.userCount;
         adminDashboardStore.userManagement.orphanedUserCount = body.orphanedUserCount;
+        adminDashboardStore.deployments = body.deployments;
     } finally {
         isFetching.adminDashboard = false;
     }

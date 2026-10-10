@@ -1,81 +1,24 @@
 <script>
-    import ToastStack from "../../components/ToastStack.svelte";
-    import PageHeader from "../../components/PageHeader.svelte";
-    import MobileSidebar from "../../components/MobileSidebar.svelte";
-    import ChangelogListItem from "../../components/ChangelogListItem.svelte";
-    import { changelogsStore } from "../../stores/changelogs.svelte.js";
-    import Card from "../../components/Card.svelte";
-    import AccordionList from "../../components/AccordionList.svelte";
-    import Modal from "../../components/Modal.svelte";
-    import Textarea from "../../components/Textarea.svelte";
-    import Spinner from "../../components/Spinner.svelte";
-    import Input from "../../components/Input.svelte";
-    import Button from "../../components/Button.svelte";
-    import { addChangelog } from "../../services/changelogService.svelte.js";
-    import HorizontalNavBar from "../../components/AdminHorizontalNavBar.svelte";
-    import {viewport} from "../../stores/viewport.svelte.js";
     import {adminDashboardStore} from "../../stores/adminDashboard.svelte.js";
     import {push} from "svelte-spa-router";
 
+    import ToastStack from "../../components/ToastStack.svelte";
+    import PageHeader from "../../components/PageHeader.svelte";
+    import MobileSidebar from "../../components/MobileSidebar.svelte";
+    import Card from "../../components/Card.svelte";
+    import Button from "../../components/Button.svelte";
+    import HorizontalNavBar from "../../components/AdminHorizontalNavBar.svelte";
+    import Chip from "../../components/Chip.svelte";
+
     let sidebarOpen = $state(false);
-
-    /** @type {import("../../components/Modal.svelte").default} */
-    let addChangelogModal = null;
-
-    // Add changelog
-
-    let isSubmitting = $state(false);
-
-    let addChangelogInputs = $state({
-        title: "",
-        version: "",
-        content: "",
-    });
-
-    let addChangelogBtnDisabled = $derived(!(addChangelogInputs.title && addChangelogInputs.version && addChangelogInputs.content) || isSubmitting);
-
-    async function submitNewChangelog() {
-        isSubmitting = true;
-
-        try {
-            await addChangelog(addChangelogInputs);
-        } finally {
-            isSubmitting = false;
-        }
-
-        addChangelogModal.hideModal();
-    }
-
-    function resetChangelogInputs() {
-        addChangelogInputs.title = "";
-        addChangelogInputs.version = "";
-        addChangelogInputs.content = "";
-    }
 
     function openSidebar() { sidebarOpen = true; }
     async function routeToReportHub() { await push("/admin/reportHub"); }
     async function routeToUserManagement() { await push("/admin/userManagement"); }
+    async function routeToDeployments() { await push("/admin/deployments"); }
 </script>
 
 <ToastStack isMobile={true} />
-
-<Modal isMobile={true} bind:this={addChangelogModal} title="Neuen Changelog hinzufügen" subTitle="Erfassen Sie hier die Changelogdaten"
-       extraFunction={resetChangelogInputs}>
-    <Input bind:value={addChangelogInputs.title} title="Titel" placeholder="Changelog v1.0" marginTop="5"/>
-    <Input bind:value={addChangelogInputs.version} title="Version" placeholder="v1.0" marginTop="5"/>
-    <Textarea bind:value={addChangelogInputs.content} title="Inhalt" placeholder="Informationen über Änderungen..." height="h-[20vh]" marginTop="5"/>
-    <div class="w-full flex items-center justify-end mt-5 gap-2">
-        <Button type="secondary" onclick={addChangelogModal.hideModal}>Abbrechen</Button>
-        <Button type="primary" disabled={addChangelogBtnDisabled} onclick={submitNewChangelog} isSubmit={true}>
-            {#if isSubmitting}
-                <Spinner light={true} />
-                <p>Speichern...</p>
-            {:else}
-                Hinzufügen
-            {/if}
-        </Button>
-    </div>
-</Modal>
 
 <MobileSidebar currentPage="adminDashboard" bind:isOpen={sidebarOpen} />
 
@@ -95,19 +38,22 @@
             <div class="flex flex-col w-full gap-4 mt-10">
                 <Card>
                     <div class="w-full flex items-center justify-start p-1">
-                        <p class="text-gv-dark-text text-dt-4">Changelogs</p>
-                        <button
-                            aria-label="Neuen Changelog hinzufügen"
-                            title="Neuen Changelog hinzufügen"
-                            class="flex items-center justify-center p-1 cursor-pointer hover:bg-gv-hover-effect rounded-2 ml-auto"
-                            onclick={addChangelogModal.showModal}
-                        >
-                            <span class="material-symbols-rounded text-icon-dt-5">add</span>
-                        </button>
+                        <p class="text-gv-dark-text text-dt-4">Deployments</p>
                     </div>
-                    <div class="w-full flex flex-col items-center max-h-[45vh]">
-                        <AccordionList itemComponent={ChangelogListItem} list={changelogsStore} />
+                    <div class="flex flex-col w-full h-full gap-2">
+                        {#each adminDashboardStore.deployments as deployment, index (deployment.id)}
+                            <Card>
+                                <div class="flex flex-col w-full items-start justify-start gap-2">
+                                    <p class="text-gv-dark-text text-dt-5">{deployment.title}</p>
+                                    <Chip text={deployment.type} colorType={deployment.type.toLowerCase()} />
+                                </div>
+                            </Card>
+                        {/each}
                     </div>
+                    <Button type="primary" onclick={routeToDeployments}>
+                        <span class="text-dt-5">Details</span>
+                        <span class="material-symbols-rounded">chevron_right</span>
+                    </Button>
                 </Card>
                 <Card>
                     <div class="w-full flex items-center justify-start p-2">
