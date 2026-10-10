@@ -7,6 +7,7 @@ import com.gvw.gvwbackend.model.Deployment;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -24,10 +25,12 @@ class DeploymentValidatorTest {
   @Mock private HttpClient httpClient;
 
   private DeploymentValidator validator;
+  private Clock fixedClock;
 
   @BeforeEach
   void setUp() {
-    validator = new DeploymentValidator(httpClient);
+    fixedClock = Clock.fixed(Instant.parse("2024-01-15T12:00:00Z"), ZoneOffset.UTC);
+    validator = new DeploymentValidator(httpClient, fixedClock);
   }
 
   @Test
@@ -37,7 +40,7 @@ class DeploymentValidatorTest {
 
   @Test
   void isTodayAndAlreadyStarted_NullTime_ReturnsFalse() {
-    String todayIso = Instant.now().atZone(ZoneOffset.UTC).toString();
+    String todayIso = Instant.now(fixedClock).atZone(ZoneOffset.UTC).toString();
     assertFalse(validator.isTodayAndAlreadyStarted(todayIso, null));
   }
 
@@ -49,7 +52,7 @@ class DeploymentValidatorTest {
   @Test
   void isTodayAndAlreadyStarted_FutureDate_ReturnsFalse() {
     String futureDate =
-        LocalDate.now(ZoneOffset.UTC)
+        LocalDate.now(fixedClock.withZone(ZoneOffset.UTC))
             .plusDays(1)
             .atStartOfDay(ZoneOffset.UTC)
             .toInstant()
@@ -58,41 +61,41 @@ class DeploymentValidatorTest {
   }
 
   @Test
-  void isTodayAndAlreadyStarted_PastDate_ReturnsFalse() {
+  void isTodayAndAlreadyStarted_PastDate_ReturnsTrue() {
     String pastDate =
-        LocalDate.now(ZoneOffset.UTC)
+        LocalDate.now(fixedClock.withZone(ZoneOffset.UTC))
             .minusDays(1)
             .atStartOfDay(ZoneOffset.UTC)
             .toInstant()
             .toString();
-    assertFalse(validator.isTodayAndAlreadyStarted(pastDate, LocalTime.NOON));
+    assertTrue(validator.isTodayAndAlreadyStarted(pastDate, LocalTime.NOON));
   }
 
   @Test
   void isTodayAndAlreadyStarted_TodayAndTimeNotPassed_ReturnsFalse() {
-    String todayIso = Instant.now().atZone(ZoneOffset.UTC).toString();
-    LocalTime futureTime = LocalTime.now(ZoneOffset.UTC).plusHours(1);
+    String todayIso = Instant.now(fixedClock).toString();
+    LocalTime futureTime = LocalTime.now(fixedClock.withZone(ZoneOffset.UTC)).plusHours(1);
     assertFalse(validator.isTodayAndAlreadyStarted(todayIso, futureTime));
   }
 
   @Test
   void isTodayAndAlreadyStarted_TodayAndTimePassed_ReturnsTrue() {
-    String todayIso = Instant.now().atZone(ZoneOffset.UTC).toString();
-    LocalTime pastTime = LocalTime.now(ZoneOffset.UTC).minusHours(1);
+    String todayIso = Instant.now(fixedClock).toString();
+    LocalTime pastTime = LocalTime.now(fixedClock.withZone(ZoneOffset.UTC)).minusHours(1);
     assertTrue(validator.isTodayAndAlreadyStarted(todayIso, pastTime));
   }
 
   @Test
   void isTodayAndAlreadyStarted_TodayAndTimeEqualNow_ReturnsTrue() {
-    String todayIso = Instant.now().atZone(ZoneOffset.UTC).toString();
-    LocalTime currentTime = LocalTime.now(ZoneOffset.UTC);
+    String todayIso = Instant.now(fixedClock).toString();
+    LocalTime currentTime = LocalTime.now(fixedClock.withZone(ZoneOffset.UTC));
     assertTrue(validator.isTodayAndAlreadyStarted(todayIso, currentTime));
   }
 
   @Test
   void isTodayAndAlreadyStarted_TodayMidnight_ReturnsTrue() {
     String todayIso =
-        LocalDate.now(ZoneOffset.UTC).atStartOfDay(ZoneOffset.UTC).toInstant().toString();
+        LocalDate.now(fixedClock.withZone(ZoneOffset.UTC)).atStartOfDay(ZoneOffset.UTC).toInstant().toString();
     assertTrue(validator.isTodayAndAlreadyStarted(todayIso, LocalTime.MIDNIGHT));
   }
 
@@ -433,7 +436,7 @@ class DeploymentValidatorTest {
 
   @Test
   void isCommitHashValid_InvalidHash_ReturnsFalse() throws Exception {
-    String invalidHash = "invalidhash";
+    String invalidHash = "abcdef123456";
 
     @SuppressWarnings("unchecked")
     HttpResponse<Void> mockResponse = mock(HttpResponse.class);
@@ -446,7 +449,7 @@ class DeploymentValidatorTest {
 
   @Test
   void isCommitHashValid_HttpException_ReturnsFalse() throws Exception {
-    String hash = "abc123";
+    String hash = "abcdef123456";
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new RuntimeException("Network error"));
@@ -455,24 +458,12 @@ class DeploymentValidatorTest {
   }
 
   @Test
-  void isCommitHashValid_NullHash_ReturnsFalse() throws Exception {
-    @SuppressWarnings("unchecked")
-    HttpResponse<Void> mockResponse = mock(HttpResponse.class);
-    when(mockResponse.statusCode()).thenReturn(404);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(mockResponse);
-
+  void isCommitHashValid_NullHash_ReturnsFalse() {
     assertFalse(validator.isCommitHashValid(null));
   }
 
   @Test
-  void isCommitHashValid_EmptyHash_ReturnsFalse() throws Exception {
-    @SuppressWarnings("unchecked")
-    HttpResponse<Void> mockResponse = mock(HttpResponse.class);
-    when(mockResponse.statusCode()).thenReturn(404);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(mockResponse);
-
+  void isCommitHashValid_EmptyHash_ReturnsFalse() {
     assertFalse(validator.isCommitHashValid(""));
   }
 }

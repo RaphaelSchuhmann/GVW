@@ -185,7 +185,12 @@ public class DashboardService {
             .map(
                 m ->
                     Map.of(
-                        "title", m.getTitle(), "type", m.getStatus().toString(), "id", m.getId()))
+                        "title",
+                        Objects.toString(m.getTitle(), ""),
+                        "type",
+                        m.getStatus() == null ? "" : m.getStatus().name(),
+                        "id",
+                        Objects.toString(m.getId(), "")))
             .toList();
 
     return new AdminDashboardResponseDTO(

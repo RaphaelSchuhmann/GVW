@@ -86,8 +86,8 @@
      * without persisting any changes.
      */
     function cancelEditing() {
-        informationDraft = null;
         onChangeIsEditing(false);
+        informationDraft = null;
     }
 
     const REQUIRED_DEPLOYMENT_FIELDS = ["title", "version", "date", "startTime", "endTime"];
@@ -230,7 +230,9 @@
         isSubmittingInformationChanges = true;
         try {
             await updateDeployment($state.snapshot(informationDraft));
-            deploymentData = await getFullDeployment(deploymentData.id);
+
+            const refreshed = await getFullDeployment(deploymentData.id);
+            if (refreshed) deploymentData = refreshed;
         } finally {
             isSubmittingInformationChanges = false;
             onChangeIsEditing(false);
@@ -456,7 +458,7 @@
             <!-- Deployment Information -->
             <div class="flex flex-col items-center gap-5 min-[1500px]:w-1/2 min-[1200px]:w-2/3 w-full mt-5 p-0.5">
                 <div class="w-full flex items-center justify-start">
-                    <p class="text-dt-3 text-gv-dark-text font-medium">Deployment Infromationen</p>
+                    <p class="text-dt-3 text-gv-dark-text font-medium">Deployment Informationen</p>
                 </div>
                 {#if !isEditing}
                     <div class="flex items-center gap-4 w-full max-[900px]:flex-col">

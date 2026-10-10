@@ -124,6 +124,12 @@ public class GlobalExceptionHandler {
         HttpStatus.TOO_MANY_REQUESTS);
   }
 
+  @ExceptionHandler(ForbiddenException.class)
+  @ResponseStatus(HttpStatus.FORBIDDEN)
+  public ResponseEntity<ErrorResponseDTO> handleForbidden(ConflictException ex) {
+    return generateResponse(ex.getMessage(), null, HttpStatus.FORBIDDEN);
+  }
+
   /**
    * Handles unexpected exceptions that are not explicitly mapped.
    *

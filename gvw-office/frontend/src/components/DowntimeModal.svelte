@@ -3,11 +3,14 @@
     import { heightMap, widthMap } from "../lib/dynamicStyles.js";
     import { getTodayDeployments } from "../services/deploymentService.svelte.js";
     import ModalHeader from "./ModalHeader.svelte";
+    import { auth } from "../stores/auth.svelte.js";
 
     let times = $state([]);
     let visible = $derived(times.length > 0);
 
     $effect(() => {
+        if (!auth.token) return;
+
         getTodayDeployments().then((deployments) => {
             times = deployments;
         });

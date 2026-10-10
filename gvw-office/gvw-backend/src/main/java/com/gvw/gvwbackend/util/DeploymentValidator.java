@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -21,10 +22,16 @@ import org.springframework.stereotype.Component;
 @Component
 public class DeploymentValidator {
   private final HttpClient httpClient;
+  private final Clock clock;
   private static final Logger log = LoggerFactory.getLogger(DeploymentValidator.class);
 
   public DeploymentValidator(HttpClient httpClient) {
+    this(httpClient, Clock.systemUTC());
+  }
+
+  public DeploymentValidator(HttpClient httpClient, Clock clock) {
     this.httpClient = httpClient;
+    this.clock = clock;
   }
 
   /**
@@ -40,13 +47,17 @@ public class DeploymentValidator {
     }
 
     LocalDate targetDate = Instant.parse(targetIsoDate).atZone(ZoneOffset.UTC).toLocalDate();
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+    LocalDate today = LocalDate.now(clock.withZone(ZoneOffset.UTC));
 
-    if (!targetDate.equals(today)) {
-      return false; // Not today (either past date or future date)
+    if (targetDate.isBefore(today)) {
+      return true;
     }
 
-    LocalTime currentTime = LocalTime.now(ZoneOffset.UTC);
+    if (targetDate.isAfter(today)) {
+      return false;
+    }
+
+    LocalTime currentTime = LocalTime.now(clock.withZone(ZoneOffset.UTC));
 
     boolean result = !currentTime.isBefore(targetStart);
     if (result) {
@@ -115,6 +126,9 @@ public class DeploymentValidator {
    * @return True if the commit exists (HTTP 200), false otherwise.
    */
   public boolean isCommitHashValid(String hash) {
+    if (hash == null || !hash.matches("^[0-9a-fA-F]{7,40}$")) {
+      return false;
+    }
     log.debug("Validating commit hash {}", hash);
     String url = "https://api.github.com/repos/raphaelschuhmann/gvw/commits/" + hash;
     HttpRequest request =

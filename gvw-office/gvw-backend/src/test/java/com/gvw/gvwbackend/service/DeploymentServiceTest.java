@@ -16,8 +16,11 @@ import com.gvw.gvwbackend.model.MigrationAction;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
 import com.gvw.gvwbackend.util.MigrationValidator;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,12 +42,14 @@ class DeploymentServiceTest {
   @Mock private HashUtil hashUtil;
 
   private DeploymentService deploymentService;
+  private Clock fixedClock;
 
   @BeforeEach
   void setUp() {
+    fixedClock = Clock.fixed(Instant.parse("2024-01-15T12:00:00Z"), ZoneOffset.UTC);
     deploymentService =
         new DeploymentService(
-            dbService, sseService, deploymentValidator, migrationValidator, hashUtil);
+            dbService, sseService, deploymentValidator, migrationValidator, hashUtil, fixedClock);
   }
 
   @Test
@@ -69,9 +74,9 @@ class DeploymentServiceTest {
   void getTodayDeployments_TodayDeploymentBeforeStartTime_ReturnsFormattedTime() {
     Deployment deployment =
         Deployment.builder()
-            .date(OffsetDateTime.now().toString())
-            .startTime(LocalTime.now().plusHours(1))
-            .endTime(LocalTime.now().plusHours(2))
+            .date(OffsetDateTime.now(fixedClock).toString())
+            .startTime(LocalTime.now(fixedClock).plusHours(1))
+            .endTime(LocalTime.now(fixedClock).plusHours(2))
             .build();
 
     when(dbService.findByQuery(anyString(), anyMap(), eq(Deployment.class)))
@@ -87,9 +92,9 @@ class DeploymentServiceTest {
   void getTodayDeployments_PastDateDeployment_ReturnsEmptyList() {
     Deployment deployment =
         Deployment.builder()
-            .date(OffsetDateTime.now().minusDays(1).toString())
-            .startTime(LocalTime.now().plusHours(1))
-            .endTime(LocalTime.now().plusHours(2))
+            .date(OffsetDateTime.now(fixedClock).minusDays(1).toString())
+            .startTime(LocalTime.now(fixedClock).plusHours(1))
+            .endTime(LocalTime.now(fixedClock).plusHours(2))
             .build();
 
     when(dbService.findByQuery(anyString(), anyMap(), eq(Deployment.class)))
@@ -104,9 +109,9 @@ class DeploymentServiceTest {
   void getTodayDeployments_TodayDeploymentAfterStartTime_ReturnsEmptyList() {
     Deployment deployment =
         Deployment.builder()
-            .date(OffsetDateTime.now().toString())
-            .startTime(LocalTime.now().minusHours(1))
-            .endTime(LocalTime.now().plusHours(1))
+            .date(OffsetDateTime.now(fixedClock).toString())
+            .startTime(LocalTime.now(fixedClock).minusHours(1))
+            .endTime(LocalTime.now(fixedClock).plusHours(1))
             .build();
 
     when(dbService.findByQuery(anyString(), anyMap(), eq(Deployment.class)))

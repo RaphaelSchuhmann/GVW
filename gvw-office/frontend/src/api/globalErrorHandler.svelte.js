@@ -60,8 +60,8 @@ const STATUS_TEMPLATES = {
         subTitle: "{domain} - Die Daten sind nicht aktuell oder bereits vergeben."
     },
     "403": {
-        title: "Zugriff verweigert",
-        subTitle: "{domain} - Sie haben nicht die Berechtigung, diese Aktion auszuführen."
+        title: "Aktion nicht erlaubt",
+        subTitle: "{domain} - Diese Aktion ist gerade nicht erlaubt."
     }
 };
 

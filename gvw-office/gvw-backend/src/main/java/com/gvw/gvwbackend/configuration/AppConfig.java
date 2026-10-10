@@ -39,7 +39,6 @@ public class AppConfig {
     return restTemplate;
   }
 
-  // BCrypt is used for one-way password hashing
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
@@ -52,6 +51,6 @@ public class AppConfig {
 
   @Bean
   public HttpClient httpclient() {
-    return HttpClient.newHttpClient();
+    return HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build();
   }
 }

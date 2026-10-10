@@ -4,7 +4,7 @@ import {
     apiDeleteDeployment, apiDeleteMigration,
     apiGetDeployment, apiGetDeploymentsToday, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
-import { handleGenericErrors, handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
+import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
 import { addToast } from "../stores/toasts.svelte.js";
 import { viewport } from "../stores/viewport.svelte.js";
@@ -132,7 +132,7 @@ export async function deploymentExists(id) {
 
             if (normalized.status === 404) return false;
 
-            if (handleGenericErrors(normalized)) return true;
+            if (handleGlobalApiError(normalized)) return true;
 
             return true;
         } catch {
@@ -158,15 +158,15 @@ export async function deploymentExists(id) {
  * @returns {Promise<void>}
  */
 export async function deleteDeployment(id) {
-    if (isFetching.deleteDeployment) return;
+    if (isFetching.removeDeployment) return;
 
-    isFetching.deleteDeployment = true;
+    isFetching.removeDeployment = true;
 
     try {
         const { resp } = await apiDeleteDeployment(id);
         const normalized = normalizeResponse(resp);
 
-        if (handleGenericErrors(normalized)) return;
+        if (handleGlobalApiError(normalized)) return;
 
         addToast({
             title: "Deployment gelöscht",
@@ -174,7 +174,7 @@ export async function deleteDeployment(id) {
             type: "success"
         });
     } finally {
-        isFetching.deleteDeployment = false;
+        isFetching.removeDeployment = false;
     }
 }
 
@@ -272,7 +272,7 @@ export async function getTodayDeployments() {
 
         if (handleGlobalApiError(normalized)) return [];
 
-        return body.times;
+        return Array.isArray(body?.times) ? body.times : [];
     } finally {
         isFetching.today = false;
     }

@@ -72,7 +72,7 @@
             isSubmitting = false;
         }
 
-        addDeploymentModal.hideModal();
+        hideAddDeploymentModal();
     }
 
     function showAddDeploymentModal() {

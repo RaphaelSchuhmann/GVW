@@ -11,9 +11,11 @@ import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
 import com.gvw.gvwbackend.util.MigrationValidator;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.slf4j.Logger;
@@ -31,6 +33,7 @@ public class DeploymentService {
   private final DeploymentValidator deploymentValidator;
   private final MigrationValidator migrationValidator;
   private final HashUtil hashUtil;
+  private final Clock clock;
   private static final Logger log = LoggerFactory.getLogger(DeploymentService.class);
 
   public DeploymentService(
@@ -39,11 +42,22 @@ public class DeploymentService {
       DeploymentValidator deploymentValidator,
       MigrationValidator migrationValidator,
       HashUtil hashUtil) {
+    this(dbService, sseService, deploymentValidator, migrationValidator, hashUtil, Clock.systemUTC());
+  }
+
+  public DeploymentService(
+      DbService dbService,
+      SseService sseService,
+      DeploymentValidator deploymentValidator,
+      MigrationValidator migrationValidator,
+      HashUtil hashUtil,
+      Clock clock) {
     this.dbService = dbService;
     this.sseService = sseService;
     this.deploymentValidator = deploymentValidator;
     this.migrationValidator = migrationValidator;
     this.hashUtil = hashUtil;
+    this.clock = clock;
   }
 
   /**
@@ -63,10 +77,11 @@ public class DeploymentService {
     List<String> times = new ArrayList<>();
 
     for (Deployment deployment : deployments) {
-      LocalDate inputDate = OffsetDateTime.parse(deployment.getDate()).toLocalDate();
+      LocalDate inputDate =
+          OffsetDateTime.parse(deployment.getDate()).atZoneSameInstant(ZoneOffset.UTC).toLocalDate();
 
-      boolean isToday = inputDate.equals(LocalDate.now());
-      boolean isBeforeTargetTime = LocalTime.now().isBefore(deployment.getStartTime());
+      boolean isToday = inputDate.equals(LocalDate.now(clock.withZone(ZoneOffset.UTC)));
+      boolean isBeforeTargetTime = LocalTime.now(clock.withZone(ZoneOffset.UTC)).isBefore(deployment.getStartTime());
 
       if (!isToday || !isBeforeTargetTime) continue;
 
@@ -168,6 +183,11 @@ public class DeploymentService {
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 400)));
     }
 
+    if (!request.endTime().isAfter(request.startTime())) {
+      throw new BadRequestException(
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+    }
+
     Deployment deployment =
         Deployment.builder()
             .title(request.title())
@@ -198,6 +218,11 @@ public class DeploymentService {
     }
 
     Deployment deployment = findDeploymentById(request.deploymentId());
+
+    if (deployment.getStatus() == DeploymentStatus.RUNNING) {
+      throw new ForbiddenException(
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403, ErrorResource.MIGRATION)));
+    }
 
     Migration newMigration =
         Migration.builder()
@@ -244,11 +269,9 @@ public class DeploymentService {
             .filter(dep -> !Objects.equals(dep.getId(), deployment.getId()))
             .toList();
 
-    if (deployment.getStatus() != DeploymentStatus.SCHEDULED
-        && deployment.getStatus() != DeploymentStatus.CANCELLED
-        && deployment.getStatus() != DeploymentStatus.FAILED) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+    if (deployment.getStatus() == DeploymentStatus.RUNNING) {
+      throw new ForbiddenException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 403)));
     }
 
     if (deploymentValidator.isTodayAndAlreadyStarted(request.date(), request.startTime())) {
@@ -263,6 +286,11 @@ public class DeploymentService {
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
+    if (!request.endTime().isAfter(request.startTime())) {
+      throw new BadRequestException(
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+    }
+
     deployment.setRev(request.rev());
     deployment.setTitle(request.title());
     deployment.setAppVersion(request.version());
@@ -270,10 +298,12 @@ public class DeploymentService {
     deployment.setStartTime(request.startTime());
     deployment.setEndTime(request.endTime());
 
-    if (request.commit() != null
-        && !request.commit().isBlank()
-        && deploymentValidator.isCommitHashValid(request.commit())) {
-      // TODO: If the commit was validated automatically run a build
+    if (request.commit() != null && !request.commit().isBlank()) {
+      if (!deploymentValidator.isCommitHashValid(request.commit())) {
+        throw new BadRequestException(
+            String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+      }
+      // TODO: trigger build the deployment from the commit
 
       deployment.setCommit(request.commit());
     }
