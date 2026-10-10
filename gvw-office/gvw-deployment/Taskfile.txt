@@ -1,0 +1,6 @@
+task clean: null
+    rm -rf build
+
+task build: clean
+    mkdir -p build
+    go build -o build/gvw-deployment .
