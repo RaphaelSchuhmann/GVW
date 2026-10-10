@@ -135,7 +135,10 @@ export async function deploymentExists(id) {
             if (handleGenericErrors(normalized)) return true;
 
             return true;
-        } catch (e) {
+        } catch {
+            // If an exception is thrown assume that the deployment still exists
+            // and wait for another sse event to try again as there is no 100% chance
+            // that the deployment was deleted after the sse event was received
             return true;
         } finally {
             pendingChecks.delete(id);
