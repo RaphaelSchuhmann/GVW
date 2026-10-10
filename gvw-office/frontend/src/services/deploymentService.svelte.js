@@ -2,15 +2,23 @@ import {
     apiAddDeployment, apiAddMigration,
     apiCheckDeployment,
     apiDeleteDeployment, apiDeleteMigration,
-    apiGetDeployment, apiUpdateDeploymentInformation
+    apiGetDeployment, apiGetDeploymentsToday, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGenericErrors, handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
 import { addToast } from "../stores/toasts.svelte.js";
 import { viewport } from "../stores/viewport.svelte.js";
 
+/**
+ * Set of allowed migration action types.
+ * @type {Set<string>}
+ */
 export const migrationActions = new Set(["ADD", "DELETE", "RENAME", "CONDITIONAL"]);
 
+/**
+* Mapping dictionary for translating deployment type filter labels between UI strings and API values.
+* @type {Object<string, string>}
+*/
 export const deploymentTypeFilterMap = {
     "": "all",
     "Alle Typen": "all",
@@ -36,11 +44,17 @@ const isFetching = {
     removeMigration: false,
     updateDeployment: false,
     deploy: false,
-    testMigrations: false
+    testMigrations: false,
+    today: false
 }
 
 const pendingChecks = new Map();
 
+/**
+ * Adds a new deployment and triggers a success toast notification upon completion.
+ * @param {Object} data - The deployment payload to add.
+ * @returns {Promise<void>}
+ */
 export async function addDeployment(data) {
     if (isFetching.addDeployment) return;
 
@@ -62,6 +76,11 @@ export async function addDeployment(data) {
     }
 }
 
+/**
+ * Fetches a full deployment object by its ID, validating that all required fields are present.
+ * @param {string} id - The unique ID of the deployment.
+ * @returns {Promise<Object|null>} The full deployment object, or null if validation or fetching fails.
+ */
 export async function getFullDeployment(id) {
     if (isFetching.getDeployment) return null;
 
@@ -93,6 +112,12 @@ export async function getFullDeployment(id) {
     }
 }
 
+/**
+ * Checks whether a specific deployment still exists in the database.
+ * Deduplicates concurrent requests for the same ID via a pending checks map.
+ * @param {string} id - The unique ID of the deployment to check.
+ * @returns {Promise<boolean>} True if the deployment exists, false if it returns 404.
+ */
 export async function deploymentExists(id) {
     if (!id) return false;
 
@@ -124,6 +149,11 @@ export async function deploymentExists(id) {
     return await request;
 }
 
+/**
+ * Deletes a deployment by its ID and triggers a success toast notification.
+ * @param {string} id - The unique ID of the deployment to delete.
+ * @returns {Promise<void>}
+ */
 export async function deleteDeployment(id) {
     if (isFetching.deleteDeployment) return;
 
@@ -145,6 +175,11 @@ export async function deleteDeployment(id) {
     }
 }
 
+/**
+ * Updates an existing deployment's information and triggers a success toast notification.
+ * @param {Object} data - The updated deployment information.
+ * @returns {Promise<void>}
+ */
 export async function updateDeployment(data) {
     if (isFetching.updateDeployment) return;
 
@@ -166,6 +201,11 @@ export async function updateDeployment(data) {
     }
 }
 
+/**
+ * Adds a migration to a deployment and triggers a success toast notification.
+ * @param {Object} data - The migration payload.
+ * @returns {Promise<void>}
+ */
 export async function addMigration(data) {
     if (isFetching.addMigration) return;
 
@@ -187,6 +227,12 @@ export async function addMigration(data) {
     }
 }
 
+/**
+ * Deletes a specific migration from a deployment and triggers a success toast notification.
+ * @param {string} deploymentId - The ID of the parent deployment.
+ * @param {string} migrationId - The ID of the migration to delete.
+ * @returns {Promise<void>}
+ */
 export async function deleteMigration(deploymentId, migrationId) {
     if (!deploymentId || !migrationId || isFetching.removeMigration) return;
 
@@ -205,5 +251,26 @@ export async function deleteMigration(deploymentId, migrationId) {
         })
     } finally {
         isFetching.removeMigration = false;
+    }
+}
+
+/**
+ * Fetches the list of scheduled deployment times for today.
+ * @returns {Promise<Array>} An array of today's deployment time strings, or an empty array if failed.
+ */
+export async function getTodayDeployments() {
+    if (isFetching.today) return [];
+
+    isFetching.today = true;
+
+    try {
+        const { resp, body } = await apiGetDeploymentsToday();
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return [];
+
+        return body.times;
+    } finally {
+        isFetching.today = false;
     }
 }

@@ -28,6 +28,8 @@
     import { ensureUserData } from "./services/userService.svelte";
     import { initSettingsSync } from "./services/appSettingsSyncService.svelte.js";
     import { initFontLoader } from "./stores/appLoading.svelte.js";
+    import { getTodayDeployments } from "./services/deploymentService.svelte.js";
+    import DowntimeModal from "./components/DowntimeModal.svelte";
 
     const routes = {
         "/": Login,
@@ -61,5 +63,7 @@
         }
     });
 </script>
+
+<DowntimeModal />
 
 <Router {routes} />

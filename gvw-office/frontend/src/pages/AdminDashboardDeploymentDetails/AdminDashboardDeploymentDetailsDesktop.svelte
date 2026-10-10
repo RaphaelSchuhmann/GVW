@@ -6,7 +6,7 @@
         updateDeployment,
         migrationActions,
         addMigration,
-        deleteMigration,
+        deleteMigration
     } from "../../services/deploymentService.svelte.js";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
 
@@ -24,6 +24,7 @@
     import Dropdown from "../../components/Dropdown.svelte";
     import Checkbox from "../../components/Checkbox.svelte";
     import Migration from "../../components/Migration.svelte";
+    import { addToast } from "../../stores/toasts.svelte.js";
 
     let {
         deploymentData,
@@ -200,6 +201,18 @@
      * Acts as a safety mechanism against inconsistent state.
      */
     $effect.pre(() => {
+        if (isEditing && deploymentData.type === "RUNNING") {
+            cancelEditing();
+
+            addToast({
+                title: "Bearbeiten nicht erlaubt",
+                subTitle: "Das Bearbeiten eines laufenden Deployments ist nicht erlaubt.",
+                type: "warning",
+            });
+
+            return;
+        }
+
         if (isEditing && !informationDraft) {
             informationDraft = JSON.parse(JSON.stringify(deploymentData));
         }
@@ -320,6 +333,7 @@
             addMigrationInputs.value = "";
         }
     }
+
     function updateMigrationNegated(val) { addMigrationInputs.conditional.negated = val; }
 
     // ==================
@@ -371,8 +385,10 @@
             <div class="w-full flex flex-col items-start justify-start gap-2">
                 <p class="text-dt-6 font-medium">Bedingung</p>
                 <div class="flex items-center gap-4 w-full">
-                    <Input title="Feld" bind:value={addMigrationInputs.conditional.condition.field} placeholder="status" />
-                    <Input title="Erwarteter Wert" bind:value={addMigrationInputs.conditional.condition.value} placeholder="active" />
+                    <Input title="Feld" bind:value={addMigrationInputs.conditional.condition.field}
+                           placeholder="status" />
+                    <Input title="Erwarteter Wert" bind:value={addMigrationInputs.conditional.condition.value}
+                           placeholder="active" />
                 </div>
                 <Checkbox title="Negiert" onChange={updateMigrationNegated} />
             </div>
@@ -380,7 +396,8 @@
             <div class="w-full flex flex-col items-start justify-start gap-2">
                 <p class="text-dt-6 font-medium">True Branch</p>
                 <div class="flex items-center gap-4 w-full">
-                    <Input title="Feld" bind:value={addMigrationInputs.conditional.truePath.field} placeholder="isActive" />
+                    <Input title="Feld" bind:value={addMigrationInputs.conditional.truePath.field}
+                           placeholder="isActive" />
                     <Input title="Wert" bind:value={addMigrationInputs.conditional.truePath.value} placeholder="true" />
                 </div>
             </div>
@@ -388,8 +405,10 @@
             <div class="w-full flex flex-col items-start justify-start gap-2">
                 <p class="text-dt-6 font-medium">False Branch</p>
                 <div class="flex items-center gap-4 w-full">
-                    <Input title="Feld" bind:value={addMigrationInputs.conditional.falsePath.field} placeholder="isActive" />
-                    <Input title="Wert" bind:value={addMigrationInputs.conditional.falsePath.value} placeholder="false" />
+                    <Input title="Feld" bind:value={addMigrationInputs.conditional.falsePath.field}
+                           placeholder="isActive" />
+                    <Input title="Wert" bind:value={addMigrationInputs.conditional.falsePath.value}
+                           placeholder="false" />
                 </div>
             </div>
         {/if}
@@ -470,7 +489,7 @@
                     <Input bind:value={informationDraft.commit} title="Commit" placeholder="Commit hash" />
                 {/if}
 
-                {#if !isEditing}
+                {#if !isEditing && deploymentData.type !== "RUNNING"}
                     <div class="flex items-center gap-4 w-full">
                         <Button type="delete" onclick={startDeletingDeployment} disabled={isRunningMigrationTests}>
                             <span class="material-symbols-rounded mr-2">delete</span>
@@ -499,13 +518,13 @@
                 {/if}
             </div>
 
-            <!-- Migrations -->
-            <div class="flex flex-col items-center gap-5 min-[1500px]:w-1/2 min-[1200px]:w-2/3 w-full mt-5 p-0.5">
-                <div class="w-full flex items-center justify-start">
-                    <p class="text-dt-3 text-gv-dark-text font-medium">Migrations</p>
-                </div>
+            {#if !isEditing}
+                <!-- Migrations -->
+                <div class="flex flex-col items-center gap-5 min-[1500px]:w-1/2 min-[1200px]:w-2/3 w-full mt-5 p-0.5">
+                    <div class="w-full flex items-center justify-start">
+                        <p class="text-dt-3 text-gv-dark-text font-medium">Migrations</p>
+                    </div>
 
-                {#if !isEditing}
                     <div class="flex w-full flex-col items-start justify-start gap-4 overflow-y-auto">
                         {#each deploymentData.migrations as migration, index (migration.id)}
                             <Migration migrationData={migration} deleteMigration={deleteMigrationAndRefresh} />
@@ -530,8 +549,8 @@
                             {/if}
                         </Button>
                     </div>
-                {/if}
-            </div>
+                </div>
+            {/if}
         </div>
     </div>
 </main>

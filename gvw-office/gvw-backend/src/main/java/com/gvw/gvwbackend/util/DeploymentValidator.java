@@ -1,7 +1,6 @@
 package com.gvw.gvwbackend.util;
 
 import com.gvw.gvwbackend.model.Deployment;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -11,8 +10,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.util.List;
-
-import com.gvw.gvwbackend.service.DeploymentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -59,24 +56,25 @@ public class DeploymentValidator {
 
     LocalDate targetDate = extractLocalDate(targetIsoDate);
 
-    boolean result = deployments.stream()
-        .anyMatch(
-            existing -> {
-              if (existing.getDate() == null
-                  || existing.getStartTime() == null
-                  || existing.getEndTime() == null) {
-                return false;
-              }
+    boolean result =
+        deployments.stream()
+            .anyMatch(
+                existing -> {
+                  if (existing.getDate() == null
+                      || existing.getStartTime() == null
+                      || existing.getEndTime() == null) {
+                    return false;
+                  }
 
-              LocalDate existingDate = extractLocalDate(existing.getDate());
+                  LocalDate existingDate = extractLocalDate(existing.getDate());
 
-              if (!targetDate.equals(existingDate)) {
-                return false;
-              }
+                  if (!targetDate.equals(existingDate)) {
+                    return false;
+                  }
 
-              return targetStart.isBefore(existing.getEndTime())
-                  && targetEnd.isAfter(existing.getStartTime());
-            });
+                  return targetStart.isBefore(existing.getEndTime())
+                      && targetEnd.isAfter(existing.getStartTime());
+                });
 
     if (result) {
       log.debug("A time overlap was detected");
@@ -88,7 +86,8 @@ public class DeploymentValidator {
   public boolean isCommitHashValid(String hash) {
     log.debug("Validating commit hash {}", hash);
     String url = "https://api.github.com/repos/raphaelschuhmann/gvw/commits/" + hash;
-    HttpRequest request = HttpRequest.newBuilder()
+    HttpRequest request =
+        HttpRequest.newBuilder()
             .uri(URI.create(url))
             .header("User-Agent", "Java-Commit-Validator")
             .header("Accept", "application/vnd.github+json")
@@ -96,7 +95,8 @@ public class DeploymentValidator {
             .build();
 
     try {
-      HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
+      HttpResponse<Void> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.discarding());
       return response.statusCode() == 200;
     } catch (Exception e) {
       log.debug("Invalid commit hash passed");

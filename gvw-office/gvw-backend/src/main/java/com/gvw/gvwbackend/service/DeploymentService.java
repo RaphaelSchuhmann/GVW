@@ -13,9 +13,9 @@ import com.gvw.gvwbackend.util.HashUtil;
 import com.gvw.gvwbackend.util.MigrationValidator;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -53,7 +53,7 @@ public class DeploymentService {
     List<String> times = new ArrayList<>();
 
     for (Deployment deployment : deployments) {
-      LocalDate inputDate = LocalDate.parse(deployment.getDate());
+      LocalDate inputDate = OffsetDateTime.parse(deployment.getDate()).toLocalDate();
 
       boolean isToday = inputDate.equals(LocalDate.now());
       boolean isBeforeTargetTime = LocalTime.now().isBefore(deployment.getStartTime());
@@ -90,7 +90,8 @@ public class DeploymentService {
                     m.getCommit(),
                     m.getHash(),
                     m.getMigrations(),
-                    m.getAppVersion()))
+                    m.getAppVersion(),
+                    m.getError()))
         .toList();
   }
 
@@ -108,7 +109,8 @@ public class DeploymentService {
         deployment.getCommit(),
         deployment.getHash(),
         deployment.getMigrations(),
-        deployment.getAppVersion());
+        deployment.getAppVersion(),
+        deployment.getError());
   }
 
   public void checkDeployment(String id) {
@@ -157,7 +159,7 @@ public class DeploymentService {
 
     Migration newMigration =
         Migration.builder()
-                .id(UUID.randomUUID().toString())
+            .id(UUID.randomUUID().toString())
             .database(request.database())
             .action(request.action())
             .field(request.field())
@@ -187,22 +189,28 @@ public class DeploymentService {
     Deployment deployment = findDeploymentById(request.id());
 
     List<Deployment> allDeployments = dbService.findAll("deployments", Deployment.class);
-    List<Deployment> filteredDeployments = allDeployments.stream().filter(dep -> !Objects.equals(dep.getId(), deployment.getId())).toList();
+    List<Deployment> filteredDeployments =
+        allDeployments.stream()
+            .filter(dep -> !Objects.equals(dep.getId(), deployment.getId()))
+            .toList();
 
-    if (deployment.getStatus() != DeploymentStatus.SCHEDULED && deployment.getStatus() != DeploymentStatus.CANCELLED && deployment.getStatus() != DeploymentStatus.FAILED) {
-      throw new BadRequestException(String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+    if (deployment.getStatus() != DeploymentStatus.SCHEDULED
+        && deployment.getStatus() != DeploymentStatus.CANCELLED
+        && deployment.getStatus() != DeploymentStatus.FAILED) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     if (deploymentValidator.isTodayAndAlreadyStarted(request.date(), request.startTime())) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     // Check if the time of the new deployment has any time overlaps with other deployments
     if (deploymentValidator.hasOverlap(
-            filteredDeployments, request.date(), request.startTime(), request.endTime())) {
+        filteredDeployments, request.date(), request.startTime(), request.endTime())) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     deployment.setRev(request.rev());
@@ -212,7 +220,9 @@ public class DeploymentService {
     deployment.setStartTime(request.startTime());
     deployment.setEndTime(request.endTime());
 
-    if (request.commit() != null && !request.commit().isBlank() && deploymentValidator.isCommitHashValid(request.commit())) {
+    if (request.commit() != null
+        && !request.commit().isBlank()
+        && deploymentValidator.isCommitHashValid(request.commit())) {
       // TODO: If the commit was validated automatically run a build
 
       deployment.setCommit(request.commit());
@@ -247,17 +257,13 @@ public class DeploymentService {
   private Deployment findDeploymentById(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
-          String.valueOf(
-              ErrorDomain.DEPLOYMENT.createCode(
-                  ErrorAction.READ_ONE, 400)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.READ_ONE, 400)));
     }
 
     Deployment deployment = dbService.findById("deployments", id, Deployment.class);
     if (deployment == null) {
       throw new NotFoundException(
-          String.valueOf(
-              ErrorDomain.DEPLOYMENT.createCode(
-                  ErrorAction.READ_ONE, 404)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.READ_ONE, 404)));
     }
 
     return deployment;

@@ -54,8 +54,8 @@ public class SseService {
   }
 
   /**
-   * Generic internal broadcast runner that handles SSE delivery, dead emitter cleanup,
-   * and exceptions during iteration.
+   * Generic internal broadcast runner that handles SSE delivery, dead emitter cleanup, and
+   * exceptions during iteration.
    *
    * @param eventName name of the SSE event (e.g., "refresh", "kill")
    * @param data payload data to attach, or {@code null} if no payload is required
@@ -64,25 +64,25 @@ public class SseService {
     List<SseEmitter> deadEmitters = new ArrayList<>();
 
     emitters.forEach(
-            emitter -> {
-              try {
-                SseEmitter.SseEventBuilder event = SseEmitter.event().name(eventName);
-                if (data != null) {
-                  event.data(data);
-                }
-                emitter.send(event);
-              } catch (Exception ex) {
-                log.debug("Failed to send {} event to emitter: {}", eventName, ex.getMessage());
-                deadEmitters.add(emitter);
-              }
-            });
+        emitter -> {
+          try {
+            SseEmitter.SseEventBuilder event = SseEmitter.event().name(eventName);
+            if (data != null) {
+              event.data(data);
+            }
+            emitter.send(event);
+          } catch (Exception ex) {
+            log.debug("Failed to send {} event to emitter: {}", eventName, ex.getMessage());
+            deadEmitters.add(emitter);
+          }
+        });
 
     emitters.removeAll(deadEmitters);
   }
 
   /**
-   * Safely executes a broadcast, swallowing unchecked exceptions to prevent SSE failures
-   * from interrupting the caller flow.
+   * Safely executes a broadcast, swallowing unchecked exceptions to prevent SSE failures from
+   * interrupting the caller flow.
    */
   private void safeBroadcast(String eventName, Object data) {
     try {
@@ -101,9 +101,7 @@ public class SseService {
     safeBroadcast("refresh", entityType);
   }
 
-  /**
-   * Broadcasts a kill event to all connected clients without a payload.
-   */
+  /** Broadcasts a kill event to all connected clients without a payload. */
   public void sendKillSignal() {
     safeBroadcast("kill", null);
   }

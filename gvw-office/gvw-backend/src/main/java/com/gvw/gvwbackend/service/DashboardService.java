@@ -180,9 +180,13 @@ public class DashboardService {
             .count();
 
     List<Deployment> deployments = dbService.findAll("deployments", Deployment.class);
-    List<Map<String, String>> deploymentResponse = deployments.stream()
-        .map(m -> Map.of("title", m.getTitle(), "type", m.getStatus().toString(), "id", m.getId()))
-        .toList();
+    List<Map<String, String>> deploymentResponse =
+        deployments.stream()
+            .map(
+                m ->
+                    Map.of(
+                        "title", m.getTitle(), "type", m.getStatus().toString(), "id", m.getId()))
+            .toList();
 
     return new AdminDashboardResponseDTO(
         feedbacks.size(),

@@ -5,9 +5,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.annotation.Nulls;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -33,9 +30,9 @@ public class Deployment {
   private String commit;
   private String hash;
   private DeploymentStatus status;
+  private Integer error; // Optional error if the deployment gets canceled or fails
 
-  @Builder.Default
-  private List<Migration> migrations = new ArrayList<>();
+  @Builder.Default private List<Migration> migrations = new ArrayList<>();
 
   public List<Migration> getMigrations() {
     if (this.migrations == null) {
