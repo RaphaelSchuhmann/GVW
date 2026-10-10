@@ -14,11 +14,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+/**
+ * Utility component responsible for validating deployment timing rules, checking for schedule
+ * overlaps, and verifying GitHub commit hashes via the GitHub REST API.
+ */
 @Component
 public class DeploymentValidator {
-  private final HttpClient httpClient = HttpClient.newHttpClient();
+  private final HttpClient httpClient;
   private static final Logger log = LoggerFactory.getLogger(DeploymentValidator.class);
 
+  public DeploymentValidator(HttpClient httpClient) {
+    this.httpClient = httpClient;
+  }
+
+  /**
+   * Checks whether the target date is today in UTC and the specified start time has already passed.
+   *
+   * @param targetIsoDate The target date string in ISO-8601 format.
+   * @param targetStart The target start time.
+   * @return True if the date is today and the current time is at or past the target start time.
+   */
   public boolean isTodayAndAlreadyStarted(String targetIsoDate, LocalTime targetStart) {
     if (targetIsoDate == null || targetStart == null) {
       return false;
@@ -41,6 +56,16 @@ public class DeploymentValidator {
     return result;
   }
 
+  /**
+   * Checks whether a proposed deployment time slot overlaps with any existing deployments on the
+   * same date.
+   *
+   * @param deployments The list of existing deployments to check against.
+   * @param targetIsoDate The target date string in ISO-8601 format.
+   * @param targetStart The proposed start time.
+   * @param targetEnd The proposed end time.
+   * @return True if a time overlap is detected with an existing deployment, false otherwise.
+   */
   public boolean hasOverlap(
       List<Deployment> deployments,
       String targetIsoDate,
@@ -83,6 +108,12 @@ public class DeploymentValidator {
     return result;
   }
 
+  /**
+   * Validates if a given commit hash exists on the GitHub repository by issuing a HEAD request.
+   *
+   * @param hash The commit hash string to validate.
+   * @return True if the commit exists (HTTP 200), false otherwise.
+   */
   public boolean isCommitHashValid(String hash) {
     log.debug("Validating commit hash {}", hash);
     String url = "https://api.github.com/repos/raphaelschuhmann/gvw/commits/" + hash;
@@ -104,6 +135,12 @@ public class DeploymentValidator {
     }
   }
 
+  /**
+   * Helper method to parse an ISO-8601 timestamp string into a UTC {@link LocalDate}.
+   *
+   * @param isoTimestamp The ISO-8601 timestamp string.
+   * @return The extracted LocalDate.
+   */
   private LocalDate extractLocalDate(String isoTimestamp) {
     return Instant.parse(isoTimestamp).atZone(ZoneOffset.UTC).toLocalDate();
   }

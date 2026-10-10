@@ -7,8 +7,22 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
 
+/**
+ * Utility component for validating individual migration fields, structures, and sequence-based
+ * field conflicts across database migrations.
+ */
 @Component
 public class MigrationValidator {
+
+  /**
+   * Validates whether the required fields for a given migration action are present and non-blank.
+   *
+   * @param action The migration action type (e.g. ADD, DELETE, RENAME, CONDITIONAL).
+   * @param field The field targeted by the migration.
+   * @param value The value associated with the migration.
+   * @param conditional The conditional branch definitions if the action is conditional.
+   * @return True if all required fields for the action are valid, false otherwise.
+   */
   public boolean areMigrationFieldsValid(
       MigrationAction action, String field, String value, Migration.Conditional conditional) {
     if (action == null) {
@@ -22,18 +36,28 @@ public class MigrationValidator {
     };
   }
 
+  /**
+   * Validates that all constituent branches of a conditional migration structure are valid.
+   *
+   * @param conditional The conditional structure containing condition, true path, and false path.
+   * @return True if all non-null branches reference a valid field, false otherwise.
+   */
   private boolean isValidConditional(Migration.Conditional conditional) {
     if (conditional == null) {
       return false;
     }
-
-    System.out.println(conditional);
 
     return isValidBranch(conditional.getCondition())
         && isValidBranch(conditional.getTruePath())
         && isValidBranch(conditional.getFalsePath());
   }
 
+  /**
+   * Validates an individual migration branch.
+   *
+   * @param branch The branch to validate.
+   * @return True if the branch is non-null and has a non-blank field, false otherwise.
+   */
   private boolean isValidBranch(Migration.Branch branch) {
     if (branch == null) {
       return false;
@@ -41,10 +65,25 @@ public class MigrationValidator {
     return isNonBlank(branch.getField());
   }
 
+  /**
+   * Checks if a string is neither null nor blank.
+   *
+   * @param str The string to check.
+   * @return True if the string has content, false otherwise.
+   */
   private boolean isNonBlank(String str) {
     return str != null && !str.isBlank();
   }
 
+  /**
+   * Validates a candidate migration against a list of existing migrations targeting the same
+   * database to ensure there are no overlapping field conflicts.
+   *
+   * @param existingMigrations The list of already registered migrations.
+   * @param candidate The candidate migration to validate.
+   * @return A {@link ValidationResult} indicating success or containing an error message on
+   *     conflict.
+   */
   public ValidationResult validateMigrationSequence(
       List<Migration> existingMigrations, Migration candidate) {
     if (candidate == null || candidate.getDatabase() == null) {
@@ -99,6 +138,9 @@ public class MigrationValidator {
   /**
    * REL-037: Extracts all fields involved in a migration. For CONDITIONAL migrations, extracts
    * fields from condition, truePath, and falsePath.
+   *
+   * @param migration The migration object to inspect.
+   * @return A set of all distinct referenced field names.
    */
   public Set<String> extractAllReferencedFields(Migration migration) {
     if (migration == null) {
@@ -125,11 +167,27 @@ public class MigrationValidator {
     return Collections.emptySet();
   }
 
+  /**
+   * Represents the outcome of a validation check, holding a validity flag and optional error
+   * message.
+   */
   public record ValidationResult(boolean isValid, String errorMessage) {
+
+    /**
+     * Creates a successful validation result.
+     *
+     * @return A valid {@link ValidationResult}.
+     */
     public static ValidationResult valid() {
       return new ValidationResult(true, null);
     }
 
+    /**
+     * Creates a failed validation result with an error message.
+     *
+     * @param message The error description.
+     * @return An invalid {@link ValidationResult}.
+     */
     public static ValidationResult invalid(String message) {
       return new ValidationResult(false, message);
     }

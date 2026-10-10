@@ -20,6 +20,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+/**
+ * Service class handling business logic for deployments and their associated migrations, including
+ * validation, database persistence, and SSE notification triggers.
+ */
 @Service
 public class DeploymentService {
   private final DbService dbService;
@@ -42,6 +46,12 @@ public class DeploymentService {
     this.hashUtil = hashUtil;
   }
 
+  /**
+   * Retrieves a list of formatted time intervals for scheduled deployments occurring today where
+   * the start time has not yet passed.
+   *
+   * @return A list of strings representing deployment time ranges (e.g. "14:00 - 15:00").
+   */
   public List<String> getTodayDeployments() {
     Map<String, Object> query = Map.of("selector", Map.of("status", "SCHEDULED"));
     List<Deployment> deployments = dbService.findByQuery("deployments", query, Deployment.class);
@@ -69,6 +79,11 @@ public class DeploymentService {
     return times;
   }
 
+  /**
+   * Retrieves all deployments stored in the database mapped to response DTOs.
+   *
+   * @return A list of all deployment response DTOs, or an empty list if none exist.
+   */
   public List<DeploymentResponseDTO> getAllDeployments() {
     List<Deployment> deployments = dbService.findAll("deployments", Deployment.class);
 
@@ -95,6 +110,13 @@ public class DeploymentService {
         .toList();
   }
 
+  /**
+   * Retrieves a specific deployment by its unique identifier.
+   *
+   * @param id The unique identifier of the deployment.
+   * @return The deployment response DTO.
+   * @throws NotFoundException if the deployment does not exist.
+   */
   public DeploymentResponseDTO getDeployment(String id) {
     Deployment deployment = findDeploymentById(id);
 
@@ -113,10 +135,24 @@ public class DeploymentService {
         deployment.getError());
   }
 
+  /**
+   * Validates the existence of a deployment by its ID without returning it.
+   *
+   * @param id The unique identifier of the deployment.
+   * @throws NotFoundException if the deployment does not exist.
+   */
   public void checkDeployment(String id) {
     findDeploymentById(id);
   }
 
+  /**
+   * Creates and persists a new deployment after validating time constraints and overlaps. Triggers
+   * an SSE refresh event upon successful creation.
+   *
+   * @param request The deployment creation request DTO.
+   * @throws BadRequestException if the deployment time is invalid, already started, or overlaps
+   *     with another.
+   */
   public void addDeployment(AddDeploymentRequestDTO request) {
     List<Deployment> deployments = dbService.findAll("deployments", Deployment.class);
 
@@ -147,6 +183,12 @@ public class DeploymentService {
     sseService.sendRefresh("DEPLOYMENTS");
   }
 
+  /**
+   * Adds a migration item to an existing deployment after field and sequence validation.
+   *
+   * @param request The migration creation request DTO.
+   * @throws BadRequestException if the migration fields or sequence are invalid.
+   */
   public void addMigration(AddMigrationRequestDTO request) {
     if (!migrationValidator.areMigrationFieldsValid(
         request.action(), request.field(), request.value(), request.conditional())) {
@@ -178,13 +220,21 @@ public class DeploymentService {
 
     deployment.setRev(request.rev());
 
-    List<Migration> migrations = deployment.getMigrations();
+    List<Migration> migrations = new ArrayList<>(deployment.getMigrations());
     migrations.add(newMigration);
     deployment.setMigrations(migrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
   }
 
+  /**
+   * Updates an existing deployment's information if its status allows modification and time overlap
+   * constraints are satisfied.
+   *
+   * @param request The update deployment information request DTO.
+   * @throws BadRequestException if the deployment status prohibits editing, time is invalid, or
+   *     overlaps exist.
+   */
   public void updateDeploymentInformation(UpdateDeploymentInformationRequestDTO request) {
     Deployment deployment = findDeploymentById(request.id());
 
@@ -231,6 +281,11 @@ public class DeploymentService {
     dbService.update("deployments", deployment.getId(), deployment);
   }
 
+  /**
+   * Deletes a deployment by its identifier and triggers an SSE refresh event.
+   *
+   * @param id The unique identifier of the deployment to remove.
+   */
   public void removeDeployment(String id) {
     Deployment deployment = findDeploymentById(id);
 
@@ -238,6 +293,13 @@ public class DeploymentService {
     sseService.sendRefresh("DEPLOYMENTS");
   }
 
+  /**
+   * Removes a specific migration from a deployment.
+   *
+   * @param deploymentId The unique identifier of the parent deployment.
+   * @param migrationId The unique identifier of the migration to remove.
+   * @throws BadRequestException if the migration ID is blank or missing.
+   */
   public void removeMigration(String deploymentId, String migrationId) {
     if (migrationId == null || migrationId.isBlank()) {
       throw new BadRequestException(
@@ -247,13 +309,25 @@ public class DeploymentService {
 
     Deployment deployment = findDeploymentById(deploymentId);
 
-    deployment.getMigrations().removeIf(m -> m.getId().equals(migrationId));
+    List<Migration> mutableMigrations = new ArrayList<>(deployment.getMigrations());
+    mutableMigrations.removeIf(m -> m.getId().equals(migrationId));
+    deployment.setMigrations(mutableMigrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
   }
 
+  /** Executes a deployment process. (Placeholder implementation) -> TODO */
   public void runDeployment() {}
 
+  /**
+   * Helper method to find a deployment by its ID or throw appropriate exceptions if invalid or not
+   * found.
+   *
+   * @param id The unique identifier of the deployment.
+   * @return The found {@link Deployment} entity.
+   * @throws BadRequestException if the ID is null or blank.
+   * @throws NotFoundException if no deployment matches the given ID.
+   */
   private Deployment findDeploymentById(String id) {
     if (id == null || id.isBlank()) {
       throw new BadRequestException(
