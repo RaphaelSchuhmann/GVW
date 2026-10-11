@@ -83,7 +83,8 @@ public class SecurityConfig {
                         "/settings/get",
                         "/sync/stream",
                         "/emergency/use",
-                        "/emergency/new")
+                        "/emergency/new",
+                        "/internal/**")
                     .permitAll()
                     .anyRequest()
                     .authenticated())

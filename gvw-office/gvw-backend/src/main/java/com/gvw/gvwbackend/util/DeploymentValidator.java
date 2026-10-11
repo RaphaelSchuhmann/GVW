@@ -25,6 +25,7 @@ public class DeploymentValidator {
   private final Clock clock;
   private static final Logger log = LoggerFactory.getLogger(DeploymentValidator.class);
 
+  @org.springframework.beans.factory.annotation.Autowired
   public DeploymentValidator(HttpClient httpClient) {
     this(httpClient, Clock.systemUTC());
   }

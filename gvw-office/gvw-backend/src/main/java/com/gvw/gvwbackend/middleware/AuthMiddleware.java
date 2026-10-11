@@ -60,7 +60,8 @@ public class AuthMiddleware extends OncePerRequestFilter {
           "/emergency/new",
           "/emergency/use",
           "/settings/get",
-          "/auth/changePw");
+          "/auth/changePw",
+              "/internal/**");
 
   public AuthMiddleware(JwtService jwtService, UserService userService) {
     this.jwtService = jwtService;

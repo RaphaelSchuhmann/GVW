@@ -3,4 +3,7 @@ task clean: null
 
 task build: clean
     mkdir -p build
-    go build -o build/gvw-deployment .
+    go build -o build/gvw-deployment ./cmd/server
+
+task run: build
+    ./build/gvw-deployment

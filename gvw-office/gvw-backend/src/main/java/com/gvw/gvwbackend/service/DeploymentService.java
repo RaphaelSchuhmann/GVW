@@ -36,6 +36,7 @@ public class DeploymentService {
   private final Clock clock;
   private static final Logger log = LoggerFactory.getLogger(DeploymentService.class);
 
+  @org.springframework.beans.factory.annotation.Autowired
   public DeploymentService(
       DbService dbService,
       SseService sseService,
