@@ -15,11 +15,12 @@ import java.nio.charset.StandardCharsets;
 @Component
 public class HttpUtil {
   private final HttpClient httpClient;
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper;
   private static final Logger log = LoggerFactory.getLogger(HttpUtil.class);
 
-  public HttpUtil(HttpClient httpClient) {
+  public HttpUtil(HttpClient httpClient, ObjectMapper objectMapper) {
     this.httpClient = httpClient;
+    this.objectMapper = objectMapper;
   }
 
   public <T> GVWHttpResponse sendGetRequest(String url, Class<T> responseType) {
@@ -39,35 +40,57 @@ public class HttpUtil {
       HttpResponse<String> response =
               httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-      int status = response.statusCode();
-      boolean isError = status >= 400;
-      String rawBody = response.body();
-
-      Object parsedBody;
-      if (!isError && rawBody != null && !rawBody.isBlank() && responseType != null) {
-        parsedBody = objectMapper.readValue(rawBody, responseType);
-      } else {
-        parsedBody = rawBody;
-      }
-
-      String contentType = response.headers().firstValue("Content-Type").orElse(null);
-
-      return new GVWHttpResponse(status, parsedBody, contentType, isError);
+      return extractResponse(response, responseType);
     } catch (Exception e) {
-      log.debug("Request failed for URL: {}", url, e);
+      log.debug("GET request failed for URL: {}", url, e);
       return new GVWHttpResponse(500, null, null, true);
     }
   }
 
-  private String extractCharset(String contentType) {
-    if (contentType != null) {
-      for (String param : contentType.split(";")) {
-        param = param.trim();
-        if (param.toLowerCase().startsWith("charset=")) {
-          return param.substring("charset=".length()).replace("\"", "");
-        }
-      }
+  public <T, U> GVWHttpResponse sendPostRequest(String url, T requestBody, Class<U> responseType) {
+    if (url == null || url.isBlank()) {
+      return new GVWHttpResponse(400, null, null, true);
     }
-    return StandardCharsets.UTF_8.name();
+
+    try {
+      String jsonPayload = objectMapper.writeValueAsString(requestBody);
+
+      HttpRequest request =
+              HttpRequest.newBuilder()
+                      .uri(URI.create(url))
+                      .header("User-Agent", "Java-GVW-Http")
+                      .header("Content-Type", "application/json")
+                      .header("Accept", "application/json")
+                      .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                      .build();
+
+      HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+      return extractResponse(response, responseType);
+    } catch (Exception e) {
+      log.debug("POST request failed for URL: " + url, e);
+      return new GVWHttpResponse(500, null, null, true);
+    }
+  }
+
+  private <T> GVWHttpResponse extractResponse (HttpResponse<String> response, Class<T> responseType) {
+    if (response == null) {
+      return new GVWHttpResponse(500, null, null, true);
+    }
+
+    int status = response.statusCode();
+    boolean isError = status >= 400;
+    String rawBody = response.body();
+
+    Object parsedBody;
+    if (!isError && rawBody != null && !rawBody.isBlank() && responseType != null) {
+      parsedBody = objectMapper.readValue(rawBody, responseType);
+    } else {
+      parsedBody = rawBody;
+    }
+
+    String contentType = response.headers().firstValue("Content-Type").orElse(null);
+
+    return new GVWHttpResponse(status, parsedBody, contentType, isError);
   }
 }

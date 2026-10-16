@@ -51,7 +51,7 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Service
 public class DbService {
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper;
   private static final Logger log = LoggerFactory.getLogger(DbService.class);
 
   private final RestTemplate restTemplate;
@@ -59,9 +59,11 @@ public class DbService {
 
   public DbService(
       @Value("${couchdb.url}") String baseUrl,
-      @Qualifier("dbRestTemplate") RestTemplate restTemplate) {
+      @Qualifier("dbRestTemplate") RestTemplate restTemplate,
+      ObjectMapper objectMapper) {
     this.restTemplate = restTemplate;
     this.baseUrl = baseUrl;
+    this.objectMapper = objectMapper;
 
     log.info("DB Service initialized");
   }

@@ -351,7 +351,7 @@ class DeploymentServiceTest {
   }
 
   @Test
-  void updateDeploymentInformation_InvalidStatus_ThrowsBadRequestException() {
+  void updateDeploymentInformation_InvalidStatus_ThrowsForbiddenException() {
     UpdateDeploymentInformationRequestDTO request =
         new UpdateDeploymentInformationRequestDTO(
             "dep-id",
@@ -371,7 +371,7 @@ class DeploymentServiceTest {
     when(dbService.findAll(anyString(), eq(Deployment.class))).thenReturn(List.of(deployment));
 
     assertThrows(
-        BadRequestException.class, () -> deploymentService.updateDeploymentInformation(request));
+        com.gvw.gvwbackend.exception.ForbiddenException.class, () -> deploymentService.updateDeploymentInformation(request));
   }
 
   @Test
@@ -493,7 +493,7 @@ class DeploymentServiceTest {
   }
 
   @Test
-  void updateDeploymentInformation_InvalidCommit_DoesNotUpdateCommit() {
+  void updateDeploymentInformation_InvalidCommit_ThrowsBadRequestException() {
     UpdateDeploymentInformationRequestDTO request =
         new UpdateDeploymentInformationRequestDTO(
             "dep-id",
@@ -522,7 +522,8 @@ class DeploymentServiceTest {
         .thenReturn(false);
     when(deploymentValidator.isCommitHashValid(anyString())).thenReturn(false);
 
-    deploymentService.updateDeploymentInformation(request);
+    assertThrows(
+        BadRequestException.class, () -> deploymentService.updateDeploymentInformation(request));
 
     assertEquals("old-commit", deployment.getCommit());
   }
