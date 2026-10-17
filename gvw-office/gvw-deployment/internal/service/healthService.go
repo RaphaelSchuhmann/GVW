@@ -4,7 +4,7 @@ import (
 	"gvw/gvw-deployment/internal/model"
 )
 
-type HealthService struct {}
+type HealthService struct{}
 
 func NewHealthService() *HealthService {
 	return &HealthService{}

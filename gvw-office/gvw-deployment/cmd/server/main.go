@@ -1,12 +1,12 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"os"
 	// "gvw/gvw-deployment/internal/client"
 	"gvw/gvw-deployment/internal/handler"
 	"gvw/gvw-deployment/internal/service"
+	"gvw/gvw-deployment/internal/middleware"
 )
 
 func main() {
@@ -17,9 +17,11 @@ func main() {
 	// internalToken := os.Getenv("GVW_INTERNAL_API_TOKEN")
 	// javaClient := client.NewJavaClient(javaBaseURL, internalToken)
 
+	var logger *service.Logger = service.NewLogger()
+
 	// Setup services
-	healthService := *service.NewHealthService();
-	
+	healthService := *service.NewHealthService()
+
 	// Setup handlers
 	healthHandler := *handler.NewHealthHandler(&healthService)
 
@@ -27,8 +29,12 @@ func main() {
 	mux := http.NewServeMux()
 	healthHandler.RegisterRoutes(mux)
 
-	log.Println("Go backend starting on 127.0.0.1:3501...")
-	if err := http.ListenAndServe("127.0.0.1:3501", mux); err != nil {
-		log.Fatalf("Server failed: %v", err)
+	// Register middlewares
+	var handler http.Handler = mux
+	handler = middleware.LoggingMiddleware(logger, handler)
+
+	logger.Println("Go backend starting on 127.0.0.1:3501...")
+	if err := http.ListenAndServe("127.0.0.1:3501", handler); err != nil {
+		logger.Fatalf("Server failed: %v", err)
 	}
 }

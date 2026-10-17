@@ -2,8 +2,8 @@ package handler
 
 import (
 	"encoding/json"
-	"net/http"
 	"gvw/gvw-deployment/internal/service"
+	"net/http"
 )
 
 type HealthHandler struct {
