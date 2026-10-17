@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"gvw/gvw-deployment/internal/utils"
 	"net"
 	"net/http"
-	"gvw/gvw-deployment/internal/utils"
 )
 
 func LocalhostOnlyMiddleware(logger *utils.Logger, next http.Handler) http.Handler {

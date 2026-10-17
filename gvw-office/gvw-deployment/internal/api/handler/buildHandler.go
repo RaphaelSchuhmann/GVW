@@ -1,13 +1,18 @@
 package handler
 
 import (
+	"gvw/gvw-deployment/internal/build"
 	"net/http"
 )
 
-type BuildHandler struct {}
+type BuildHandler struct {
+	buildManager *build.BuildManager
+}
 
-func NewBuildHandler() *BuildHandler {
-	return &BuildHandler{}
+func NewBuildHandler(buildManager *build.BuildManager) *BuildHandler {
+	return &BuildHandler{
+		buildManager: buildManager,
+	}
 }
 
 func (b *BuildHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -23,8 +28,7 @@ func (b *BuildHandler) StartBuild(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO: call start build process here
+	b.buildManager.TriggerBuild(deploymentId, commitHash)
 
 	resp.WriteHeader(http.StatusAccepted)
 }
-

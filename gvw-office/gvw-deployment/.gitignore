@@ -32,9 +32,11 @@ go.work.sum
 # .idea/
 # .vscode/
 
-./build/
+bin/
+builds/
+logs/
 
 .zenith/
 *.Log
 
-logs/
+config.json
