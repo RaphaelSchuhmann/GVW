@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"gvw/gvw-deployment/internal/service"
+	"gvw/gvw-deployment/internal/utils"
 	"net/http"
 	"time"
 )
@@ -23,7 +23,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
-func LoggingMiddleware(logger *service.Logger, next http.Handler) http.Handler {
+func LoggingMiddleware(logger *utils.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 

@@ -1,4 +1,4 @@
-package service
+package utils
 
 import (
 	"gopkg.in/natefinch/lumberjack.v2"

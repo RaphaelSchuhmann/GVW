@@ -3,10 +3,10 @@ package main
 import (
 	"net/http"
 	"os"
-	// "gvw/gvw-deployment/internal/client"
-	"gvw/gvw-deployment/internal/handler"
-	"gvw/gvw-deployment/internal/service"
-	"gvw/gvw-deployment/internal/middleware"
+	// "gvw/gvw-deployment/internal/api/client"
+	"gvw/gvw-deployment/internal/api/handler"
+	"gvw/gvw-deployment/internal/api/middleware"
+	"gvw/gvw-deployment/internal/utils"
 )
 
 func main() {
@@ -17,17 +17,14 @@ func main() {
 	// internalToken := os.Getenv("GVW_INTERNAL_API_TOKEN")
 	// javaClient := client.NewJavaClient(javaBaseURL, internalToken)
 
-	var logger *service.Logger = service.NewLogger()
-
-	// Setup services
-	healthService := *service.NewHealthService()
+	var logger *utils.Logger = utils.NewLogger()
 
 	// Setup handlers
-	healthHandler := *handler.NewHealthHandler(&healthService)
+	buildHandler := *handler.NewBuildHandler()
 
 	// Setup router and register all routes
 	mux := http.NewServeMux()
-	healthHandler.RegisterRoutes(mux)
+	buildHandler.RegisterRoutes(mux)
 
 	// Register middlewares
 	var handler http.Handler = mux
