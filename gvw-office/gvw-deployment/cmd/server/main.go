@@ -32,6 +32,7 @@ func main() {
 	// Register middlewares
 	var handler http.Handler = mux
 	handler = middleware.LoggingMiddleware(logger, handler)
+	handler = middleware.LocalhostOnlyMiddleware(logger, handler)
 
 	logger.Println("Go backend starting on 127.0.0.1:3501...")
 	if err := http.ListenAndServe("127.0.0.1:3501", handler); err != nil {
