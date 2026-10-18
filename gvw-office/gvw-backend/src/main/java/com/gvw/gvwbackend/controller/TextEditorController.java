@@ -1,7 +1,7 @@
 package com.gvw.gvwbackend.controller;
 
 import com.gvw.gvwbackend.dto.response.LinkMetadataResponseDTO;
-import com.gvw.gvwbackend.model.AttachmentResource;
+import com.gvw.gvwbackend.model.helper.AttachmentResource;
 import com.gvw.gvwbackend.service.HelpCenterService;
 import com.gvw.gvwbackend.service.ReportService;
 import com.gvw.gvwbackend.service.TextEditorService;

@@ -8,7 +8,7 @@ import com.gvw.gvwbackend.dto.response.LinkMetadataResponseDTO;
 import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.NotFoundException;
-import com.gvw.gvwbackend.model.AttachmentResource;
+import com.gvw.gvwbackend.model.helper.AttachmentResource;
 import com.gvw.gvwbackend.model.helper.StoredFile;
 import com.gvw.gvwbackend.model.interfaces.TextDocument;
 import com.gvw.gvwbackend.model.helper.TextDocumentSearchResult;

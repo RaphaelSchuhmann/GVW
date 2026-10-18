@@ -3,6 +3,7 @@ package com.gvw.gvwbackend.service;
 import com.gvw.gvwbackend.dto.response.LinkMetadataResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.*;
+import com.gvw.gvwbackend.model.helper.AttachmentResource;
 import com.gvw.gvwbackend.model.helper.StoredFile;
 import com.gvw.gvwbackend.model.helper.TextDocumentSearchResult;
 import com.gvw.gvwbackend.model.interfaces.TextDocument;
