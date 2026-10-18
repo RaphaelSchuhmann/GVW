@@ -13,7 +13,7 @@ type Config struct {
 	GithubRepoURL string `json:"github_repo_url"`
 }
 
-func LoadConfig(path string, filesystemWrapper *utils.FileSytemWrapper) (*Config, error) {
+func LoadConfig(path string, filesystemWrapper *utils.FileSystemWrapper) (*Config, error) {
 	data, err := filesystemWrapper.ReadFile(path)
 	if err != nil {
 		return nil, err

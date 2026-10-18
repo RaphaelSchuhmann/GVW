@@ -1,14 +1,33 @@
 package build
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/utils"
+	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 )
+
+type JavaClient interface {
+	UpdateDeploymentState(deploymentId string, state string, reason uint32) error
+}
+
+type FileSystemWrapper interface {
+	DirOrFileExists(path string) bool
+	CreateDir(path string, permissions os.FileMode) error
+	CleanDir(path string)
+	WriteToFile(path string, content []byte) error
+	ReadFile(path string) ([]byte, error)
+	CopyFile(src, dst string) error
+	ListDir(path string) ([]os.DirEntry, error)
+	CopyDirContents(srcDir, dstDir string) error
+	GetFileByPattern(dir string, filePattern string) (string, error)
+}
 
 type BuildManager struct {
 	mutex         sync.Mutex
@@ -16,12 +35,13 @@ type BuildManager struct {
 	activeRunIds  map[string]uint64
 	nextId        uint64
 	githubRepoURL string
-	javaClient    *client.JavaClient
-	fsWrapper     *utils.FileSytemWrapper
+	javaClient    JavaClient
+	fsWrapper     FileSystemWrapper
 	logger        *utils.Logger
+	modelLoader   *ModelLoader
 }
 
-func NewBuildManager(githubRepoURL string, javaClient *client.JavaClient, fsWrapper *utils.FileSytemWrapper, logger *utils.Logger) *BuildManager {
+func NewBuildManager(githubRepoURL string, javaClient JavaClient, fsWrapper FileSystemWrapper, logger *utils.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
 		activeCancels: make(map[string]context.CancelFunc),
 		activeRunIds:  make(map[string]uint64),
@@ -29,6 +49,7 @@ func NewBuildManager(githubRepoURL string, javaClient *client.JavaClient, fsWrap
 		javaClient:    javaClient,
 		fsWrapper:     fsWrapper,
 		logger:        logger,
+		modelLoader:   modelLoader,
 	}
 }
 
@@ -69,12 +90,13 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 	b.fsWrapper.CreateDir("./builds/"+deploymentId, 0755)
 	b.fsWrapper.CreateDir("./builds/"+deploymentId+"/repo", 0755)
 
-	err := b.cloneRepo(ctx, deploymentId, commit)
-	if err != nil {
-		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", CodeCommitInvalid)
-		return
-	}
+	// !!!!! TODO: RE-ENABLE THIS BEFORE PUSHING!!!! THIS IS JUST FOR TESTING!!!!
+	// err := b.cloneRepo(ctx, deploymentId, commit)
+	// if err != nil {
+	// 	b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
+	// 	b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", CodeCommitInvalid)
+	// 	return
+	// }
 
 	cancelledReason := 0
 
@@ -86,9 +108,9 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		err := b.buildFrontend(ctx, deploymentId)
 		if err != nil {
 			if err.Error() == "TEST_FAIL" {
-				cancelledReason = CodeTestExecutionFailed
+				cancelledReason = BUILD_CodeTestExecutionFailed
 			} else {
-				cancelledReason = CodeBuildFailed
+				cancelledReason = BUILD_CodeBuildFailed
 			}
 			continue
 		}
@@ -97,9 +119,9 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		err = b.buildBackend(ctx, deploymentId)
 		if err != nil {
 			if err.Error() == "TEST_FAIL" {
-				cancelledReason = CodeTestExecutionFailed
+				cancelledReason = BUILD_CodeTestExecutionFailed
 			} else {
-				cancelledReason = CodeBuildFailed
+				cancelledReason = BUILD_CodeBuildFailed
 			}
 			continue
 		}
@@ -107,18 +129,28 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		// Extract binaries
 		err = b.extractBinaries(deploymentId)
 		if err != nil {
-			cancelledReason = CodeBinaryExtractionFailed
+			cancelledReason = BUILD_CodeBinaryExtractionFailed
 			continue
 		}
+
+		b.logger.Printf("Build successful for deployment %s", deploymentId)
+		cancelledReason = 0
+		break
 	}
 
 	if cancelledReason == 0 {
-
+		err := b.generateSchema(deploymentId)
+		if err != nil {
+			cancelledReason = BUILD_CodeSchemaGenerationFailed
+		}
 	}
 
 	if cancelledReason != 0 {
-		b.logger.Fatalf("[BUILD] Build for deployment %s with commit %s failed", deploymentId, commit)
-		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", uint32(cancelledReason))
+		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed", deploymentId, commit)
+		err := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", uint32(cancelledReason))
+		if err != nil {
+			b.logger.Printf("[BUILD] Failed to updated deployment state: %v", err)
+		}
 	}
 }
 
@@ -164,8 +196,8 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 	// Build
 	b.logger.Printf("[BUILD] Building frontend for deployment %s", deploymentId)
 	output, err := utils.RunCommand(ctx, workingDir, "npm", "run", "build")
-	if err != nil || strings.Contains(output, "error") {
-		b.logger.Printf("[BUILD] Frontend build failed for deployment %s", deploymentId)
+	if err != nil {
+		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
 		return fmt.Errorf("BUILD_FAIL")
 	}
 
@@ -176,7 +208,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 	b.logger.Printf("[BUILD] Test execution output for deployment %s:\n%s", deploymentId, output)
 
 	if err != nil || strings.Contains(output, "fail") {
-		b.logger.Printf("[BUILD] Frontend tests failed for deployment %s", deploymentId)
+		b.logger.Printf("[BUILD] Frontend tests failed for deployment %s with error %v", deploymentId, err)
 		return fmt.Errorf("TEST_FAIL")
 	}
 
@@ -188,23 +220,23 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 
 	b.fsWrapper.CleanDir(workingDir + "/target")
 
-	// Build
-	b.logger.Printf("[BUILD] Building backend for deployment %s", deploymentId)
-	output, err := utils.RunCommand(ctx, workingDir, "./mvnw", "build")
-	if err != nil || strings.Contains(output, "error") {
-		b.logger.Printf("[BUILD] Backend build failed for deployment %s", deploymentId)
-		return fmt.Errorf("BUILD_FAIL")
-	}
-
 	// Test
 	b.logger.Printf("[BUILD] Testing backend for deployment %s", deploymentId)
-	output, err = utils.RunCommand(ctx, workingDir, "./mvnw", "test")
+	output, err := utils.RunCommand(ctx, workingDir, "./mvnw", "test")
 
 	b.logger.Printf("[BUILD] Test execution output for deployment %s:\n%s", deploymentId, output)
 
-	if err != nil || strings.Contains(output, "fail") || strings.Contains(output, "error") {
-		b.logger.Printf("[BUILD] Backend tests failed for deployment %s", deploymentId)
+	if err != nil || !strings.Contains(output, "BUILD SUCCESS") {
+		b.logger.Printf("[BUILD] Backend tests failed for deployment %s with error %v", deploymentId, err)
 		return fmt.Errorf("TEST_FAIL")
+	}
+
+	// Package
+	b.logger.Printf("[BUILD] Building backend for deployment %s", deploymentId)
+	_, err = utils.RunCommand(ctx, workingDir, "./mvnw", "package")
+	if err != nil {
+		b.logger.Printf("[BUILD] Backend build failed for deployment %s with error %v", deploymentId, err)
+		return fmt.Errorf("BUILD_FAIL")
 	}
 
 	return nil
@@ -213,11 +245,18 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 func (b *BuildManager) extractBinaries(deploymentId string) error {
 	workingDir := "./builds/" + deploymentId
 
+	b.logger.Printf("[BUILD] Extracting binaries for deployment %s", deploymentId)
+
 	b.fsWrapper.CreateDir(workingDir+"/bin/frontend", 0755)
-	b.fsWrapper.CopyDirContents(workingDir+"/repo/gvw-office/frontend/dist", workingDir+"/bin/frontend")
+	err := b.fsWrapper.CopyDirContents(workingDir+"/repo/gvw-office/frontend/dist", workingDir+"/bin/frontend")
+	if err != nil {
+		b.logger.Printf("[BUILD] Failed extracting frontend binaries for deployment %s", deploymentId)
+		return err
+	}
 
 	backendArtifact, err := b.fsWrapper.GetFileByPattern(workingDir+"/repo/gvw-office/gvw-backend/target", "gvw-backend-*.jar")
 	if err != nil {
+		b.logger.Printf("[BUILD] Failed locating backend binary for deployment %s", deploymentId)
 		return err
 	}
 
@@ -225,6 +264,7 @@ func (b *BuildManager) extractBinaries(deploymentId string) error {
 
 	err = b.fsWrapper.CopyFile(backendArtifact, dstFile)
 	if err != nil {
+		b.logger.Printf("[BUILD] Failed extracting backend binary for deployment %s", deploymentId)
 		return err
 	}
 
@@ -232,7 +272,58 @@ func (b *BuildManager) extractBinaries(deploymentId string) error {
 }
 
 func (b *BuildManager) generateSchema(deploymentId string) error {
-	
+	workingDir := "./builds/" + deploymentId + "/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
+
+	models, err := b.fsWrapper.ListDir(workingDir)
+	if err != nil {
+		b.logger.Printf("[BUILD] Failed to list model directory for deployment %s: %v", deploymentId, err)
+		return err
+	}
+
+	models = slices.DeleteFunc(models, func(m os.DirEntry) bool {
+		return m.IsDir()
+	})
+
+	rawSchema := make(map[string]any)
+
+	for _, model := range models {
+		modelMap, err := b.modelLoader.LoadModel(filepath.Join(workingDir, model.Name()))
+		if err != nil {
+			b.logger.Printf("[BUILD] Error while generating model schema for deployment %s in model %s: %v", deploymentId, model.Name(), err)
+			return err
+		}
+
+		for k, v := range modelMap {
+			rawSchema[k] = v
+		}
+	}
+
+	validatedSchema, err := b.modelLoader.NormalizeAndValidateSchema(rawSchema)
+	if err != nil {
+		b.logger.Printf("[BUILD] Schema validation failed: %v", err)
+		return err
+	}
+
+	b.modelLoader.MarkEmbeddedClasses(validatedSchema)
+
+	var buf bytes.Buffer
+	encoder := json.NewEncoder(&buf)
+
+	encoder.SetEscapeHTML(false)
+	encoder.SetIndent("", "  ")
+
+	if err := encoder.Encode(validatedSchema); err != nil {
+		b.logger.Printf("[BUILD] Failed to encode models map to JSON for deployment %s: %v", deploymentId, err)
+		return err
+	}
+
+	schemaPath := filepath.Join("./builds/" + deploymentId, "schema.json")
+	if err := b.fsWrapper.WriteToFile(schemaPath, buf.Bytes()); err != nil {
+		b.logger.Printf("[BUILD] Failed to write schema.json for deployment %s: %v", deploymentId, err)
+		return err
+	}
+
+	b.logger.Printf("[BUILD] Successfully generated schema.json for deployment %s", deploymentId)
 
 	return nil
 }

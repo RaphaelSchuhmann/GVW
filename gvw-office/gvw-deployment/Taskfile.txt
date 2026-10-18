@@ -7,3 +7,9 @@ task build: clean
 
 task run: build
     ./bin/gvw-deployment
+
+task test: null
+    go test ./...
+
+task test-verbose: null
+    go test ./... -v

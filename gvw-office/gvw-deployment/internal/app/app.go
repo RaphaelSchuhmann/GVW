@@ -16,16 +16,16 @@ type App struct {
 	HttpServer *http.Server
 }
 
-func NewApp(cfg *config.Config, logger *utils.Logger, fsWrapper *utils.FileSytemWrapper) (*App, error) {
+func NewApp(cfg *config.Config, logger *utils.Logger, fsWrapper *utils.FileSystemWrapper) (*App, error) {
 	javaBaseURL := cfg.JavaBaseURL
 	if javaBaseURL == "" {
 		javaBaseURL = "http://localhost:3500/api"
 	}
 
 	javaClient := client.NewJavaClient(javaBaseURL, cfg.InternalToken)
-	buildManager := build.NewBuildManager(cfg.GithubRepoURL, javaClient, fsWrapper, logger)
 
-	// modelLoader := build.NewModelLoader(fsWrapper)
+	modelLoader := build.NewModelLoader(logger, fsWrapper)
+	buildManager := build.NewBuildManager(cfg.GithubRepoURL, javaClient, fsWrapper, logger, modelLoader)
 
 	buildHandler := handler.NewBuildHandler(buildManager)
 

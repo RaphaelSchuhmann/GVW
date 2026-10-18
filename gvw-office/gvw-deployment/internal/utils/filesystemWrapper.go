@@ -7,17 +7,17 @@ import (
 	"path/filepath"
 )
 
-type FileSytemWrapper struct {
+type FileSystemWrapper struct {
 	logger *Logger
 }
 
-func NewFileSystemWrapper(logger *Logger) *FileSytemWrapper {
-	return &FileSytemWrapper{
+func NewFileSystemWrapper(logger *Logger) *FileSystemWrapper {
+	return &FileSystemWrapper{
 		logger: logger,
 	}
 }
 
-func (f *FileSytemWrapper) DirOrFileExists(path string) bool {
+func (f *FileSystemWrapper) DirOrFileExists(path string) bool {
 	_, err := os.Stat(path)
 
 	if err != nil {
@@ -27,7 +27,7 @@ func (f *FileSytemWrapper) DirOrFileExists(path string) bool {
 	return err == nil
 }
 
-func (f *FileSytemWrapper) CreateDir(path string, permissions os.FileMode) error {
+func (f *FileSystemWrapper) CreateDir(path string, permissions os.FileMode) error {
 	err := os.MkdirAll(path, permissions)
 	if err != nil {
 		f.logger.Printf("Failed to create directory: %v", err)
@@ -37,21 +37,23 @@ func (f *FileSytemWrapper) CreateDir(path string, permissions os.FileMode) error
 	return nil
 }
 
-func (f *FileSytemWrapper) CleanDir(path string) {
+func (f *FileSystemWrapper) CleanDir(path string) {
 	err := os.RemoveAll(path)
 	if err != nil {
 		f.logger.Printf("Failed to clean directory: %v", err)
 	}
 }
 
-func (f *FileSytemWrapper) WriteToFile(path string, content []byte) {
+func (f *FileSystemWrapper) WriteToFile(path string, content []byte) error {
 	err := os.WriteFile(path, content, 0644)
 	if err != nil {
 		f.logger.Printf("Failed to write to file: %v", err)
+		return err
 	}
+	return nil
 }
 
-func (f *FileSytemWrapper) ReadFile(path string) ([]byte, error) {
+func (f *FileSystemWrapper) ReadFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		f.logger.Printf("Faield to read file: %v", err)
@@ -60,7 +62,7 @@ func (f *FileSytemWrapper) ReadFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-func (f *FileSytemWrapper) CopyFile(src, dst string) error {
+func (f *FileSystemWrapper) CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -92,7 +94,7 @@ func (f *FileSytemWrapper) CopyFile(src, dst string) error {
 	return nil
 }
 
-func (f *FileSytemWrapper) ListDir(path string) ([]os.DirEntry, error) {
+func (f *FileSystemWrapper) ListDir(path string) ([]os.DirEntry, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		f.logger.Printf("Failed to read directory: %v", err)
@@ -102,7 +104,7 @@ func (f *FileSytemWrapper) ListDir(path string) ([]os.DirEntry, error) {
 	return entries, nil
 }
 
-func (f *FileSytemWrapper) CopyDirContents(srcDir, dstDir string) error {
+func (f *FileSystemWrapper) CopyDirContents(srcDir, dstDir string) error {
 	entries, err := os.ReadDir(srcDir)
 	if err != nil {
 		return err
@@ -130,7 +132,7 @@ func (f *FileSytemWrapper) CopyDirContents(srcDir, dstDir string) error {
 	return nil
 }
 
-func (f *FileSytemWrapper) GetFileByPattern(dir string, filePattern string) (string, error) {
+func (f *FileSystemWrapper) GetFileByPattern(dir string, filePattern string) (string, error) {
 	pattern := filepath.Join(dir, filePattern)
 
 	matches, err := filepath.Glob(pattern)
