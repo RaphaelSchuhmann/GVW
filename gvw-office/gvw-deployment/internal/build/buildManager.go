@@ -29,11 +29,14 @@ type FileSystemWrapper interface {
 	GetFileByPattern(dir string, filePattern string) (string, error)
 }
 
+type activeBuild struct {
+	cancel context.CancelFunc
+	done   chan struct{}
+}
+
 type BuildManager struct {
 	mutex         sync.Mutex
-	activeCancels map[string]context.CancelFunc
-	activeRunIds  map[string]uint64
-	nextId        uint64
+	activeBuilds  map[string]*activeBuild
 	githubRepoURL string
 	javaClient    JavaClient
 	fsWrapper     FileSystemWrapper
@@ -43,8 +46,7 @@ type BuildManager struct {
 
 func NewBuildManager(githubRepoURL string, javaClient JavaClient, fsWrapper FileSystemWrapper, logger *utils.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
-		activeCancels: make(map[string]context.CancelFunc),
-		activeRunIds:  make(map[string]uint64),
+		activeBuilds:  make(map[string]*activeBuild),
 		githubRepoURL: githubRepoURL,
 		javaClient:    javaClient,
 		fsWrapper:     fsWrapper,
@@ -56,16 +58,19 @@ func NewBuildManager(githubRepoURL string, javaClient JavaClient, fsWrapper File
 func (b *BuildManager) TriggerBuild(deploymentId string, commit string) {
 	b.mutex.Lock()
 
-	if cancel, exists := b.activeCancels[deploymentId]; exists {
-		cancel()
+	previous := b.activeBuilds[deploymentId]
+	if previous != nil {
+		b.logger.Printf("[BUILD] Cancelling build for deployment %s", deploymentId)
+		previous.cancel()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	b.activeCancels[deploymentId] = cancel
+	current := &activeBuild{
+		cancel: cancel,
+		done:   make(chan struct{}),
+	}
 
-	b.nextId++
-	currentRunId := b.nextId
-	b.activeRunIds[deploymentId] = currentRunId
+	b.activeBuilds[deploymentId] = current
 
 	b.mutex.Unlock()
 
@@ -73,18 +78,34 @@ func (b *BuildManager) TriggerBuild(deploymentId string, commit string) {
 	go func() {
 		defer func() {
 			b.mutex.Lock()
-			if b.activeRunIds[deploymentId] == currentRunId {
-				delete(b.activeCancels, deploymentId)
+			if b.activeBuilds[deploymentId] == current {
+				delete(b.activeBuilds, deploymentId)
 			}
 			b.mutex.Unlock()
+
+			close(current.done)
 		}()
+
+		if previous != nil {
+			<-previous.done
+		}
+
+		b.mutex.Lock()
+		isCurrent := b.activeBuilds[deploymentId] == current
+		b.mutex.Unlock()
+
+		if !isCurrent {
+			return
+		}
 
 		b.runPipeline(ctx, deploymentId, commit)
 	}()
 }
 
 func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, commit string) {
-	// Note: ctx just needs to get passed to command executions
+	if ctx.Err() != nil {
+		return
+	}
 
 	// Setup build environment
 	b.fsWrapper.CreateDir("./builds/"+deploymentId, 0755)
@@ -102,6 +123,11 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 
 	// Try three times to run the build
 	for i := 0; i < 3; i++ {
+		if err := ctx.Err(); err != nil {
+			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			return
+		}
+
 		b.setupBuildDirs(deploymentId)
 
 		// Frontend
@@ -115,6 +141,11 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 			continue
 		}
 
+		if err := ctx.Err(); err != nil {
+			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			return
+		}
+
 		// Backend
 		err = b.buildBackend(ctx, deploymentId)
 		if err != nil {
@@ -126,6 +157,11 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 			continue
 		}
 
+		if err := ctx.Err(); err != nil {
+			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			return
+		}
+
 		// Extract binaries
 		err = b.extractBinaries(deploymentId)
 		if err != nil {
@@ -133,9 +169,19 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 			continue
 		}
 
+		if err := ctx.Err(); err != nil {
+			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			return
+		}
+
 		b.logger.Printf("Build successful for deployment %s", deploymentId)
 		cancelledReason = 0
 		break
+	}
+
+	if err := ctx.Err(); err != nil {
+		b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+		return
 	}
 
 	if cancelledReason == 0 {
@@ -143,6 +189,11 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		if err != nil {
 			cancelledReason = BUILD_CodeSchemaGenerationFailed
 		}
+	}
+
+	if err := ctx.Err(); err != nil {
+		b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+		return
 	}
 
 	if cancelledReason != 0 {
@@ -317,7 +368,7 @@ func (b *BuildManager) generateSchema(deploymentId string) error {
 		return err
 	}
 
-	schemaPath := filepath.Join("./builds/" + deploymentId, "schema.json")
+	schemaPath := filepath.Join("./builds/"+deploymentId, "schema.json")
 	if err := b.fsWrapper.WriteToFile(schemaPath, buf.Bytes()); err != nil {
 		b.logger.Printf("[BUILD] Failed to write schema.json for deployment %s: %v", deploymentId, err)
 		return err
