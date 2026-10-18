@@ -8,7 +8,7 @@ import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.File;
-import com.gvw.gvwbackend.model.StoredFile;
+import com.gvw.gvwbackend.model.helper.StoredFile;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

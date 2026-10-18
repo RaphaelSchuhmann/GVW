@@ -10,6 +10,7 @@ import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.exception.NotFoundException;
 import com.gvw.gvwbackend.model.*;
+import com.gvw.gvwbackend.model.helper.TextDocumentSearchResult;
 import com.gvw.gvwbackend.util.FileUtils;
 import java.time.Instant;
 import java.util.*;

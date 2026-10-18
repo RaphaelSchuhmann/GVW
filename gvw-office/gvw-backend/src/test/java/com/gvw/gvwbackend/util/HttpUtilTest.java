@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import com.gvw.gvwbackend.model.GVWHttpResponse;
-import java.net.URI;
+import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
+
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;

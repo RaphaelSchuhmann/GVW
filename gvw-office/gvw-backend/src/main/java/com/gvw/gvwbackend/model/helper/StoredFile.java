@@ -1,4 +1,4 @@
-package com.gvw.gvwbackend.model;
+package com.gvw.gvwbackend.model.helper;
 
 import java.nio.file.Path;
 
