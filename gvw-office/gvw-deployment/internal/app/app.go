@@ -1,0 +1,54 @@
+package app
+
+import (
+	"gvw/gvw-deployment/internal/api/client"
+	"gvw/gvw-deployment/internal/api/handler"
+	"gvw/gvw-deployment/internal/api/middleware"
+	"gvw/gvw-deployment/internal/build"
+	"gvw/gvw-deployment/internal/config"
+	"gvw/gvw-deployment/internal/utils"
+	"net/http"
+)
+
+type App struct {
+	Config     *config.Config
+	Logger     *utils.Logger
+	HttpServer *http.Server
+}
+
+func NewApp(cfg *config.Config, logger *utils.Logger, fsWrapper *utils.FileSytemWrapper) (*App, error) {
+	javaBaseURL := cfg.JavaBaseURL
+	if javaBaseURL == "" {
+		javaBaseURL = "http://localhost:3500/api"
+	}
+
+	javaClient := client.NewJavaClient(javaBaseURL, cfg.InternalToken)
+	buildManager := build.NewBuildManager(cfg.GithubRepoURL, javaClient, fsWrapper, logger)
+
+	// modelLoader := build.NewModelLoader(fsWrapper)
+
+	buildHandler := handler.NewBuildHandler(buildManager)
+
+	mux := http.NewServeMux()
+	buildHandler.RegisterRoutes(mux)
+
+	var handler http.Handler = mux
+	handler = middleware.LoggingMiddleware(logger, handler)
+	handler = middleware.LocalhostOnlyMiddleware(logger, handler)
+
+	server := &http.Server{
+		Addr:    "127.0.0.1:" + cfg.Port,
+		Handler: handler,
+	}
+
+	return &App{
+		Config:     cfg,
+		Logger:     logger,
+		HttpServer: server,
+	}, nil
+}
+
+func (a *App) Start() error {
+	a.Logger.Println("Go backend starting on " + a.HttpServer.Addr + "...")
+	return a.HttpServer.ListenAndServe()
+}
