@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestNewFileSystemWrapper(t *testing.T) {
+func TestNewFileSystem(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	if fsw == nil {
 		t.Error("Expected non-nil FileSystemWrapper")
@@ -21,7 +21,7 @@ func TestNewFileSystemWrapper(t *testing.T) {
 
 func TestDirOrFileExists_ExistingFile(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpFile, err := os.CreateTemp("", "test-*.txt")
 	if err != nil {
@@ -38,7 +38,7 @@ func TestDirOrFileExists_ExistingFile(t *testing.T) {
 
 func TestDirOrFileExists_NonExistent(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	exists := fsw.DirOrFileExists("/nonexistent/path/file.txt")
 	if exists {
@@ -48,7 +48,7 @@ func TestDirOrFileExists_NonExistent(t *testing.T) {
 
 func TestCreateDir_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -69,7 +69,7 @@ func TestCreateDir_Success(t *testing.T) {
 
 func TestCreateDir_ExistingDir(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -86,7 +86,7 @@ func TestCreateDir_ExistingDir(t *testing.T) {
 
 func TestCleanDir_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -109,7 +109,7 @@ func TestCleanDir_Success(t *testing.T) {
 
 func TestWriteToFile_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpFile, err := os.CreateTemp("", "test-*.txt")
 	if err != nil {
@@ -136,7 +136,7 @@ func TestWriteToFile_Success(t *testing.T) {
 
 func TestReadFile_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpFile, err := os.CreateTemp("", "test-*.txt")
 	if err != nil {
@@ -160,7 +160,7 @@ func TestReadFile_Success(t *testing.T) {
 
 func TestReadFile_NonExistent(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	_, err := fsw.ReadFile("/nonexistent/path/file.txt")
 	if err == nil {
@@ -170,7 +170,7 @@ func TestReadFile_NonExistent(t *testing.T) {
 
 func TestCopyFile_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -204,7 +204,7 @@ func TestCopyFile_Success(t *testing.T) {
 
 func TestCopyFile_SourceNotFound(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -223,7 +223,7 @@ func TestCopyFile_SourceNotFound(t *testing.T) {
 
 func TestListDir_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -247,7 +247,7 @@ func TestListDir_Success(t *testing.T) {
 
 func TestListDir_NonExistent(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	_, err := fsw.ListDir("/nonexistent/path")
 	if err == nil {
@@ -257,7 +257,7 @@ func TestListDir_NonExistent(t *testing.T) {
 
 func TestCopyDirContents_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -290,7 +290,7 @@ func TestCopyDirContents_Success(t *testing.T) {
 
 func TestCopyDirContents_SourceNotFound(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -309,7 +309,7 @@ func TestCopyDirContents_SourceNotFound(t *testing.T) {
 
 func TestGetFileByPattern_Success(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -332,7 +332,7 @@ func TestGetFileByPattern_Success(t *testing.T) {
 
 func TestGetFileByPattern_NoMatch(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {
@@ -348,7 +348,7 @@ func TestGetFileByPattern_NoMatch(t *testing.T) {
 
 func TestGetFileByPattern_InvalidPattern(t *testing.T) {
 	logger := NewLogger()
-	fsw := NewFileSystemWrapper(logger)
+	fsw := NewFileSystem(logger)
 
 	tmpDir, err := os.MkdirTemp("", "testdir-")
 	if err != nil {

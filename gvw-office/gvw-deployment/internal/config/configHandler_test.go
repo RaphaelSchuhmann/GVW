@@ -95,10 +95,10 @@ func TestValidateConfig_EmptyGithubRepoURL(t *testing.T) {
 
 func TestValidateConfig_EmptyModelDatabaseMap(t *testing.T) {
 	config := Config{
-		Port:          "8080",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
+		Port:             "8080",
+		InternalToken:    "test-token",
+		JavaBaseURL:      "http://localhost:8080",
+		GithubRepoURL:    "https://github.com/test/repo",
 		ModelDatabaseMap: map[string]string{},
 	}
 
@@ -110,10 +110,10 @@ func TestValidateConfig_EmptyModelDatabaseMap(t *testing.T) {
 
 func TestValidateConfig_NilModelDatabaseMap(t *testing.T) {
 	config := Config{
-		Port:          "8080",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
+		Port:             "8080",
+		InternalToken:    "test-token",
+		JavaBaseURL:      "http://localhost:8080",
+		GithubRepoURL:    "https://github.com/test/repo",
 		ModelDatabaseMap: nil,
 	}
 
@@ -196,7 +196,7 @@ func TestLoadConfig_ValidFile(t *testing.T) {
 	tmpFile.Close()
 
 	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystemWrapper(logger)
+	filesystemWrapper := utils.NewFileSystem(logger)
 
 	config, err := LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err != nil {
@@ -220,7 +220,7 @@ func TestLoadConfig_InvalidJSON(t *testing.T) {
 	tmpFile.Close()
 
 	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystemWrapper(logger)
+	filesystemWrapper := utils.NewFileSystem(logger)
 
 	_, err = LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err == nil {
@@ -230,7 +230,7 @@ func TestLoadConfig_InvalidJSON(t *testing.T) {
 
 func TestLoadConfig_FileNotFound(t *testing.T) {
 	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystemWrapper(logger)
+	filesystemWrapper := utils.NewFileSystem(logger)
 
 	_, err := LoadConfig("/nonexistent/path/config.json", filesystemWrapper)
 	if err == nil {
@@ -256,7 +256,7 @@ func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 	tmpFile.Close()
 
 	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystemWrapper(logger)
+	filesystemWrapper := utils.NewFileSystem(logger)
 
 	_, err = LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err == nil {

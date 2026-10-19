@@ -8,7 +8,7 @@ import (
 
 type ModelLoader struct {
 	logger    *utils.Logger
-	fsWrapper FileSystemWrapper
+	fsWrapper utils.FileSystemWrapper
 }
 
 type ClassScope struct {
@@ -16,7 +16,7 @@ type ClassScope struct {
 	startDepth int
 }
 
-func NewModelLoader(logger *utils.Logger, fsWrapper FileSystemWrapper) *ModelLoader {
+func NewModelLoader(logger *utils.Logger, fsWrapper utils.FileSystemWrapper) *ModelLoader {
 	return &ModelLoader{
 		logger:    logger,
 		fsWrapper: fsWrapper,
@@ -37,10 +37,10 @@ func (m *ModelLoader) LoadModel(path string) (map[string]any, error) {
 
 	var modelLines []string = strings.Split(modelString, "\n")
 
-	return m.ParseLines(modelLines)
+	return m.parseLines(modelLines)
 }
 
-func (m *ModelLoader) ParseLines(lines []string) (map[string]any, error) {
+func (m *ModelLoader) parseLines(lines []string) (map[string]any, error) {
 	result := make(map[string]any)
 	var stack []ClassScope
 	braceDepth := 0
@@ -91,7 +91,7 @@ func (m *ModelLoader) ParseLines(lines []string) (map[string]any, error) {
 				classType = "enum"
 			}
 
-			name := ExtractClassName(line)
+			name := extractClassName(line)
 			if name != "" {
 				if classType == "enum" {
 					result[name] = map[string]any{
@@ -119,7 +119,7 @@ func (m *ModelLoader) ParseLines(lines []string) (map[string]any, error) {
 			}
 
 			line = strings.TrimSuffix(line, ";")
-			line = FixGenericSpacing(line)
+			line = fixGenericSpacing(line)
 			parts := strings.Fields(line)
 
 			var cleanParts []string
@@ -129,8 +129,8 @@ func (m *ModelLoader) ParseLines(lines []string) (map[string]any, error) {
 					continue
 				default:
 					if strings.HasPrefix(part, "@") {
-            		    continue
-            		}
+						continue
+					}
 					cleanParts = append(cleanParts, part)
 				}
 			}
@@ -201,7 +201,7 @@ func (m *ModelLoader) NormalizeAndValidateSchema(rawSchema map[string]any) (map[
 				return nil, fmt.Errorf("INVALID_TYPE_REPRESENTATION")
 			}
 
-			normType, err := NormalizeType(fieldType, classes, enums)
+			normType, err := normalizeType(fieldType, classes, enums)
 			if err != nil {
 				m.logger.Printf("[BUILD] Error normalizing type for class %s, field %s: %v", className, fieldName, err)
 				return nil, fmt.Errorf("ERROR_NORMALIZING_TYPE: %w", err)
@@ -219,7 +219,7 @@ func (m *ModelLoader) NormalizeAndValidateSchema(rawSchema map[string]any) (map[
 	return normalizedSchema, nil
 }
 
-func NormalizeType(typeName string, classes map[string]bool, enums map[string]bool) (any, error) {
+func normalizeType(typeName string, classes map[string]bool, enums map[string]bool) (any, error) {
 	typeName = strings.TrimSpace(typeName)
 
 	// Primitive and Wrapper Mappings
@@ -248,7 +248,7 @@ func NormalizeType(typeName string, classes map[string]bool, enums map[string]bo
 	if (strings.HasPrefix(typeName, "List<") && strings.HasSuffix(typeName, ">")) ||
 		(strings.HasPrefix(typeName, "Set<") && strings.HasSuffix(typeName, ">")) {
 		inner := typeName[strings.Index(typeName, "<")+1 : len(typeName)-1]
-		normInner, err := NormalizeType(inner, classes, enums)
+		normInner, err := normalizeType(inner, classes, enums)
 		if err != nil {
 			return nil, err
 		}
@@ -260,12 +260,12 @@ func NormalizeType(typeName string, classes map[string]bool, enums map[string]bo
 
 	if strings.HasSuffix(typeName, "[]") {
 		inner := strings.TrimSuffix(typeName, "[]")
-		normInner, err := NormalizeType(inner, classes, enums)
+		normInner, err := normalizeType(inner, classes, enums)
 		if err != nil {
 			return nil, err
 		}
 		return map[string]any{
-			"type": "array",
+			"type":  "array",
 			"items": normInner,
 		}, nil
 	}
@@ -280,13 +280,13 @@ func NormalizeType(typeName string, classes map[string]bool, enums map[string]bo
 
 		valType := strings.TrimSpace(parts[1])
 
-		normVal, err := NormalizeType(valType, classes, enums)
+		normVal, err := normalizeType(valType, classes, enums)
 		if err != nil {
 			return nil, err
 		}
 
 		return map[string]any{
-			"type": "object",
+			"type":   "object",
 			"values": normVal,
 		}, nil
 	}
@@ -317,7 +317,7 @@ func (m *ModelLoader) MarkEmbeddedClasses(schema map[string]any) {
 		}
 
 		for _, fieldType := range members {
-			CollectReferences(fieldType, referenced, classNames)
+			collectReferences(fieldType, referenced, classNames)
 		}
 	}
 
@@ -332,7 +332,7 @@ func (m *ModelLoader) MarkEmbeddedClasses(schema map[string]any) {
 	}
 }
 
-func ExtractClassName(line string) string {
+func extractClassName(line string) string {
 	var firstIndex int
 	if strings.Contains(line, "enum") {
 		firstIndex = strings.Index(line, "enum") + 4
@@ -350,11 +350,11 @@ func ExtractClassName(line string) string {
 	return ""
 }
 
-func FixGenericSpacing(s string) string {
+func fixGenericSpacing(s string) string {
 	return strings.ReplaceAll(s, ", ", ",")
 }
 
-func CollectReferences(fieldType any, referenced map[string]bool, classNames map[string]bool) {
+func collectReferences(fieldType any, referenced map[string]bool, classNames map[string]bool) {
 	switch t := fieldType.(type) {
 	case string:
 		if classNames[t] {
@@ -363,9 +363,9 @@ func CollectReferences(fieldType any, referenced map[string]bool, classNames map
 	case map[string]any:
 		if typeVal, ok := t["type"].(string); ok {
 			if typeVal == "array" {
-				CollectReferences(t["items"], referenced, classNames)
+				collectReferences(t["items"], referenced, classNames)
 			} else if typeVal == "object" {
-				CollectReferences(t["values"], referenced, classNames)
+				collectReferences(t["values"], referenced, classNames)
 			}
 		}
 	}

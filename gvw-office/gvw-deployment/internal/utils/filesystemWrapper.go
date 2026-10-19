@@ -7,17 +7,31 @@ import (
 	"path/filepath"
 )
 
-type FileSystemWrapper struct {
+var _ FileSystemWrapper = (*FileSystem)(nil)
+
+type FileSystemWrapper interface {
+	DirOrFileExists(path string) bool
+	CreateDir(path string, permissions os.FileMode) error
+	CleanDir(path string)
+	WriteToFile(path string, content []byte) error
+	ReadFile(path string) ([]byte, error)
+	CopyFile(src, dst string) error
+	ListDir(path string) ([]os.DirEntry, error)
+	CopyDirContents(srcDir, dstDir string) error
+	GetFileByPattern(dir string, filePattern string) (string, error)
+}
+
+type FileSystem struct {
 	logger *Logger
 }
 
-func NewFileSystemWrapper(logger *Logger) *FileSystemWrapper {
-	return &FileSystemWrapper{
+func NewFileSystem(logger *Logger) *FileSystem {
+	return &FileSystem{
 		logger: logger,
 	}
 }
 
-func (f *FileSystemWrapper) DirOrFileExists(path string) bool {
+func (f *FileSystem) DirOrFileExists(path string) bool {
 	_, err := os.Stat(path)
 
 	if err != nil {
@@ -27,7 +41,7 @@ func (f *FileSystemWrapper) DirOrFileExists(path string) bool {
 	return err == nil
 }
 
-func (f *FileSystemWrapper) CreateDir(path string, permissions os.FileMode) error {
+func (f *FileSystem) CreateDir(path string, permissions os.FileMode) error {
 	err := os.MkdirAll(path, permissions)
 	if err != nil {
 		f.logger.Printf("Failed to create directory: %v", err)
@@ -37,14 +51,14 @@ func (f *FileSystemWrapper) CreateDir(path string, permissions os.FileMode) erro
 	return nil
 }
 
-func (f *FileSystemWrapper) CleanDir(path string) {
+func (f *FileSystem) CleanDir(path string) {
 	err := os.RemoveAll(path)
 	if err != nil {
 		f.logger.Printf("Failed to clean directory: %v", err)
 	}
 }
 
-func (f *FileSystemWrapper) WriteToFile(path string, content []byte) error {
+func (f *FileSystem) WriteToFile(path string, content []byte) error {
 	err := os.WriteFile(path, content, 0644)
 	if err != nil {
 		f.logger.Printf("Failed to write to file: %v", err)
@@ -53,7 +67,7 @@ func (f *FileSystemWrapper) WriteToFile(path string, content []byte) error {
 	return nil
 }
 
-func (f *FileSystemWrapper) ReadFile(path string) ([]byte, error) {
+func (f *FileSystem) ReadFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		f.logger.Printf("Faield to read file: %v", err)
@@ -62,7 +76,7 @@ func (f *FileSystemWrapper) ReadFile(path string) ([]byte, error) {
 	return data, nil
 }
 
-func (f *FileSystemWrapper) CopyFile(src, dst string) error {
+func (f *FileSystem) CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
 		return err
@@ -94,7 +108,7 @@ func (f *FileSystemWrapper) CopyFile(src, dst string) error {
 	return nil
 }
 
-func (f *FileSystemWrapper) ListDir(path string) ([]os.DirEntry, error) {
+func (f *FileSystem) ListDir(path string) ([]os.DirEntry, error) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		f.logger.Printf("Failed to read directory: %v", err)
@@ -104,7 +118,7 @@ func (f *FileSystemWrapper) ListDir(path string) ([]os.DirEntry, error) {
 	return entries, nil
 }
 
-func (f *FileSystemWrapper) CopyDirContents(srcDir, dstDir string) error {
+func (f *FileSystem) CopyDirContents(srcDir, dstDir string) error {
 	entries, err := os.ReadDir(srcDir)
 	if err != nil {
 		return err
@@ -132,7 +146,7 @@ func (f *FileSystemWrapper) CopyDirContents(srcDir, dstDir string) error {
 	return nil
 }
 
-func (f *FileSystemWrapper) GetFileByPattern(dir string, filePattern string) (string, error) {
+func (f *FileSystem) GetFileByPattern(dir string, filePattern string) (string, error) {
 	pattern := filepath.Join(dir, filePattern)
 
 	matches, err := filepath.Glob(pattern)

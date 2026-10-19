@@ -18,7 +18,7 @@ func TestIntegration_RealModelSources(t *testing.T) {
 	}
 
 	logger := utils.NewLogger()
-	fsWrapper := utils.NewFileSystemWrapper(logger)
+	fsWrapper := utils.NewFileSystem(logger)
 	modelLoader := NewModelLoader(logger, fsWrapper)
 
 	// Load all model files from the real backend

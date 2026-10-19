@@ -15,7 +15,7 @@ type Config struct {
 	ModelDatabaseMap map[string]string `json:"model_db_map"`
 }
 
-func LoadConfig(path string, filesystemWrapper *utils.FileSystemWrapper) (*Config, error) {
+func LoadConfig(path string, filesystemWrapper utils.FileSystemWrapper) (*Config, error) {
 	data, err := filesystemWrapper.ReadFile(path)
 	if err != nil {
 		return nil, err

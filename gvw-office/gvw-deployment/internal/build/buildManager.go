@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/utils"
 	"os"
 	"path/filepath"
@@ -12,22 +13,6 @@ import (
 	"strings"
 	"sync"
 )
-
-type JavaClient interface {
-	UpdateDeploymentState(deploymentId string, state string, reason uint32) error
-}
-
-type FileSystemWrapper interface {
-	DirOrFileExists(path string) bool
-	CreateDir(path string, permissions os.FileMode) error
-	CleanDir(path string)
-	WriteToFile(path string, content []byte) error
-	ReadFile(path string) ([]byte, error)
-	CopyFile(src, dst string) error
-	ListDir(path string) ([]os.DirEntry, error)
-	CopyDirContents(srcDir, dstDir string) error
-	GetFileByPattern(dir string, filePattern string) (string, error)
-}
 
 type activeBuild struct {
 	cancel context.CancelFunc
@@ -38,13 +23,13 @@ type BuildManager struct {
 	mutex         sync.Mutex
 	activeBuilds  map[string]*activeBuild
 	githubRepoURL string
-	javaClient    JavaClient
-	fsWrapper     FileSystemWrapper
+	javaClient    client.JavaClient
+	fsWrapper     utils.FileSystemWrapper
 	logger        *utils.Logger
 	modelLoader   *ModelLoader
 }
 
-func NewBuildManager(githubRepoURL string, javaClient JavaClient, fsWrapper FileSystemWrapper, logger *utils.Logger, modelLoader *ModelLoader) *BuildManager {
+func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapper utils.FileSystemWrapper, logger *utils.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
 		activeBuilds:  make(map[string]*activeBuild),
 		githubRepoURL: githubRepoURL,
@@ -111,13 +96,12 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 	b.fsWrapper.CreateDir("./builds/"+deploymentId, 0755)
 	b.fsWrapper.CreateDir("./builds/"+deploymentId+"/repo", 0755)
 
-	// !!!!! TODO: RE-ENABLE THIS BEFORE PUSHING!!!! THIS IS JUST FOR TESTING!!!!
-	// err := b.cloneRepo(ctx, deploymentId, commit)
-	// if err != nil {
-	// 	b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-	// 	b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", CodeCommitInvalid)
-	// 	return
-	// }
+	err := b.cloneRepo(ctx, deploymentId, commit)
+	if err != nil {
+		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
+		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeCommitInvalid)
+		return
+	}
 
 	cancelledReason := 0
 

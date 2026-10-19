@@ -12,8 +12,8 @@ import (
 type MockJavaClient struct {
 	updateDeploymentStateCalled bool
 	deploymentId                string
-	state                        string
-	reason                       uint32
+	state                       string
+	reason                      uint32
 }
 
 func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state string, reason uint32) error {
@@ -26,43 +26,43 @@ func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state string
 
 // MockFileSystemWrapper for testing
 type MockFileSystemWrapper struct {
-	logger               *utils.Logger
-	createDirCalled      bool
-	createDirPath        string
-	writeToFileCalled    bool
-	writeToFilePath      string
-	writeToFileContent   []byte
-	readFileCalled       bool
-	readFilePath         string
-	readFileContent      map[string][]byte
-	readFileError        error
-	listDirCalled        bool
-	listDirPath          string
-	listDirEntries       []os.DirEntry
-	listDirError         error
-	dirOrFileExists      bool
-	dirOrFileExistsMap   map[string]bool
-	cleanDirCalled       bool
-	cleanDirPath         string
-	copyDirContentsCalled bool
-	copyDirContentsSrc   string
-	copyDirContentsDst   string
-	copyFileCalled       bool
-	copyFileSrc          string
-	copyFileDst          string
-	getFileByPatternCalled bool
-	getFileByPatternDir  string
+	logger                  *utils.Logger
+	createDirCalled         bool
+	createDirPath           string
+	writeToFileCalled       bool
+	writeToFilePath         string
+	writeToFileContent      []byte
+	readFileCalled          bool
+	readFilePath            string
+	readFileContent         map[string][]byte
+	readFileError           error
+	listDirCalled           bool
+	listDirPath             string
+	listDirEntries          []os.DirEntry
+	listDirError            error
+	dirOrFileExists         bool
+	dirOrFileExistsMap      map[string]bool
+	cleanDirCalled          bool
+	cleanDirPath            string
+	copyDirContentsCalled   bool
+	copyDirContentsSrc      string
+	copyDirContentsDst      string
+	copyFileCalled          bool
+	copyFileSrc             string
+	copyFileDst             string
+	getFileByPatternCalled  bool
+	getFileByPatternDir     string
 	getFileByPatternPattern string
-	getFileByPatternResult string
-	getFileByPatternError error
+	getFileByPatternResult  string
+	getFileByPatternError   error
 }
 
 func NewMockFileSystemWrapper(logger *utils.Logger) *MockFileSystemWrapper {
 	return &MockFileSystemWrapper{
-		logger:                logger,
-		dirOrFileExists:       true,
-		readFileContent:       make(map[string][]byte),
-		dirOrFileExistsMap:    make(map[string]bool),
+		logger:             logger,
+		dirOrFileExists:    true,
+		readFileContent:    make(map[string][]byte),
+		dirOrFileExistsMap: make(map[string]bool),
 	}
 }
 

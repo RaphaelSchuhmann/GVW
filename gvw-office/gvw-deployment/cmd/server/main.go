@@ -8,7 +8,7 @@ import (
 
 func main() {
 	var logger *utils.Logger = utils.NewLogger()
-	var fsWrapper *utils.FileSystemWrapper = utils.NewFileSystemWrapper(logger)
+	var fsWrapper *utils.FileSystem = utils.NewFileSystem(logger)
 
 	cfg, err := config.LoadConfig("./config.json", fsWrapper)
 	if err != nil {

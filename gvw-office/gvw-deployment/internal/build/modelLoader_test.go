@@ -18,9 +18,9 @@ func TestParseLines_PublicClassWithFields(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	if len(result) != 1 {
@@ -69,9 +69,9 @@ func TestParseLines_ModifiersIgnored(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	class, ok := result["TestClass"].(map[string]any)
@@ -105,9 +105,9 @@ func TestParseLines_BuilderDefaultAnnotation(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	class := result["TestClass"].(map[string]any)
@@ -130,9 +130,9 @@ func TestParseLines_JsonPropertyAnnotation(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	class := result["TestClass"].(map[string]any)
@@ -164,9 +164,9 @@ func TestParseLines_JsonPropertySeparateLines(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	class := result["TestClass"].(map[string]any)
@@ -189,9 +189,9 @@ func TestParseLines_GenericDeclarations(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	class := result["TestClass"].(map[string]any)
@@ -223,9 +223,9 @@ func TestParseLines_CommentsAndAnnotations(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	class := result["TestClass"].(map[string]any)
@@ -253,9 +253,9 @@ func TestParseLines_Enum(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.ParseLines(lines)
+	result, err := loader.parseLines(lines)
 	if err != nil {
-		t.Fatalf("ParseLines failed: %v", err)
+		t.Fatalf("parseLines failed: %v", err)
 	}
 
 	if len(result) != 1 {
@@ -316,12 +316,12 @@ func TestNormalizeType_StringTypes(t *testing.T) {
 
 	stringTypes := []string{"String", "char", "Character", "Instant", "LocalDate", "LocalDateTime", "LocalTime"}
 	for _, typeName := range stringTypes {
-		result, err := NormalizeType(typeName, classes, enums)
+		result, err := normalizeType(typeName, classes, enums)
 		if err != nil {
-			t.Errorf("NormalizeType(%s) failed: %v", typeName, err)
+			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
 		}
 		if result != "string" {
-			t.Errorf("NormalizeType(%s) expected 'string', got '%v'", typeName, result)
+			t.Errorf("normalizeType(%s) expected 'string', got '%v'", typeName, result)
 		}
 	}
 }
@@ -332,12 +332,12 @@ func TestNormalizeType_IntegerTypes(t *testing.T) {
 
 	intTypes := []string{"byte", "Byte", "short", "Short", "int", "Integer", "long", "Long", "BigInteger"}
 	for _, typeName := range intTypes {
-		result, err := NormalizeType(typeName, classes, enums)
+		result, err := normalizeType(typeName, classes, enums)
 		if err != nil {
-			t.Errorf("NormalizeType(%s) failed: %v", typeName, err)
+			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
 		}
 		if result != "int" {
-			t.Errorf("NormalizeType(%s) expected 'int', got '%v'", typeName, result)
+			t.Errorf("normalizeType(%s) expected 'int', got '%v'", typeName, result)
 		}
 	}
 }
@@ -348,12 +348,12 @@ func TestNormalizeType_FloatTypes(t *testing.T) {
 
 	floatTypes := []string{"float", "Float", "double", "Double", "BigDecimal"}
 	for _, typeName := range floatTypes {
-		result, err := NormalizeType(typeName, classes, enums)
+		result, err := normalizeType(typeName, classes, enums)
 		if err != nil {
-			t.Errorf("NormalizeType(%s) failed: %v", typeName, err)
+			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
 		}
 		if result != "float" {
-			t.Errorf("NormalizeType(%s) expected 'float', got '%v'", typeName, result)
+			t.Errorf("normalizeType(%s) expected 'float', got '%v'", typeName, result)
 		}
 	}
 }
@@ -364,12 +364,12 @@ func TestNormalizeType_BooleanTypes(t *testing.T) {
 
 	boolTypes := []string{"boolean", "Boolean"}
 	for _, typeName := range boolTypes {
-		result, err := NormalizeType(typeName, classes, enums)
+		result, err := normalizeType(typeName, classes, enums)
 		if err != nil {
-			t.Errorf("NormalizeType(%s) failed: %v", typeName, err)
+			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
 		}
 		if result != "bool" {
-			t.Errorf("NormalizeType(%s) expected 'bool', got '%v'", typeName, result)
+			t.Errorf("normalizeType(%s) expected 'bool', got '%v'", typeName, result)
 		}
 	}
 }
@@ -379,12 +379,12 @@ func TestNormalizeType_KnownEnum(t *testing.T) {
 	enums := make(map[string]bool)
 	enums["Status"] = true
 
-	result, err := NormalizeType("Status", classes, enums)
+	result, err := normalizeType("Status", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Status) failed: %v", err)
+		t.Errorf("normalizeType(Status) failed: %v", err)
 	}
 	if result != "string" {
-		t.Errorf("NormalizeType(Status) expected 'string', got '%v'", result)
+		t.Errorf("normalizeType(Status) expected 'string', got '%v'", result)
 	}
 }
 
@@ -393,12 +393,12 @@ func TestNormalizeType_KnownModelClass(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("Migration", classes, enums)
+	result, err := normalizeType("Migration", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Migration) failed: %v", err)
+		t.Errorf("normalizeType(Migration) failed: %v", err)
 	}
 	if result != "Migration" {
-		t.Errorf("NormalizeType(Migration) expected 'Migration', got '%v'", result)
+		t.Errorf("normalizeType(Migration) expected 'Migration', got '%v'", result)
 	}
 }
 
@@ -406,9 +406,9 @@ func TestNormalizeType_ListOfString(t *testing.T) {
 	classes := make(map[string]bool)
 	enums := make(map[string]bool)
 
-	result, err := NormalizeType("List<String>", classes, enums)
+	result, err := normalizeType("List<String>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(List<String>) failed: %v", err)
+		t.Errorf("normalizeType(List<String>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -430,9 +430,9 @@ func TestNormalizeType_ListOfModel(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("List<Migration>", classes, enums)
+	result, err := normalizeType("List<Migration>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(List<Migration>) failed: %v", err)
+		t.Errorf("normalizeType(List<Migration>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -454,9 +454,9 @@ func TestNormalizeType_SetOfModel(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("Set<Migration>", classes, enums)
+	result, err := normalizeType("Set<Migration>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Set<Migration>) failed: %v", err)
+		t.Errorf("normalizeType(Set<Migration>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -478,9 +478,9 @@ func TestNormalizeType_ArraySyntax(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("Migration[]", classes, enums)
+	result, err := normalizeType("Migration[]", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Migration[]) failed: %v", err)
+		t.Errorf("normalizeType(Migration[]) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -501,9 +501,9 @@ func TestNormalizeType_MapStringString(t *testing.T) {
 	classes := make(map[string]bool)
 	enums := make(map[string]bool)
 
-	result, err := NormalizeType("Map<String, String>", classes, enums)
+	result, err := normalizeType("Map<String, String>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Map<String, String>) failed: %v", err)
+		t.Errorf("normalizeType(Map<String, String>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -525,9 +525,9 @@ func TestNormalizeType_MapStringModel(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("Map<String, Migration>", classes, enums)
+	result, err := normalizeType("Map<String, Migration>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Map<String, Migration>) failed: %v", err)
+		t.Errorf("normalizeType(Map<String, Migration>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -549,9 +549,9 @@ func TestNormalizeType_NestedList(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("List<List<Migration>>", classes, enums)
+	result, err := normalizeType("List<List<Migration>>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(List<List<Migration>>) failed: %v", err)
+		t.Errorf("normalizeType(List<List<Migration>>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -583,9 +583,9 @@ func TestNormalizeType_MapWithListValues(t *testing.T) {
 	enums := make(map[string]bool)
 	classes["Migration"] = true
 
-	result, err := NormalizeType("Map<String, List<Migration>>", classes, enums)
+	result, err := normalizeType("Map<String, List<Migration>>", classes, enums)
 	if err != nil {
-		t.Errorf("NormalizeType(Map<String, List<Migration>>) failed: %v", err)
+		t.Errorf("normalizeType(Map<String, List<Migration>>) failed: %v", err)
 	}
 
 	resultMap, ok := result.(map[string]any)
@@ -616,7 +616,7 @@ func TestNormalizeType_UnknownClass(t *testing.T) {
 	classes := make(map[string]bool)
 	enums := make(map[string]bool)
 
-	_, err := NormalizeType("UnknownClass", classes, enums)
+	_, err := normalizeType("UnknownClass", classes, enums)
 	if err == nil {
 		t.Errorf("Expected error for unknown class, got nil")
 	}
@@ -630,7 +630,7 @@ func TestNormalizeType_ListOfUnknownModel(t *testing.T) {
 	classes := make(map[string]bool)
 	enums := make(map[string]bool)
 
-	_, err := NormalizeType("List<UnknownModel>", classes, enums)
+	_, err := normalizeType("List<UnknownModel>", classes, enums)
 	if err == nil {
 		t.Errorf("Expected error for List<UnknownModel>, got nil")
 	}
@@ -644,7 +644,7 @@ func TestNormalizeType_InvalidMapDeclaration(t *testing.T) {
 	classes := make(map[string]bool)
 	enums := make(map[string]bool)
 
-	_, err := NormalizeType("Map<String>", classes, enums)
+	_, err := normalizeType("Map<String>", classes, enums)
 	if err == nil {
 		t.Errorf("Expected error for invalid map declaration, got nil")
 	}
