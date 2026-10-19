@@ -64,7 +64,7 @@ func IsConfigValueInvalid(member reflect.Value) bool {
 	}
 
 	if member.Kind() != reflect.Struct {
-		return false
+		return member.IsZero()
 	}
 
 	for i := 0; i < member.NumField(); i++ {

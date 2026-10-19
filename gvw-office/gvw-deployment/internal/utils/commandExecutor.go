@@ -17,8 +17,8 @@ func RunCommand(ctx context.Context, workDir string, name string, args ...string
     outputStr := string(outputBytes)
 
     if err != nil {
-        if ctx.Err() == context.Canceled {
-            return outputStr, fmt.Errorf("command cancelled: %w", ctx.Err())
+        if ctx.Err() != nil {
+            return outputStr, fmt.Errorf("COMMAND_CANCELLED_OR_TIMEDOUT: %w", ctx.Err())
         }
 
         return outputStr, fmt.Errorf("command failed: %w", err)
