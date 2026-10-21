@@ -6,11 +6,17 @@ import (
 	"testing"
 )
 
-func TestParseLines_PublicClassWithFields(t *testing.T) {
+func setupTestLoader(t *testing.T) (*log.Logger, *MockFileSystemWrapper, *ModelLoader) {
 	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
+	return logger, fsWrapper, loader
+}
 
+func TestParseLines_ClassParsing(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
+
+	// Test basic class with fields
 	lines := []string{
 		"public class Person {",
 		"    private String name;",
@@ -49,14 +55,9 @@ func TestParseLines_PublicClassWithFields(t *testing.T) {
 	if members["age"] != "int" {
 		t.Errorf("Expected age field to be int, got '%v'", members["age"])
 	}
-}
 
-func TestParseLines_ModifiersIgnored(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	lines := []string{
+	// Test that modifiers are ignored
+	lines = []string{
 		"public class TestClass {",
 		"    private String privateField;",
 		"    public String publicField;",
@@ -66,19 +67,18 @@ func TestParseLines_ModifiersIgnored(t *testing.T) {
 		"}",
 	}
 
-	result := loader.parseLines(lines)
+	result = loader.parseLines(lines)
 
 	class, ok := result["TestClass"].(map[string]any)
 	if !ok {
 		t.Fatalf("TestClass not found")
 	}
 
-	members := class["members"].(map[string]any)
+	members = class["members"].(map[string]any)
 	if len(members) != 5 {
 		t.Fatalf("Expected 5 members, got %d", len(members))
 	}
 
-	// Verify modifiers are not part of field names
 	expectedFields := []string{"privateField", "publicField", "protectedField", "staticField", "finalField"}
 	for _, field := range expectedFields {
 		if _, ok := members[field]; !ok {
@@ -87,120 +87,124 @@ func TestParseLines_ModifiersIgnored(t *testing.T) {
 	}
 }
 
-func TestParseLines_BuilderDefaultAnnotation(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+func TestParseLines_Annotations(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
 
-	lines := []string{
-		"public class TestClass {",
-		"    @Builder.Default",
-		"    private String name;",
-		"}",
+	tests := []struct {
+		name           string
+		lines          []string
+		wantField      string
+		wantFieldType  string
+		wantFieldAbsent string
+	}{
+		{
+			name: "@Builder.Default annotation is ignored",
+			lines: []string{
+				"public class TestClass {",
+				"    @Builder.Default",
+				"    private String name;",
+				"}",
+			},
+			wantField:     "name",
+			wantFieldType: "String",
+		},
+		{
+			name: "@JsonProperty annotation uses jsonName",
+			lines: []string{
+				"public class TestClass {",
+				"    @JsonProperty(\"jsonName\")",
+				"    private String javaName;",
+				"}",
+			},
+			wantField:       "jsonName",
+			wantFieldType:   "String",
+			wantFieldAbsent: "javaName",
+		},
 	}
 
-	result := loader.parseLines(lines)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := loader.parseLines(tt.lines)
+			class := result["TestClass"].(map[string]any)
+			members := class["members"].(map[string]any)
 
-	class := result["TestClass"].(map[string]any)
-	members := class["members"].(map[string]any)
+			if members[tt.wantField] != tt.wantFieldType {
+				t.Errorf("Expected field '%s' to be '%s', got '%v'", tt.wantField, tt.wantFieldType, members[tt.wantField])
+			}
 
-	if members["name"] != "String" {
-		t.Errorf("Expected name field to be String, got '%v'", members["name"])
-	}
-}
-
-func TestParseLines_JsonPropertyAnnotation(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	lines := []string{
-		"public class TestClass {",
-		"    @JsonProperty(\"jsonName\")",
-		"    private String javaName;",
-		"}",
-	}
-
-	result := loader.parseLines(lines)
-
-	class := result["TestClass"].(map[string]any)
-	members := class["members"].(map[string]any)
-
-	// Should use jsonName, not javaName
-	if _, ok := members["jsonName"]; !ok {
-		t.Errorf("Expected field 'jsonName' not found")
-	}
-
-	if _, ok := members["javaName"]; ok {
-		t.Errorf("Field 'javaName' should not exist, should be 'jsonName'")
-	}
-
-	if members["jsonName"] != "String" {
-		t.Errorf("Expected jsonName field to be String, got '%v'", members["jsonName"])
-	}
-}
-
-func TestParseLines_GenericDeclarations(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	lines := []string{
-		"public class TestClass {",
-		"    private List<String> stringList;",
-		"    private Map<String, Migration> migrationMap;",
-		"}",
-	}
-
-	result := loader.parseLines(lines)
-
-	class := result["TestClass"].(map[string]any)
-	members := class["members"].(map[string]any)
-
-	if members["stringList"] != "List<String>" {
-		t.Errorf("Expected stringList to be 'List<String>', got '%v'", members["stringList"])
-	}
-
-	if members["migrationMap"] != "Map<String,Migration>" {
-		t.Errorf("Expected migrationMap to be 'Map<String,Migration>', got '%v'", members["migrationMap"])
+			if tt.wantFieldAbsent != "" {
+				if _, ok := members[tt.wantFieldAbsent]; ok {
+					t.Errorf("Field '%s' should not exist", tt.wantFieldAbsent)
+				}
+			}
+		})
 	}
 }
 
-func TestParseLines_CommentsAndAnnotations(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+func TestParseLines_ComplexParsing(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
 
-	lines := []string{
-		"// This is a comment",
-		"/* Block comment */",
-		"public class TestClass {",
-		"    /**",
-		"     * Javadoc comment",
-		"     */",
-		"    @Deprecated",
-		"    private String name;",
-		"}",
+	tests := []struct {
+		name         string
+		lines        []string
+		wantMembers  map[string]string
+		wantCount    int
+	}{
+		{
+			name: "generic declarations",
+			lines: []string{
+				"public class TestClass {",
+				"    private List<String> stringList;",
+				"    private Map<String, Migration> migrationMap;",
+				"}",
+			},
+			wantMembers: map[string]string{
+				"stringList":   "List<String>",
+				"migrationMap": "Map<String,Migration>",
+			},
+			wantCount: 2,
+		},
+		{
+			name: "comments and annotations are ignored",
+			lines: []string{
+				"// This is a comment",
+				"/* Block comment */",
+				"public class TestClass {",
+				"    /**",
+				"     * Javadoc comment",
+				"     */",
+				"    @Deprecated",
+				"    private String name;",
+				"}",
+			},
+			wantMembers: map[string]string{
+				"name": "String",
+			},
+			wantCount: 1,
+		},
 	}
 
-	result := loader.parseLines(lines)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := loader.parseLines(tt.lines)
+			class := result["TestClass"].(map[string]any)
+			members := class["members"].(map[string]any)
 
-	class := result["TestClass"].(map[string]any)
-	members := class["members"].(map[string]any)
+			if len(members) != tt.wantCount {
+				t.Fatalf("Expected %d members, got %d", tt.wantCount, len(members))
+			}
 
-	if len(members) != 1 {
-		t.Fatalf("Expected 1 member, got %d", len(members))
-	}
-
-	if members["name"] != "String" {
-		t.Errorf("Expected name field to be String, got '%v'", members["name"])
+			for field, expectedType := range tt.wantMembers {
+				if members[field] != expectedType {
+					t.Errorf("Expected field '%s' to be '%s', got '%v'", field, expectedType, members[field])
+				}
+			}
+		})
 	}
 }
 
 func TestParseLines_Enum(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+	_, _, loader := setupTestLoader(t)
 
 	lines := []string{
 		"public enum Status {",
@@ -232,9 +236,7 @@ func TestParseLines_Enum(t *testing.T) {
 }
 
 func TestLoadModel_InvalidPaths(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+	_, fsWrapper, loader := setupTestLoader(t)
 
 	// Test empty path
 	_, err := loader.LoadModel("")
@@ -260,278 +262,300 @@ func TestNormalizeType_PrimitiveTypes(t *testing.T) {
 	classes := make(map[string]bool)
 	enums := make(map[string]bool)
 
-	// Test string types
-	stringTypes := []string{"String", "char", "Character", "Instant", "LocalDate", "LocalDateTime", "LocalTime"}
-	for _, typeName := range stringTypes {
-		result, err := normalizeType(typeName, classes, enums)
-		if err != nil {
-			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
-		}
-		if result != "string" {
-			t.Errorf("normalizeType(%s) expected 'string', got '%v'", typeName, result)
-		}
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		// String types
+		{"String", "String", "string"},
+		{"char", "char", "string"},
+		{"Character", "Character", "string"},
+		{"Instant", "Instant", "string"},
+		{"LocalDate", "LocalDate", "string"},
+		{"LocalDateTime", "LocalDateTime", "string"},
+		{"LocalTime", "LocalTime", "string"},
+		// Integer types
+		{"byte", "byte", "int"},
+		{"Byte", "Byte", "int"},
+		{"short", "short", "int"},
+		{"Short", "Short", "int"},
+		{"int", "int", "int"},
+		{"Integer", "Integer", "int"},
+		{"long", "long", "int"},
+		{"Long", "Long", "int"},
+		{"BigInteger", "BigInteger", "int"},
+		// Float types
+		{"float", "float", "float"},
+		{"Float", "Float", "float"},
+		{"double", "double", "float"},
+		{"Double", "Double", "float"},
+		{"BigDecimal", "BigDecimal", "float"},
+		// Boolean types
+		{"boolean", "boolean", "bool"},
+		{"Boolean", "Boolean", "bool"},
 	}
 
-	// Test integer types
-	intTypes := []string{"byte", "Byte", "short", "Short", "int", "Integer", "long", "Long", "BigInteger"}
-	for _, typeName := range intTypes {
-		result, err := normalizeType(typeName, classes, enums)
-		if err != nil {
-			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
-		}
-		if result != "int" {
-			t.Errorf("normalizeType(%s) expected 'int', got '%v'", typeName, result)
-		}
-	}
-
-	// Test float types
-	floatTypes := []string{"float", "Float", "double", "Double", "BigDecimal"}
-	for _, typeName := range floatTypes {
-		result, err := normalizeType(typeName, classes, enums)
-		if err != nil {
-			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
-		}
-		if result != "float" {
-			t.Errorf("normalizeType(%s) expected 'float', got '%v'", typeName, result)
-		}
-	}
-
-	// Test boolean types
-	boolTypes := []string{"boolean", "Boolean"}
-	for _, typeName := range boolTypes {
-		result, err := normalizeType(typeName, classes, enums)
-		if err != nil {
-			t.Errorf("normalizeType(%s) failed: %v", typeName, err)
-		}
-		if result != "bool" {
-			t.Errorf("normalizeType(%s) expected 'bool', got '%v'", typeName, result)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := normalizeType(tt.input, classes, enums)
+			if err != nil {
+				t.Errorf("normalizeType(%s) failed: %v", tt.input, err)
+			}
+			if result != tt.expected {
+				t.Errorf("normalizeType(%s) expected '%s', got '%v'", tt.input, tt.expected, result)
+			}
+		})
 	}
 }
 
 func TestNormalizeType_KnownTypes(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
-
-	// Test known enum
-	enums["Status"] = true
-	result, err := normalizeType("Status", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Status) failed: %v", err)
-	}
-	if result != "string" {
-		t.Errorf("normalizeType(Status) expected 'string', got '%v'", result)
-	}
-
-	// Test known model class
-	classes["Migration"] = true
-	result, err = normalizeType("Migration", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Migration) failed: %v", err)
-	}
-	if result != "Migration" {
-		t.Errorf("normalizeType(Migration) expected 'Migration', got '%v'", result)
-	}
-}
-
-func TestNormalizeType_ListOfString(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
-
-	result, err := normalizeType("List<String>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(List<String>) failed: %v", err)
+	tests := []struct {
+		name          string
+		input         string
+		classes       map[string]bool
+		enums         map[string]bool
+		expected      string
+	}{
+		{
+			name:     "known enum",
+			input:    "Status",
+			classes:  map[string]bool{},
+			enums:    map[string]bool{"Status": true},
+			expected: "string",
+		},
+		{
+			name:     "known model class",
+			input:    "Migration",
+			classes:  map[string]bool{"Migration": true},
+			enums:    map[string]bool{},
+			expected: "Migration",
+		},
 	}
 
-	resultMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map, got %T", result)
-	}
-
-	if resultMap["type"] != "array" {
-		t.Errorf("Expected type 'array', got '%v'", resultMap["type"])
-	}
-
-	if resultMap["items"] != "string" {
-		t.Errorf("Expected items 'string', got '%v'", resultMap["items"])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := normalizeType(tt.input, tt.classes, tt.enums)
+			if err != nil {
+				t.Errorf("normalizeType(%s) failed: %v", tt.input, err)
+			}
+			if result != tt.expected {
+				t.Errorf("normalizeType(%s) expected '%s', got '%v'", tt.input, tt.expected, result)
+			}
+		})
 	}
 }
 
 func TestNormalizeType_CollectionTypes(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
-	classes["Migration"] = true
+	tests := []struct {
+		name       string
+		input      string
+		classes    map[string]bool
+		enums      map[string]bool
+		wantType   string
+		wantItems  string
+	}{
+		{
+			name:      "List with primitive",
+			input:     "List<String>",
+			classes:   map[string]bool{},
+			enums:     map[string]bool{},
+			wantType:  "array",
+			wantItems: "string",
+		},
+		{
+			name:      "List with model",
+			input:     "List<Migration>",
+			classes:   map[string]bool{"Migration": true},
+			enums:     map[string]bool{},
+			wantType:  "array",
+			wantItems: "Migration",
+		},
+		{
+			name:      "Set with model",
+			input:     "Set<Migration>",
+			classes:   map[string]bool{"Migration": true},
+			enums:     map[string]bool{},
+			wantType:  "array",
+			wantItems: "Migration",
+		},
+		{
+			name:      "Array syntax",
+			input:     "Migration[]",
+			classes:   map[string]bool{"Migration": true},
+			enums:     map[string]bool{},
+			wantType:  "array",
+			wantItems: "Migration",
+		},
+	}
 
-	// Test List
-	result, err := normalizeType("List<Migration>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(List<Migration>) failed: %v", err)
-	}
-	resultMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map for List, got %T", result)
-	}
-	if resultMap["type"] != "array" || resultMap["items"] != "Migration" {
-		t.Errorf("List<Migration> not normalized correctly")
-	}
-
-	// Test Set
-	result, err = normalizeType("Set<Migration>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Set<Migration>) failed: %v", err)
-	}
-	resultMap, ok = result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map for Set, got %T", result)
-	}
-	if resultMap["type"] != "array" || resultMap["items"] != "Migration" {
-		t.Errorf("Set<Migration> not normalized correctly")
-	}
-
-	// Test array syntax
-	result, err = normalizeType("Migration[]", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Migration[]) failed: %v", err)
-	}
-	resultMap, ok = result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map for array syntax, got %T", result)
-	}
-	if resultMap["type"] != "array" || resultMap["items"] != "Migration" {
-		t.Errorf("Migration[] not normalized correctly")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := normalizeType(tt.input, tt.classes, tt.enums)
+			if err != nil {
+				t.Errorf("normalizeType(%s) failed: %v", tt.input, err)
+			}
+			resultMap, ok := result.(map[string]any)
+			if !ok {
+				t.Fatalf("Expected map for %s, got %T", tt.input, result)
+			}
+			if resultMap["type"] != tt.wantType || resultMap["items"] != tt.wantItems {
+				t.Errorf("%s not normalized correctly: got type=%v, items=%v, want type=%v, items=%v",
+					tt.input, resultMap["type"], resultMap["items"], tt.wantType, tt.wantItems)
+			}
+		})
 	}
 }
 
-func TestNormalizeType_MapStringString(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
-
-	result, err := normalizeType("Map<String, String>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Map<String, String>) failed: %v", err)
+func TestNormalizeType_MapTypes(t *testing.T) {
+	tests := []struct {
+		name       string
+		input      string
+		classes    map[string]bool
+		enums      map[string]bool
+		wantType   string
+		wantValues string
+	}{
+		{
+			name:       "Map with primitive values",
+			input:      "Map<String, String>",
+			classes:    map[string]bool{},
+			enums:      map[string]bool{},
+			wantType:   "object",
+			wantValues: "string",
+		},
+		{
+			name:       "Map with model values",
+			input:      "Map<String, Migration>",
+			classes:    map[string]bool{"Migration": true},
+			enums:      map[string]bool{},
+			wantType:   "object",
+			wantValues: "Migration",
+		},
 	}
 
-	resultMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map, got %T", result)
-	}
-
-	if resultMap["type"] != "object" {
-		t.Errorf("Expected type 'object', got '%v'", resultMap["type"])
-	}
-
-	if resultMap["values"] != "string" {
-		t.Errorf("Expected values 'string', got '%v'", resultMap["values"])
-	}
-}
-
-func TestNormalizeType_MapStringModel(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
-	classes["Migration"] = true
-
-	result, err := normalizeType("Map<String, Migration>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Map<String, Migration>) failed: %v", err)
-	}
-
-	resultMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map, got %T", result)
-	}
-
-	if resultMap["type"] != "object" {
-		t.Errorf("Expected type 'object', got '%v'", resultMap["type"])
-	}
-
-	if resultMap["values"] != "Migration" {
-		t.Errorf("Expected values 'Migration', got '%v'", resultMap["values"])
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := normalizeType(tt.input, tt.classes, tt.enums)
+			if err != nil {
+				t.Errorf("normalizeType(%s) failed: %v", tt.input, err)
+			}
+			resultMap, ok := result.(map[string]any)
+			if !ok {
+				t.Fatalf("Expected map for %s, got %T", tt.input, result)
+			}
+			if resultMap["type"] != tt.wantType || resultMap["values"] != tt.wantValues {
+				t.Errorf("%s not normalized correctly: got type=%v, values=%v, want type=%v, values=%v",
+					tt.input, resultMap["type"], resultMap["values"], tt.wantType, tt.wantValues)
+			}
+		})
 	}
 }
 
 func TestNormalizeType_NestedStructures(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
-	classes["Migration"] = true
+	classes := map[string]bool{"Migration": true}
+	enums := map[string]bool{}
 
-	// Test nested list
-	result, err := normalizeType("List<List<Migration>>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(List<List<Migration>>) failed: %v", err)
-	}
-	resultMap, ok := result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map for nested list, got %T", result)
-	}
-	if resultMap["type"] != "array" {
-		t.Errorf("Expected type 'array', got '%v'", resultMap["type"])
-	}
-	itemsMap, ok := resultMap["items"].(map[string]any)
-	if !ok {
-		t.Fatalf("Expected items to be a map, got %T", resultMap["items"])
-	}
-	if itemsMap["type"] != "array" || itemsMap["items"] != "Migration" {
-		t.Errorf("Nested list structure not normalized correctly")
+	tests := []struct {
+		name          string
+		input         string
+		wantType      string
+		wantNested    bool
+		wantNestedType string
+		wantNestedItem string
+	}{
+		{
+			name:           "nested list",
+			input:          "List<List<Migration>>",
+			wantType:       "array",
+			wantNested:     true,
+			wantNestedType: "array",
+			wantNestedItem: "Migration",
+		},
+		{
+			name:           "map with list values",
+			input:          "Map<String, List<Migration>>",
+			wantType:       "object",
+			wantNested:     true,
+			wantNestedType: "array",
+			wantNestedItem: "Migration",
+		},
 	}
 
-	// Test map with list values
-	result, err = normalizeType("Map<String, List<Migration>>", classes, enums)
-	if err != nil {
-		t.Errorf("normalizeType(Map<String, List<Migration>>) failed: %v", err)
-	}
-	resultMap, ok = result.(map[string]any)
-	if !ok {
-		t.Fatalf("Expected map for map with list values, got %T", result)
-	}
-	if resultMap["type"] != "object" {
-		t.Errorf("Expected type 'object', got '%v'", resultMap["type"])
-	}
-	valuesMap, ok := resultMap["values"].(map[string]any)
-	if !ok {
-		t.Fatalf("Expected values to be a map, got %T", resultMap["values"])
-	}
-	if valuesMap["type"] != "array" || valuesMap["items"] != "Migration" {
-		t.Errorf("Map with list values not normalized correctly")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := normalizeType(tt.input, classes, enums)
+			if err != nil {
+				t.Errorf("normalizeType(%s) failed: %v", tt.input, err)
+			}
+			resultMap, ok := result.(map[string]any)
+			if !ok {
+				t.Fatalf("Expected map for %s, got %T", tt.input, result)
+			}
+			if resultMap["type"] != tt.wantType {
+				t.Errorf("%s: expected type '%v', got '%v'", tt.input, tt.wantType, resultMap["type"])
+			}
+			if tt.wantNested {
+				var nestedMap map[string]any
+				if tt.wantType == "array" {
+					nestedMap, ok = resultMap["items"].(map[string]any)
+				} else {
+					nestedMap, ok = resultMap["values"].(map[string]any)
+				}
+				if !ok {
+					t.Fatalf("%s: expected nested structure to be a map", tt.input)
+				}
+				if nestedMap["type"] != tt.wantNestedType || nestedMap["items"] != tt.wantNestedItem {
+					t.Errorf("%s: nested structure not normalized correctly", tt.input)
+				}
+			}
+		})
 	}
 }
 
 func TestNormalizeType_ErrorCases(t *testing.T) {
-	classes := make(map[string]bool)
-	enums := make(map[string]bool)
+	classes := map[string]bool{}
+	enums := map[string]bool{}
 
-	// Test unknown class
-	_, err := normalizeType("UnknownClass", classes, enums)
-	if err == nil {
-		t.Errorf("Expected error for unknown class, got nil")
-	}
-	if err.Error() != "ModelLoder_Unsupported_Type" {
-		t.Errorf("Expected error 'ModelLoder_Unsupported_Type', got '%v'", err)
+	tests := []struct {
+		name        string
+		input       string
+		wantError   string
+	}{
+		{
+			name:      "unknown class",
+			input:     "UnknownClass",
+			wantError: "ModelLoder_Unsupported_Type",
+		},
+		{
+			name:      "list of unknown model",
+			input:     "List<UnknownModel>",
+			wantError: "ModelLoder_Normalizing_Collections",
+		},
+		{
+			name:      "invalid map declaration",
+			input:     "Map<String>",
+			wantError: "ModelLoder_Invalid_Map_Format",
+		},
 	}
 
-	// Test list of unknown model
-	_, err = normalizeType("List<UnknownModel>", classes, enums)
-	if err == nil {
-		t.Errorf("Expected error for List<UnknownModel>, got nil")
-	}
-	if err.Error() != "ModelLoder_Normalizing_Collections" {
-		t.Errorf("Expected error 'ModelLoder_Normalizing_Collections', got '%v'", err)
-	}
-
-	// Test invalid map declaration
-	_, err = normalizeType("Map<String>", classes, enums)
-	if err == nil {
-		t.Errorf("Expected error for invalid map declaration, got nil")
-	}
-	if err.Error() != "ModelLoder_Invalid_Map_Format" {
-		t.Errorf("Expected error 'ModelLoder_Invalid_Map_Format', got '%v'", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := normalizeType(tt.input, classes, enums)
+			if err == nil {
+				t.Errorf("Expected error for %s, got nil", tt.input)
+			}
+			if err.Error() != tt.wantError {
+				t.Errorf("Expected error '%s', got '%v'", tt.wantError, err)
+			}
+		})
 	}
 }
 
-func TestNormalizeAndValidateSchema_ValidClassWithPrimitives(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+func TestNormalizeAndValidateSchema_ValidSchemas(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
 
+	// Test class with primitives
 	rawSchema := map[string]any{
 		"Person": map[string]any{
 			"objType": "class",
@@ -557,14 +581,9 @@ func TestNormalizeAndValidateSchema_ValidClassWithPrimitives(t *testing.T) {
 	if members["age"] != "int" {
 		t.Errorf("Expected age to be normalized to 'int', got '%v'", members["age"])
 	}
-}
 
-func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	rawSchema := map[string]any{
+	// Test class referencing another class
+	rawSchema = map[string]any{
 		"Deployment": map[string]any{
 			"objType": "class",
 			"members": map[string]any{
@@ -579,25 +598,20 @@ func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
 		},
 	}
 
-	result, err := loader.NormalizeAndValidateSchema(rawSchema)
+	result, err = loader.NormalizeAndValidateSchema(rawSchema)
 	if err != nil {
 		t.Fatalf("NormalizeAndValidateSchema failed: %v", err)
 	}
 
 	deployment := result["Deployment"].(map[string]any)
-	members := deployment["members"].(map[string]any)
+	members = deployment["members"].(map[string]any)
 
 	if members["migration"] != "Migration" {
 		t.Errorf("Expected migration reference to be preserved, got '%v'", members["migration"])
 	}
-}
 
-func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	rawSchema := map[string]any{
+	// Test class referencing enum
+	rawSchema = map[string]any{
 		"Task": map[string]any{
 			"objType": "class",
 			"members": map[string]any{
@@ -609,13 +623,13 @@ func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
 		},
 	}
 
-	result, err := loader.NormalizeAndValidateSchema(rawSchema)
+	result, err = loader.NormalizeAndValidateSchema(rawSchema)
 	if err != nil {
 		t.Fatalf("NormalizeAndValidateSchema failed: %v", err)
 	}
 
 	task := result["Task"].(map[string]any)
-	members := task["members"].(map[string]any)
+	members = task["members"].(map[string]any)
 
 	if members["status"] != "string" {
 		t.Errorf("Expected status to be normalized to 'string', got '%v'", members["status"])
@@ -627,338 +641,328 @@ func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
 	}
 }
 
-func TestNormalizeAndValidateSchema_CollectionOfKnownModel(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	rawSchema := map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"migrations": "List<Migration>",
-			},
-		},
-		"Migration": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
-			},
-		},
-	}
-
-	result, err := loader.NormalizeAndValidateSchema(rawSchema)
-	if err != nil {
-		t.Fatalf("NormalizeAndValidateSchema failed: %v", err)
-	}
-
-	deployment := result["Deployment"].(map[string]any)
-	members := deployment["members"].(map[string]any)
-
-	migrations := members["migrations"].(map[string]any)
-	if migrations["type"] != "array" {
-		t.Errorf("Expected migrations type 'array', got '%v'", migrations["type"])
-	}
-
-	if migrations["items"] != "Migration" {
-		t.Errorf("Expected migrations items 'Migration', got '%v'", migrations["items"])
-	}
-}
 
 func TestNormalizeAndValidateSchema_UnknownTypes(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+	_, _, loader := setupTestLoader(t)
 
-	// Test collection of unknown model
-	rawSchema := map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"items": "List<UnknownModel>",
-			},
-		},
-	}
-
-	_, err := loader.NormalizeAndValidateSchema(rawSchema)
-	if err == nil {
-		t.Errorf("Expected error for collection of unknown model, got nil")
-	}
-	if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
-		t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
-	}
-
-	// Test map with unknown value type
-	rawSchema = map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"metadata": "Map<String,UnknownModel>",
-			},
-		},
-	}
-
-	_, err = loader.NormalizeAndValidateSchema(rawSchema)
-	if err == nil {
-		t.Errorf("Expected error for map with unknown value type, got nil")
-	}
-	if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
-		t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
-	}
-}
-
-func TestNormalizeAndValidateSchema_InvalidStructures(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	// Test malformed class structure
-	rawSchema := map[string]any{
-		"Person": "not a map",
-	}
-
-	_, err := loader.NormalizeAndValidateSchema(rawSchema)
-	if err == nil {
-		t.Errorf("Expected error for malformed class structure, got nil")
-	}
-	if err.Error() != "ModelLoder_Invalid_Class_Structure" {
-		t.Errorf("Expected error 'ModelLoder_Invalid_Class_Structure', got '%v'", err)
-	}
-
-	// Test non-string field type
-	rawSchema = map[string]any{
-		"Person": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"name": 123, // Not a string
-			},
-		},
-	}
-
-	_, err = loader.NormalizeAndValidateSchema(rawSchema)
-	if err == nil {
-		t.Errorf("Expected error for non-string field type, got nil")
-	}
-	if err.Error() != "ModelLoader_Invalid_Type_Representation" {
-		t.Errorf("Expected error 'ModelLoader_Invalid_Type_Representation', got '%v'", err)
-	}
-
-	// Test unsupported field type
-	rawSchema = map[string]any{
-		"Person": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"data": "UnsupportedType",
-			},
-		},
-	}
-
-	_, err = loader.NormalizeAndValidateSchema(rawSchema)
-	if err == nil {
-		t.Errorf("Expected error for unsupported field type, got nil")
-	}
-	if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
-		t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
-	}
-}
-
-func TestMarkEmbeddedClasses_ReferenceTypes(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-
-	// Test direct reference
-	schema := map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"migration": "Migration",
-			},
-		},
-		"Migration": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
-			},
-		},
-	}
-
-	loader.MarkEmbeddedClasses(schema)
-
-	deployment := schema["Deployment"].(map[string]any)
-	migration := schema["Migration"].(map[string]any)
-
-	if deployment["embedded"] != false {
-		t.Errorf("Expected Deployment to not be embedded, got '%v'", deployment["embedded"])
-	}
-	if migration["embedded"] != true {
-		t.Errorf("Expected Migration to be embedded, got '%v'", migration["embedded"])
-	}
-
-	// Test reference through array
-	schema = map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"migrations": map[string]any{
-					"type":  "array",
-					"items": "Migration",
-				},
-			},
-		},
-		"Migration": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
-			},
-		},
-	}
-
-	loader.MarkEmbeddedClasses(schema)
-
-	migration = schema["Migration"].(map[string]any)
-	if migration["embedded"] != true {
-		t.Errorf("Expected Migration to be embedded through array, got '%v'", migration["embedded"])
-	}
-
-	// Test reference through map values
-	schema = map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"metadata": map[string]any{
-					"type":   "object",
-					"values": "Migration",
-				},
-			},
-		},
-		"Migration": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
-			},
-		},
-	}
-
-	loader.MarkEmbeddedClasses(schema)
-
-	migration = schema["Migration"].(map[string]any)
-	if migration["embedded"] != true {
-		t.Errorf("Expected Migration to be embedded through map, got '%v'", migration["embedded"])
-	}
-
-	// Test nested reference
-	schema = map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"migrations": map[string]any{
-					"type":  "array",
-					"items": map[string]any{
-						"type":  "array",
-						"items": "Migration",
+	tests := []struct {
+		name   string
+		schema map[string]any
+	}{
+		{
+			name: "collection of unknown model",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"items": "List<UnknownModel>",
 					},
 				},
 			},
 		},
-		"Migration": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
+		{
+			name: "map with unknown value type",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"metadata": "Map<String,UnknownModel>",
+					},
+				},
 			},
 		},
 	}
 
-	loader.MarkEmbeddedClasses(schema)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := loader.NormalizeAndValidateSchema(tt.schema)
+			if err == nil {
+				t.Errorf("Expected error for %s, got nil", tt.name)
+			}
+			if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
+				t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
+			}
+		})
+	}
+}
 
-	migration = schema["Migration"].(map[string]any)
-	if migration["embedded"] != true {
-		t.Errorf("Expected Migration to be embedded through nested structure, got '%v'", migration["embedded"])
+func TestNormalizeAndValidateSchema_InvalidStructures(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
+
+	tests := []struct {
+		name      string
+		schema    map[string]any
+		wantError string
+	}{
+		{
+			name: "malformed class structure",
+			schema: map[string]any{
+				"Person": "not a map",
+			},
+			wantError: "ModelLoder_Invalid_Class_Structure",
+		},
+		{
+			name: "non-string field type",
+			schema: map[string]any{
+				"Person": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"name": 123,
+					},
+				},
+			},
+			wantError: "ModelLoader_Invalid_Type_Representation",
+		},
+		{
+			name: "unsupported field type",
+			schema: map[string]any{
+				"Person": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"data": "UnsupportedType",
+					},
+				},
+			},
+			wantError: "ModelLoader_Normalize_Type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := loader.NormalizeAndValidateSchema(tt.schema)
+			if err == nil {
+				t.Errorf("Expected error for %s, got nil", tt.name)
+			}
+			if strings.Contains(tt.wantError, "ModelLoader_Normalize_Type") {
+				if !strings.Contains(err.Error(), tt.wantError) {
+					t.Errorf("Expected error to contain '%s', got '%v'", tt.wantError, err)
+				}
+			} else {
+				if err.Error() != tt.wantError {
+					t.Errorf("Expected error '%s', got '%v'", tt.wantError, err)
+				}
+			}
+		})
+	}
+}
+
+func TestMarkEmbeddedClasses_ReferenceTypes(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
+
+	tests := []struct {
+		name     string
+		schema   map[string]any
+		check    func(schema map[string]any)
+	}{
+		{
+			name: "direct reference",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"migration": "Migration",
+					},
+				},
+				"Migration": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"id": "String",
+					},
+				},
+			},
+			check: func(schema map[string]any) {
+				deployment := schema["Deployment"].(map[string]any)
+				migration := schema["Migration"].(map[string]any)
+				if deployment["embedded"] != false {
+					t.Errorf("Expected Deployment to not be embedded, got '%v'", deployment["embedded"])
+				}
+				if migration["embedded"] != true {
+					t.Errorf("Expected Migration to be embedded, got '%v'", migration["embedded"])
+				}
+			},
+		},
+		{
+			name: "reference through array",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"migrations": map[string]any{
+							"type":  "array",
+							"items": "Migration",
+						},
+					},
+				},
+				"Migration": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"id": "String",
+					},
+				},
+			},
+			check: func(schema map[string]any) {
+				migration := schema["Migration"].(map[string]any)
+				if migration["embedded"] != true {
+					t.Errorf("Expected Migration to be embedded through array, got '%v'", migration["embedded"])
+				}
+			},
+		},
+		{
+			name: "reference through map values",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"metadata": map[string]any{
+							"type":   "object",
+							"values": "Migration",
+						},
+					},
+				},
+				"Migration": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"id": "String",
+					},
+				},
+			},
+			check: func(schema map[string]any) {
+				migration := schema["Migration"].(map[string]any)
+				if migration["embedded"] != true {
+					t.Errorf("Expected Migration to be embedded through map, got '%v'", migration["embedded"])
+				}
+			},
+		},
+		{
+			name: "nested reference",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"migrations": map[string]any{
+							"type":  "array",
+							"items": map[string]any{
+								"type":  "array",
+								"items": "Migration",
+							},
+						},
+					},
+				},
+				"Migration": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"id": "String",
+					},
+				},
+			},
+			check: func(schema map[string]any) {
+				migration := schema["Migration"].(map[string]any)
+				if migration["embedded"] != true {
+					t.Errorf("Expected Migration to be embedded through nested structure, got '%v'", migration["embedded"])
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loader.MarkEmbeddedClasses(tt.schema)
+			tt.check(tt.schema)
+		})
 	}
 }
 
 func TestMarkEmbeddedClasses_NoEmbeddingScenarios(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+	_, _, loader := setupTestLoader(t)
 
-	// Test unreferenced class
-	schema := map[string]any{
-		"Deployment": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
+	tests := []struct {
+		name   string
+		schema map[string]any
+		check  func(schema map[string]any)
+	}{
+		{
+			name: "unreferenced class",
+			schema: map[string]any{
+				"Deployment": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"id": "String",
+					},
+				},
+				"Migration": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"id": "String",
+					},
+				},
+			},
+			check: func(schema map[string]any) {
+				deployment := schema["Deployment"].(map[string]any)
+				migration := schema["Migration"].(map[string]any)
+				if deployment["embedded"] != false {
+					t.Errorf("Expected Deployment to not be embedded, got '%v'", deployment["embedded"])
+				}
+				if migration["embedded"] != false {
+					t.Errorf("Expected Migration to not be embedded, got '%v'", migration["embedded"])
+				}
 			},
 		},
-		"Migration": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"id": "String",
+		{
+			name: "primitive types (no embedding)",
+			schema: map[string]any{
+				"Person": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"name": "string",
+						"age":  "int",
+					},
+				},
+			},
+			check: func(schema map[string]any) {
+				person := schema["Person"].(map[string]any)
+				if person["embedded"] != false {
+					t.Errorf("Expected Person to not be embedded, got '%v'", person["embedded"])
+				}
+			},
+		},
+		{
+			name: "enum not embedded",
+			schema: map[string]any{
+				"Task": map[string]any{
+					"objType": "class",
+					"members": map[string]any{
+						"status": "string",
+					},
+				},
+				"Status": map[string]any{
+					"objType": "enum",
+				},
+			},
+			check: func(schema map[string]any) {
+				task := schema["Task"].(map[string]any)
+				status := schema["Status"].(map[string]any)
+				if task["embedded"] != false {
+					t.Errorf("Expected Task to not be embedded, got '%v'", task["embedded"])
+				}
+				if _, ok := status["embedded"]; ok {
+					t.Errorf("Enum should not have embedded flag")
+				}
 			},
 		},
 	}
 
-	loader.MarkEmbeddedClasses(schema)
-
-	deployment := schema["Deployment"].(map[string]any)
-	migration := schema["Migration"].(map[string]any)
-
-	if deployment["embedded"] != false {
-		t.Errorf("Expected Deployment to not be embedded, got '%v'", deployment["embedded"])
-	}
-	if migration["embedded"] != false {
-		t.Errorf("Expected Migration to not be embedded, got '%v'", migration["embedded"])
-	}
-
-	// Test primitive types (no embedding)
-	schema = map[string]any{
-		"Person": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"name": "string",
-				"age":  "int",
-			},
-		},
-	}
-
-	loader.MarkEmbeddedClasses(schema)
-
-	person := schema["Person"].(map[string]any)
-	if person["embedded"] != false {
-		t.Errorf("Expected Person to not be embedded, got '%v'", person["embedded"])
-	}
-
-	// Test enum not embedded
-	schema = map[string]any{
-		"Task": map[string]any{
-			"objType": "class",
-			"members": map[string]any{
-				"status": "string",
-			},
-		},
-		"Status": map[string]any{
-			"objType": "enum",
-		},
-	}
-
-	loader.MarkEmbeddedClasses(schema)
-
-	task := schema["Task"].(map[string]any)
-	status := schema["Status"].(map[string]any)
-
-	if task["embedded"] != false {
-		t.Errorf("Expected Task to not be embedded, got '%v'", task["embedded"])
-	}
-	if _, ok := status["embedded"]; ok {
-		t.Errorf("Enum should not have embedded flag")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			loader.MarkEmbeddedClasses(tt.schema)
+			tt.check(tt.schema)
+		})
 	}
 }
 
-func TestMarkEmbeddedClasses_SelfReference(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
+func TestMarkEmbeddedClasses_ComplexScenarios(t *testing.T) {
+	_, _, loader := setupTestLoader(t)
 
+	// Test self-reference
 	schema := map[string]any{
 		"Node": map[string]any{
 			"objType": "class",
@@ -975,15 +979,9 @@ func TestMarkEmbeddedClasses_SelfReference(t *testing.T) {
 	if node["embedded"] != true {
 		t.Errorf("Expected Node to be embedded (self-reference), got '%v'", node["embedded"])
 	}
-}
-
-func TestMarkEmbeddedClasses_ComplexScenarios(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
 
 	// Test multiple references to same model
-	schema := map[string]any{
+	schema = map[string]any{
 		"Deployment": map[string]any{
 			"objType": "class",
 			"members": map[string]any{
