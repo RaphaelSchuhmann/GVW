@@ -1,12 +1,12 @@
 package middleware
 
 import (
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
 	"net"
 	"net/http"
 )
 
-func LocalhostOnlyMiddleware(logger *utils.Logger, next http.Handler) http.Handler {
+func LocalhostOnlyMiddleware(logger *log.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		host, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil {

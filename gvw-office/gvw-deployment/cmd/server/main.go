@@ -3,12 +3,13 @@ package main
 import (
 	"gvw/gvw-deployment/internal/app"
 	"gvw/gvw-deployment/internal/config"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
+	"gvw/gvw-deployment/internal/utils/filesystem"
 )
 
 func main() {
-	var logger *utils.Logger = utils.NewLogger()
-	var fsWrapper *utils.FileSystem = utils.NewFileSystem(logger)
+	var logger *log.Logger = log.NewLogger()
+	var fsWrapper *filesystem.FileSystem = filesystem.NewFileSystem(logger)
 
 	cfg, err := config.LoadConfig("./config.json", fsWrapper)
 	if err != nil {

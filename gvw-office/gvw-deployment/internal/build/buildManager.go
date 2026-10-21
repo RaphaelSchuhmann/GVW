@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"gvw/gvw-deployment/internal/api/client"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/filesystem"
+	"gvw/gvw-deployment/internal/utils/log"
+	"gvw/gvw-deployment/internal/utils/commandExecutor"
 	"os"
 	"path/filepath"
 	"slices"
@@ -24,12 +26,12 @@ type BuildManager struct {
 	activeBuilds  map[string]*activeBuild
 	githubRepoURL string
 	javaClient    client.JavaClient
-	fsWrapper     utils.FileSystemWrapper
-	logger        *utils.Logger
+	fsWrapper     filesystem.FileSystemWrapper
+	logger        *log.Logger
 	modelLoader   *ModelLoader
 }
 
-func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapper utils.FileSystemWrapper, logger *utils.Logger, modelLoader *ModelLoader) *BuildManager {
+func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapper filesystem.FileSystemWrapper, logger *log.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
 		activeBuilds:  make(map[string]*activeBuild),
 		githubRepoURL: githubRepoURL,
@@ -200,7 +202,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 	workingDir := "./builds/" + deploymentId + "/repo"
 
 	run := func(name string, args ...string) error {
-		_, err := utils.RunCommand(ctx, workingDir, name, args...)
+		_, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
 		return err
 	}
 
@@ -230,7 +232,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	// Build
 	b.logger.Printf("[BUILD] Building frontend for deployment %s", deploymentId)
-	output, err := utils.RunCommand(ctx, workingDir, "npm", "run", "build")
+	output, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
 		return fmt.Errorf("BUILD_FAIL")
@@ -238,7 +240,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	// Test
 	b.logger.Printf("[BUILD] Testing frontend for deployment %s", deploymentId)
-	output, err = utils.RunCommand(ctx, workingDir, "npm", "run", "test")
+	output, err = commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "test")
 
 	b.logger.Printf("[BUILD] Test execution output for deployment %s:\n%s", deploymentId, output)
 
@@ -257,7 +259,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 
 	// Test
 	b.logger.Printf("[BUILD] Testing backend for deployment %s", deploymentId)
-	output, err := utils.RunCommand(ctx, workingDir, "./mvnw", "test")
+	output, err := commandExecutor.RunCommand(ctx, workingDir, "./mvnw", "test")
 
 	b.logger.Printf("[BUILD] Test execution output for deployment %s:\n%s", deploymentId, output)
 
@@ -268,7 +270,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 
 	// Package
 	b.logger.Printf("[BUILD] Building backend for deployment %s", deploymentId)
-	_, err = utils.RunCommand(ctx, workingDir, "./mvnw", "package")
+	_, err = commandExecutor.RunCommand(ctx, workingDir, "./mvnw", "package")
 	if err != nil {
 		b.logger.Printf("[BUILD] Backend build failed for deployment %s with error %v", deploymentId, err)
 		return fmt.Errorf("BUILD_FAIL")

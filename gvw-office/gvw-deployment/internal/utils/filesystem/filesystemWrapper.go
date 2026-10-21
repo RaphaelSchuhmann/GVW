@@ -1,7 +1,8 @@
-package utils
+package filesystem
 
 import (
 	"fmt"
+	"gvw/gvw-deployment/internal/utils/log"
 	"io"
 	"os"
 	"path/filepath"
@@ -22,10 +23,10 @@ type FileSystemWrapper interface {
 }
 
 type FileSystem struct {
-	logger *Logger
+	logger *log.Logger
 }
 
-func NewFileSystem(logger *Logger) *FileSystem {
+func NewFileSystem(logger *log.Logger) *FileSystem {
 	return &FileSystem{
 		logger: logger,
 	}

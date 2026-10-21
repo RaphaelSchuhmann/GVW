@@ -2,13 +2,14 @@ package build
 
 import (
 	"fmt"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
+	"gvw/gvw-deployment/internal/utils/filesystem"
 	"strings"
 )
 
 type ModelLoader struct {
-	logger    *utils.Logger
-	fsWrapper utils.FileSystemWrapper
+	logger    *log.Logger
+	fsWrapper filesystem.FileSystemWrapper
 }
 
 type ClassScope struct {
@@ -16,7 +17,7 @@ type ClassScope struct {
 	startDepth int
 }
 
-func NewModelLoader(logger *utils.Logger, fsWrapper utils.FileSystemWrapper) *ModelLoader {
+func NewModelLoader(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper) *ModelLoader {
 	return &ModelLoader{
 		logger:    logger,
 		fsWrapper: fsWrapper,

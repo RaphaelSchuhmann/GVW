@@ -1,13 +1,13 @@
 package build
 
 import (
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
 	"strings"
 	"testing"
 )
 
 func TestParseLines_PublicClassWithFields(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -55,7 +55,7 @@ func TestParseLines_PublicClassWithFields(t *testing.T) {
 }
 
 func TestParseLines_ModifiersIgnored(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -94,7 +94,7 @@ func TestParseLines_ModifiersIgnored(t *testing.T) {
 }
 
 func TestParseLines_BuilderDefaultAnnotation(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -119,7 +119,7 @@ func TestParseLines_BuilderDefaultAnnotation(t *testing.T) {
 }
 
 func TestParseLines_JsonPropertyAnnotation(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -153,7 +153,7 @@ func TestParseLines_JsonPropertyAnnotation(t *testing.T) {
 }
 
 func TestParseLines_JsonPropertySeparateLines(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -178,7 +178,7 @@ func TestParseLines_JsonPropertySeparateLines(t *testing.T) {
 }
 
 func TestParseLines_GenericDeclarations(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -207,7 +207,7 @@ func TestParseLines_GenericDeclarations(t *testing.T) {
 }
 
 func TestParseLines_CommentsAndAnnotations(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -241,7 +241,7 @@ func TestParseLines_CommentsAndAnnotations(t *testing.T) {
 }
 
 func TestParseLines_Enum(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -278,7 +278,7 @@ func TestParseLines_Enum(t *testing.T) {
 }
 
 func TestLoadModel_NonexistentPath(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -296,7 +296,7 @@ func TestLoadModel_NonexistentPath(t *testing.T) {
 }
 
 func TestLoadModel_EmptyPath(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -655,7 +655,7 @@ func TestNormalizeType_InvalidMapDeclaration(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_ValidClassWithPrimitives(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -687,7 +687,7 @@ func TestNormalizeAndValidateSchema_ValidClassWithPrimitives(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -720,7 +720,7 @@ func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -755,7 +755,7 @@ func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_CollectionOfKnownModel(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -793,7 +793,7 @@ func TestNormalizeAndValidateSchema_CollectionOfKnownModel(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_CollectionOfUnknownModel(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -817,7 +817,7 @@ func TestNormalizeAndValidateSchema_CollectionOfUnknownModel(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_MapWithUnknownValueType(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -841,7 +841,7 @@ func TestNormalizeAndValidateSchema_MapWithUnknownValueType(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_MalformedClassStructure(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -860,7 +860,7 @@ func TestNormalizeAndValidateSchema_MalformedClassStructure(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_NonStringFieldType(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -884,7 +884,7 @@ func TestNormalizeAndValidateSchema_NonStringFieldType(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_UnsupportedFieldType(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -908,7 +908,7 @@ func TestNormalizeAndValidateSchema_UnsupportedFieldType(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_DirectReference(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -942,7 +942,7 @@ func TestMarkEmbeddedClasses_DirectReference(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_ReferenceThroughArray(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -974,7 +974,7 @@ func TestMarkEmbeddedClasses_ReferenceThroughArray(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_ReferenceThroughMapValues(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1006,7 +1006,7 @@ func TestMarkEmbeddedClasses_ReferenceThroughMapValues(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_NestedReference(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1041,7 +1041,7 @@ func TestMarkEmbeddedClasses_NestedReference(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_UnreferencedClass(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1075,7 +1075,7 @@ func TestMarkEmbeddedClasses_UnreferencedClass(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_SelfReference(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1098,7 +1098,7 @@ func TestMarkEmbeddedClasses_SelfReference(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_PrimitiveTypeNoEmbedding(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1122,7 +1122,7 @@ func TestMarkEmbeddedClasses_PrimitiveTypeNoEmbedding(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_EnumNotEmbedded(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1154,7 +1154,7 @@ func TestMarkEmbeddedClasses_EnumNotEmbedded(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_MultipleReferencesSameModel(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 
@@ -1199,7 +1199,7 @@ func TestMarkEmbeddedClasses_MultipleReferencesSameModel(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_EmbeddedClassReferencingAnother(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
 

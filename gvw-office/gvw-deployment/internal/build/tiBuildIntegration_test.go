@@ -2,10 +2,11 @@ package build
 
 import (
 	"encoding/json"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
+	"gvw/gvw-deployment/internal/utils/filesystem"
 	"os"
 	"path/filepath"
-	"testing"
+	"testing"	
 )
 
 // TestIntegration_RealModelSources runs the generator against the actual backend model sources
@@ -17,8 +18,8 @@ func TestIntegration_RealModelSources(t *testing.T) {
 		t.Skip("Backend model directory not found, skipping integration test")
 	}
 
-	logger := utils.NewLogger()
-	fsWrapper := utils.NewFileSystem(logger)
+	logger := log.NewLogger()
+	fsWrapper := filesystem.NewFileSystem(logger)
 	modelLoader := NewModelLoader(logger, fsWrapper)
 
 	// Load all model files from the real backend

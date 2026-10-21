@@ -1,4 +1,4 @@
-package utils
+package log
 
 import (
 	"gopkg.in/natefinch/lumberjack.v2"

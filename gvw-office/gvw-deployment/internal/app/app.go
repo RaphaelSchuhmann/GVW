@@ -6,17 +6,18 @@ import (
 	"gvw/gvw-deployment/internal/api/middleware"
 	"gvw/gvw-deployment/internal/build"
 	"gvw/gvw-deployment/internal/config"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
+	"gvw/gvw-deployment/internal/utils/filesystem"
 	"net/http"
 )
 
 type App struct {
 	Config     *config.Config
-	Logger     *utils.Logger
+	Logger     *log.Logger
 	HttpServer *http.Server
 }
 
-func NewApp(cfg *config.Config, logger *utils.Logger, fsWrapper *utils.FileSystem) (*App, error) {
+func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSystem) (*App, error) {
 	javaBaseURL := cfg.JavaBaseURL
 	if javaBaseURL == "" {
 		javaBaseURL = "http://localhost:3500/api"

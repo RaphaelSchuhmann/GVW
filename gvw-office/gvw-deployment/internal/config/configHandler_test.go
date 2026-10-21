@@ -2,7 +2,8 @@ package config
 
 import (
 	"encoding/json"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/filesystem"
+	"gvw/gvw-deployment/internal/utils/log"
 	"os"
 	"reflect"
 	"testing"
@@ -195,8 +196,8 @@ func TestLoadConfig_ValidFile(t *testing.T) {
 	tmpFile.Write(jsonData)
 	tmpFile.Close()
 
-	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystem(logger)
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
 
 	config, err := LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err != nil {
@@ -219,8 +220,8 @@ func TestLoadConfig_InvalidJSON(t *testing.T) {
 	tmpFile.WriteString("{invalid json}")
 	tmpFile.Close()
 
-	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystem(logger)
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
 
 	_, err = LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err == nil {
@@ -229,8 +230,8 @@ func TestLoadConfig_InvalidJSON(t *testing.T) {
 }
 
 func TestLoadConfig_FileNotFound(t *testing.T) {
-	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystem(logger)
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
 
 	_, err := LoadConfig("/nonexistent/path/config.json", filesystemWrapper)
 	if err == nil {
@@ -255,8 +256,8 @@ func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 	tmpFile.Write(jsonData)
 	tmpFile.Close()
 
-	logger := utils.NewLogger()
-	filesystemWrapper := utils.NewFileSystem(logger)
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
 
 	_, err = LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err == nil {

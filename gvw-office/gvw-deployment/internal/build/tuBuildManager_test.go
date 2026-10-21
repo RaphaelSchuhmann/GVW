@@ -2,7 +2,7 @@ package build
 
 import (
 	"encoding/json"
-	"gvw/gvw-deployment/internal/utils"
+	"gvw/gvw-deployment/internal/utils/log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +26,7 @@ func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state string
 
 // MockFileSystemWrapper for testing
 type MockFileSystemWrapper struct {
-	logger                  *utils.Logger
+	logger                  *log.Logger
 	createDirCalled         bool
 	createDirPath           string
 	writeToFileCalled       bool
@@ -57,7 +57,7 @@ type MockFileSystemWrapper struct {
 	getFileByPatternError   error
 }
 
-func NewMockFileSystemWrapper(logger *utils.Logger) *MockFileSystemWrapper {
+func NewMockFileSystemWrapper(logger *log.Logger) *MockFileSystemWrapper {
 	return &MockFileSystemWrapper{
 		logger:             logger,
 		dirOrFileExists:    true,
@@ -159,7 +159,7 @@ func (m *MockDirEntry) Info() (os.FileInfo, error) {
 }
 
 func TestGenerateSchema_Success(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -248,7 +248,7 @@ public class Migration {
 }
 
 func TestGenerateSchema_ListDirFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -264,7 +264,7 @@ func TestGenerateSchema_ListDirFails(t *testing.T) {
 }
 
 func TestGenerateSchema_ModelFileReadFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -283,7 +283,7 @@ func TestGenerateSchema_ModelFileReadFails(t *testing.T) {
 }
 
 func TestGenerateSchema_ValidationFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -314,7 +314,7 @@ public class Deployment {
 }
 
 func TestGenerateSchema_PreviousSchemaReplaced(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -376,7 +376,7 @@ public class Deployment {
 }
 
 func TestGenerateSchema_NestedReferences(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -481,7 +481,7 @@ public class Branch {
 }
 
 func TestRunPipeline_FirstAttemptFailsSecondSucceeds(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -498,7 +498,7 @@ func TestRunPipeline_FirstAttemptFailsSecondSucceeds(t *testing.T) {
 }
 
 func TestRunPipeline_AllThreeAttemptsFail(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -511,7 +511,7 @@ func TestRunPipeline_AllThreeAttemptsFail(t *testing.T) {
 }
 
 func TestRunPipeline_FrontendTestFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -523,7 +523,7 @@ func TestRunPipeline_FrontendTestFails(t *testing.T) {
 }
 
 func TestRunPipeline_FrontendBuildFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -535,7 +535,7 @@ func TestRunPipeline_FrontendBuildFails(t *testing.T) {
 }
 
 func TestRunPipeline_BackendTestFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -547,7 +547,7 @@ func TestRunPipeline_BackendTestFails(t *testing.T) {
 }
 
 func TestRunPipeline_BackendPackagingFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -559,7 +559,7 @@ func TestRunPipeline_BackendPackagingFails(t *testing.T) {
 }
 
 func TestRunPipeline_BinaryExtractionFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -571,7 +571,7 @@ func TestRunPipeline_BinaryExtractionFails(t *testing.T) {
 }
 
 func TestRunPipeline_SchemaGenerationFails(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -583,7 +583,7 @@ func TestRunPipeline_SchemaGenerationFails(t *testing.T) {
 }
 
 func TestSetupBuildDirs(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
@@ -614,7 +614,7 @@ func TestSetupBuildDirs(t *testing.T) {
 }
 
 func TestTriggerBuild_CancelsPreviousBuild(t *testing.T) {
-	logger := utils.NewLogger()
+	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
