@@ -113,7 +113,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 	// Try three times to run the build
 	for i := 0; i < 3; i++ {
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
+			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
 			return
 		}
 
@@ -131,7 +131,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		}
 
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
+			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
 			return
 		}
 
@@ -147,7 +147,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		}
 
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
+			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
 			return
 		}
 
@@ -159,7 +159,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		}
 
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
+			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
 			return
 		}
 
@@ -169,7 +169,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 	}
 
 	if err := ctx.Err(); err != nil {
-		b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
+		b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
 		return
 	}
 
@@ -181,7 +181,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 	}
 
 	if err := ctx.Err(); err != nil {
-		b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
+		b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
 		return
 	}
 
