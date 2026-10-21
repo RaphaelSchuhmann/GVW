@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func setupTestLoader(t *testing.T) (*log.Logger, *MockFileSystemWrapper, *ModelLoader) {
+func setupTestLoader() (*log.Logger, *MockFileSystemWrapper, *ModelLoader) {
 	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	loader := NewModelLoader(logger, fsWrapper)
@@ -14,7 +14,7 @@ func setupTestLoader(t *testing.T) (*log.Logger, *MockFileSystemWrapper, *ModelL
 }
 
 func TestParseLines_ClassParsing(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	// Test basic class with fields
 	lines := []string{
@@ -88,7 +88,7 @@ func TestParseLines_ClassParsing(t *testing.T) {
 }
 
 func TestParseLines_Annotations(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	tests := []struct {
 		name           string
@@ -142,7 +142,7 @@ func TestParseLines_Annotations(t *testing.T) {
 }
 
 func TestParseLines_ComplexParsing(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	tests := []struct {
 		name         string
@@ -204,7 +204,7 @@ func TestParseLines_ComplexParsing(t *testing.T) {
 }
 
 func TestParseLines_Enum(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	lines := []string{
 		"public enum Status {",
@@ -236,7 +236,7 @@ func TestParseLines_Enum(t *testing.T) {
 }
 
 func TestLoadModel_InvalidPaths(t *testing.T) {
-	_, fsWrapper, loader := setupTestLoader(t)
+	_, fsWrapper, loader := setupTestLoader()
 
 	// Test empty path
 	_, err := loader.LoadModel("")
@@ -553,7 +553,7 @@ func TestNormalizeType_ErrorCases(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_ValidSchemas(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	// Test class with primitives
 	rawSchema := map[string]any{
@@ -643,7 +643,7 @@ func TestNormalizeAndValidateSchema_ValidSchemas(t *testing.T) {
 
 
 func TestNormalizeAndValidateSchema_UnknownTypes(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	tests := []struct {
 		name   string
@@ -687,7 +687,7 @@ func TestNormalizeAndValidateSchema_UnknownTypes(t *testing.T) {
 }
 
 func TestNormalizeAndValidateSchema_InvalidStructures(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	tests := []struct {
 		name      string
@@ -747,7 +747,7 @@ func TestNormalizeAndValidateSchema_InvalidStructures(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_ReferenceTypes(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	tests := []struct {
 		name     string
@@ -873,7 +873,7 @@ func TestMarkEmbeddedClasses_ReferenceTypes(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_NoEmbeddingScenarios(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	tests := []struct {
 		name   string
@@ -960,7 +960,7 @@ func TestMarkEmbeddedClasses_NoEmbeddingScenarios(t *testing.T) {
 }
 
 func TestMarkEmbeddedClasses_ComplexScenarios(t *testing.T) {
-	_, _, loader := setupTestLoader(t)
+	_, _, loader := setupTestLoader()
 
 	// Test self-reference
 	schema := map[string]any{
