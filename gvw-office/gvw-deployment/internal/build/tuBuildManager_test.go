@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// MockJavaClient for testing
 type MockJavaClient struct {
 	updateDeploymentStateCalled bool
 	deploymentId                string

@@ -597,8 +597,8 @@ func TestNormalizeType_UnknownClass(t *testing.T) {
 		t.Errorf("Expected error for unknown class, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "ModelLoder_Unsupported_Type") {
-		t.Errorf("Expected error containing 'ModelLoder_Unsupported_Type', got '%v'", err)
+	if err.Error() != "ModelLoder_Unsupported_Type" {
+		t.Errorf("Expected error 'ModelLoder_Unsupported_Type', got '%v'", err)
 	}
 }
 
@@ -611,8 +611,8 @@ func TestNormalizeType_ListOfUnknownModel(t *testing.T) {
 		t.Errorf("Expected error for List<UnknownModel>, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "ModelLoder_Unsupported_Type") {
-		t.Errorf("Expected error containing 'ModelLoder_Unsupported_Type', got '%v'", err)
+	if err.Error() != "ModelLoder_Normalizing_Collections" {
+		t.Errorf("Expected error 'ModelLoder_Normalizing_Collections', got '%v'", err)
 	}
 }
 
