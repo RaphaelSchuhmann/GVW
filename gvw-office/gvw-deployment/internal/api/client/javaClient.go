@@ -3,9 +3,10 @@ package client
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"gvw/gvw-deployment/internal/utils/errors"
 	"net/http"
 	"time"
-	"fmt"
 )
 
 var _ JavaClient = (*HttpJavaClient)(nil)
@@ -45,12 +46,12 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status strin
 
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal status payload: %w", err)
+		return errors.Wrap("HttpError_Failed_Marshaling_Payload", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return fmt.Errorf("failed to create http request: %w", err)
+		return errors.Wrap("HttpError_Failed_Creating_Request", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -58,12 +59,12 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status strin
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to execute request: %w", err)
+		return errors.Wrap("HttpError_Failed_To_Execute", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("java api returned non-sucecss status: %d", resp.StatusCode)
+		return errors.NewError(fmt.Sprintf("java api returned non-sucecss status: %d", resp.StatusCode)) 
 	}
 
 	return nil

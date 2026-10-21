@@ -41,8 +41,8 @@ func TestRunCommand_CommandFails(t *testing.T) {
 		t.Error("Expected error for failing command")
 	}
 
-	if !strings.Contains(err.Error(), "command failed") {
-		t.Errorf("Expected error message to contain 'command failed', got: %v", err)
+	if !strings.Contains(err.Error(), "CommandExecutionError_Command_Failed") {
+		t.Errorf("Expected error message to contain 'CommandExecutionError_Command_Failed', got: %v", err)
 	}
 
 	// Output should still be returned even on error
@@ -59,8 +59,8 @@ func TestRunCommand_CommandNotFound(t *testing.T) {
 		t.Error("Expected error for non-existent command")
 	}
 
-	if !strings.Contains(err.Error(), "command failed") {
-		t.Errorf("Expected error message to contain 'command failed', got: %v", err)
+	if !strings.Contains(err.Error(), "CommandExecutionError_Command_Failed") {
+		t.Errorf("Expected error message to contain 'CommandExecutionError_Command_Failed', got: %v", err)
 	}
 }
 
@@ -74,8 +74,8 @@ func TestRunCommand_ContextCancelled(t *testing.T) {
 		t.Error("Expected error for cancelled context")
 	}
 
-	if !strings.Contains(err.Error(), "COMMAND_CANCELLED_OR_TIMEDOUT") {
-		t.Errorf("Expected error message to contain 'COMMAND_CANCELLED_OR_TIMEDOUT', got: %v", err)
+	if !strings.Contains(err.Error(), "CommandExecutionError_Cancelled_Or_Timedout") {
+		t.Errorf("Expected error message to contain 'CommandExecutionError_Cancelled_Or_Timedout', got: %v", err)
 	}
 }
 
@@ -89,8 +89,8 @@ func TestRunCommand_ContextTimeout(t *testing.T) {
 		t.Error("Expected error for timed out context")
 	}
 
-	if !strings.Contains(err.Error(), "COMMAND_CANCELLED_OR_TIMEDOUT") {
-		t.Errorf("Expected error message to contain 'COMMAND_CANCELLED_OR_TIMEDOUT', got: %v", err)
+	if !strings.Contains(err.Error(), "CommandExecutionError_Cancelled_Or_Timedout") {
+		t.Errorf("Expected error message to contain 'CommandExecutionError_Cancelled_Or_Timedout', got: %v", err)
 	}
 }
 

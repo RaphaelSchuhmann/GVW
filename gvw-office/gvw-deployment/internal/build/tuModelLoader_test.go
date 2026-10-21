@@ -18,10 +18,7 @@ func TestParseLines_PublicClassWithFields(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	if len(result) != 1 {
 		t.Fatalf("Expected 1 class, got %d", len(result))
@@ -69,10 +66,7 @@ func TestParseLines_ModifiersIgnored(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	class, ok := result["TestClass"].(map[string]any)
 	if !ok {
@@ -105,10 +99,7 @@ func TestParseLines_BuilderDefaultAnnotation(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	class := result["TestClass"].(map[string]any)
 	members := class["members"].(map[string]any)
@@ -130,10 +121,7 @@ func TestParseLines_JsonPropertyAnnotation(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	class := result["TestClass"].(map[string]any)
 	members := class["members"].(map[string]any)
@@ -164,10 +152,7 @@ func TestParseLines_JsonPropertySeparateLines(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	class := result["TestClass"].(map[string]any)
 	members := class["members"].(map[string]any)
@@ -189,10 +174,7 @@ func TestParseLines_GenericDeclarations(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	class := result["TestClass"].(map[string]any)
 	members := class["members"].(map[string]any)
@@ -223,10 +205,7 @@ func TestParseLines_CommentsAndAnnotations(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	class := result["TestClass"].(map[string]any)
 	members := class["members"].(map[string]any)
@@ -253,10 +232,7 @@ func TestParseLines_Enum(t *testing.T) {
 		"}",
 	}
 
-	result, err := loader.parseLines(lines)
-	if err != nil {
-		t.Fatalf("parseLines failed: %v", err)
-	}
+	result := loader.parseLines(lines)
 
 	if len(result) != 1 {
 		t.Fatalf("Expected 1 entry, got %d", len(result))
@@ -290,8 +266,8 @@ func TestLoadModel_NonexistentPath(t *testing.T) {
 		t.Errorf("Expected error for nonexistent path, got nil")
 	}
 
-	if err.Error() != "INVALID_PATH" {
-		t.Errorf("Expected error 'INVALID_PATH', got '%v'", err)
+	if err.Error() != "ModelLoader_Invalid_Path" {
+		t.Errorf("Expected error 'ModelLoader_Invalid_Path', got '%v'", err)
 	}
 }
 
@@ -305,8 +281,8 @@ func TestLoadModel_EmptyPath(t *testing.T) {
 		t.Errorf("Expected error for empty path, got nil")
 	}
 
-	if err.Error() != "INVALID_PATH" {
-		t.Errorf("Expected error 'INVALID_PATH', got '%v'", err)
+	if err.Error() != "ModelLoader_Invalid_Path" {
+		t.Errorf("Expected error 'ModelLoader_Invalid_Path', got '%v'", err)
 	}
 }
 
@@ -621,8 +597,8 @@ func TestNormalizeType_UnknownClass(t *testing.T) {
 		t.Errorf("Expected error for unknown class, got nil")
 	}
 
-	if err.Error() != "UNSUPPORTED_TYPE" {
-		t.Errorf("Expected error 'UNSUPPORTED_TYPE', got '%v'", err)
+	if !strings.Contains(err.Error(), "ModelLoder_Unsupported_Type") {
+		t.Errorf("Expected error containing 'ModelLoder_Unsupported_Type', got '%v'", err)
 	}
 }
 
@@ -635,8 +611,8 @@ func TestNormalizeType_ListOfUnknownModel(t *testing.T) {
 		t.Errorf("Expected error for List<UnknownModel>, got nil")
 	}
 
-	if err.Error() != "UNSUPPORTED_TYPE" {
-		t.Errorf("Expected error 'UNSUPPORTED_TYPE', got '%v'", err)
+	if !strings.Contains(err.Error(), "ModelLoder_Unsupported_Type") {
+		t.Errorf("Expected error containing 'ModelLoder_Unsupported_Type', got '%v'", err)
 	}
 }
 
@@ -649,8 +625,8 @@ func TestNormalizeType_InvalidMapDeclaration(t *testing.T) {
 		t.Errorf("Expected error for invalid map declaration, got nil")
 	}
 
-	if err.Error() != "INVALID_MAP_FORMAT" {
-		t.Errorf("Expected error 'INVALID_MAP_FORMAT', got '%v'", err)
+	if err.Error() != "ModelLoder_Invalid_Map_Format" {
+		t.Errorf("Expected error 'ModelLoder_Invalid_Map_Format', got '%v'", err)
 	}
 }
 
@@ -811,8 +787,8 @@ func TestNormalizeAndValidateSchema_CollectionOfUnknownModel(t *testing.T) {
 		t.Errorf("Expected error for collection of unknown model, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "ERROR_NORMALIZING_TYPE") {
-		t.Errorf("Expected error to contain 'ERROR_NORMALIZING_TYPE', got '%v'", err)
+	if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
+		t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
 	}
 }
 
@@ -835,8 +811,8 @@ func TestNormalizeAndValidateSchema_MapWithUnknownValueType(t *testing.T) {
 		t.Errorf("Expected error for map with unknown value type, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "ERROR_NORMALIZING_TYPE") {
-		t.Errorf("Expected error to contain 'ERROR_NORMALIZING_TYPE', got '%v'", err)
+	if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
+		t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
 	}
 }
 
@@ -854,8 +830,8 @@ func TestNormalizeAndValidateSchema_MalformedClassStructure(t *testing.T) {
 		t.Errorf("Expected error for malformed class structure, got nil")
 	}
 
-	if err.Error() != "INVALID_CLASS_STRUCTURE" {
-		t.Errorf("Expected error 'INVALID_CLASS_STRUCTURE', got '%v'", err)
+	if err.Error() != "ModelLoder_Invalid_Class_Structure" {
+		t.Errorf("Expected error 'ModelLoder_Invalid_Class_Structure', got '%v'", err)
 	}
 }
 
@@ -878,8 +854,8 @@ func TestNormalizeAndValidateSchema_NonStringFieldType(t *testing.T) {
 		t.Errorf("Expected error for non-string field type, got nil")
 	}
 
-	if err.Error() != "INVALID_TYPE_REPRESENTATION" {
-		t.Errorf("Expected error 'INVALID_TYPE_REPRESENTATION', got '%v'", err)
+	if err.Error() != "ModelLoader_Invalid_Type_Representation" {
+		t.Errorf("Expected error 'ModelLoader_Invalid_Type_Representation', got '%v'", err)
 	}
 }
 
@@ -902,8 +878,8 @@ func TestNormalizeAndValidateSchema_UnsupportedFieldType(t *testing.T) {
 		t.Errorf("Expected error for unsupported field type, got nil")
 	}
 
-	if !strings.Contains(err.Error(), "ERROR_NORMALIZING_TYPE") {
-		t.Errorf("Expected error to contain 'ERROR_NORMALIZING_TYPE', got '%v'", err)
+	if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
+		t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
 	}
 }
 

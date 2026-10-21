@@ -6,8 +6,9 @@ import (
 	"gvw/gvw-deployment/internal/api/middleware"
 	"gvw/gvw-deployment/internal/build"
 	"gvw/gvw-deployment/internal/config"
-	"gvw/gvw-deployment/internal/utils/log"
+	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
+	"gvw/gvw-deployment/internal/utils/log"
 	"net/http"
 )
 
@@ -51,5 +52,11 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 
 func (a *App) Start() error {
 	a.Logger.Println("Go backend starting on " + a.HttpServer.Addr + "...")
-	return a.HttpServer.ListenAndServe()
+	
+	err := a.HttpServer.ListenAndServe()
+	if err != nil {
+		return errors.Wrap("StartUpError", a.HttpServer.ListenAndServe())
+	}
+
+	return nil
 }

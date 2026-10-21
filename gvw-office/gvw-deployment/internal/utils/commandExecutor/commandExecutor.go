@@ -2,7 +2,7 @@ package commandExecutor
 
 import (
 	"context"
-	"fmt"
+	"gvw/gvw-deployment/internal/utils/errors"
 	"os/exec"
 )
 
@@ -18,10 +18,10 @@ func RunCommand(ctx context.Context, workDir string, name string, args ...string
 
     if err != nil {
         if ctx.Err() != nil {
-            return outputStr, fmt.Errorf("COMMAND_CANCELLED_OR_TIMEDOUT: %w", ctx.Err())
+            return outputStr, errors.Wrap("CommandExecutionError_Cancelled_Or_Timedout", ctx.Err())
         }
 
-        return outputStr, fmt.Errorf("command failed: %w", err)
+        return outputStr, errors.Wrap("CommandExecutionError_Command_Failed", err)
     }
 
     return outputStr, nil

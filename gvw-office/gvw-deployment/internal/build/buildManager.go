@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"gvw/gvw-deployment/internal/api/client"
+	"gvw/gvw-deployment/internal/utils/commandExecutor"
+	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
-	"gvw/gvw-deployment/internal/utils/commandExecutor"
 	"os"
 	"path/filepath"
 	"slices"
@@ -119,7 +119,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		// Frontend
 		err := b.buildFrontend(ctx, deploymentId)
 		if err != nil {
-			if err.Error() == "TEST_FAIL" {
+			if err.Error() == "BuildError_Test_Failed" {
 				cancelledReason = BUILD_CodeTestExecutionFailed
 			} else {
 				cancelledReason = BUILD_CodeBuildFailed
@@ -135,7 +135,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		// Backend
 		err = b.buildBackend(ctx, deploymentId)
 		if err != nil {
-			if err.Error() == "TEST_FAIL" {
+			if err.Error() == "BuildError_Test_Failed" {
 				cancelledReason = BUILD_CodeTestExecutionFailed
 			} else {
 				cancelledReason = BUILD_CodeBuildFailed
@@ -186,7 +186,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed", deploymentId, commit)
 		err := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", uint32(cancelledReason))
 		if err != nil {
-			b.logger.Printf("[BUILD] Failed to updated deployment state: %v", err)
+			b.logger.Printf("[BUILD] Failed to update deployment state: %v", err)
 		}
 	}
 }
@@ -203,7 +203,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 
 	run := func(name string, args ...string) error {
 		_, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
-		return err
+		return errors.Wrap("BuildError_Clone_Repo", err)
 	}
 
 	if err := run("git", "init"); err != nil {
@@ -235,7 +235,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 	output, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
-		return fmt.Errorf("BUILD_FAIL")
+		return errors.Wrap("BuildError_Build_Failed", err)
 	}
 
 	// Test
@@ -246,7 +246,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	if err != nil || strings.Contains(output, "fail") {
 		b.logger.Printf("[BUILD] Frontend tests failed for deployment %s with error %v", deploymentId, err)
-		return fmt.Errorf("TEST_FAIL")
+		return errors.Wrap("BuildError_Test_Failed", err)
 	}
 
 	return nil
@@ -265,7 +265,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 
 	if err != nil || !strings.Contains(output, "BUILD SUCCESS") {
 		b.logger.Printf("[BUILD] Backend tests failed for deployment %s with error %v", deploymentId, err)
-		return fmt.Errorf("TEST_FAIL")
+		return errors.Wrap("BuildError_Test_Failed", err)
 	}
 
 	// Package
@@ -273,7 +273,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 	_, err = commandExecutor.RunCommand(ctx, workingDir, "./mvnw", "package")
 	if err != nil {
 		b.logger.Printf("[BUILD] Backend build failed for deployment %s with error %v", deploymentId, err)
-		return fmt.Errorf("BUILD_FAIL")
+		return errors.Wrap("BuildError_Build_Failed", err)
 	}
 
 	return nil
@@ -288,13 +288,13 @@ func (b *BuildManager) extractBinaries(deploymentId string) error {
 	err := b.fsWrapper.CopyDirContents(workingDir+"/repo/gvw-office/frontend/dist", workingDir+"/bin/frontend")
 	if err != nil {
 		b.logger.Printf("[BUILD] Failed extracting frontend binaries for deployment %s", deploymentId)
-		return err
+		return errors.Wrap("BuildError_Extract_Binaries_Copy_Frontend", err)
 	}
 
 	backendArtifact, err := b.fsWrapper.GetFileByPattern(workingDir+"/repo/gvw-office/gvw-backend/target", "gvw-backend-*.jar")
 	if err != nil {
 		b.logger.Printf("[BUILD] Failed locating backend binary for deployment %s", deploymentId)
-		return err
+		return errors.Wrap("BuildError_Extract_Binaries_Find_Backend", err)
 	}
 
 	dstFile := filepath.Join(workingDir+"/bin", "gvw-backend.jar")
@@ -302,7 +302,7 @@ func (b *BuildManager) extractBinaries(deploymentId string) error {
 	err = b.fsWrapper.CopyFile(backendArtifact, dstFile)
 	if err != nil {
 		b.logger.Printf("[BUILD] Failed extracting backend binary for deployment %s", deploymentId)
-		return err
+		return errors.Wrap("BuildError_Extract_Binaries_Copy_Backend", err)
 	}
 
 	return nil
@@ -314,7 +314,7 @@ func (b *BuildManager) generateSchema(deploymentId string) error {
 	models, err := b.fsWrapper.ListDir(workingDir)
 	if err != nil {
 		b.logger.Printf("[BUILD] Failed to list model directory for deployment %s: %v", deploymentId, err)
-		return err
+		return errors.Wrap("BuildError_Generate_Schema_Get_Models", err)
 	}
 
 	models = slices.DeleteFunc(models, func(m os.DirEntry) bool {

@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
+	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"reflect"
 )
@@ -18,17 +18,17 @@ type Config struct {
 func LoadConfig(path string, filesystemWrapper filesystem.FileSystemWrapper) (*Config, error) {
 	data, err := filesystemWrapper.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap("ConfigError", err)
 	}
 
 	var config Config
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap("ConfigError", err)
 	}
 
 	if err := ValidateConfig(config); err != nil {
-		return nil, err
+		return nil, errors.Wrap("ConfigError", err)
 	}
 
 	return &config, nil
@@ -38,18 +38,18 @@ func ValidateConfig(config Config) error {
 	val := reflect.ValueOf(config)
 
 	if val.Kind() != reflect.Struct {
-		return fmt.Errorf("INVALID_CONFIG_NO_STRUCT")
+		return errors.NewError("InvalidConfig_No_Struct")
 	}
 
 	for i := 0; i < val.NumField(); i++ {
 		if IsConfigValueInvalid(val.Field(i)) {
-			return fmt.Errorf("INVALID_CONFIG")
+			return errors.NewError("InvalidConfig_Empty_Field")
 		}
 	}
 
 	// Ensure that model to db map always has at least one value
 	if len(config.ModelDatabaseMap) <= 0 {
-		return fmt.Errorf("INVALID_CONFIG")
+		return errors.NewError("InvalidConfig_Bad_Model_Map")
 	}
 
 	return nil
