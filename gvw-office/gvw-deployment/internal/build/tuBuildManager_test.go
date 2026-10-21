@@ -125,7 +125,7 @@ func (m *MockFileSystemWrapper) CopyDirContents(srcDir, dstDir string) error {
 	return nil
 }
 
-func (m *MockFileSystemWrapper) GetFileByPattern(dir string, filePattern string) (string, error) {
+func (m *MockFileSystemWrapper) GetFileByPattern(dir, filePattern string) (string, error) {
 	m.getFileByPatternCalled = true
 	m.getFileByPatternDir = dir
 	m.getFileByPatternPattern = filePattern

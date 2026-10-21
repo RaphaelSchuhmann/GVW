@@ -31,6 +31,9 @@ type BuildManager struct {
 	modelLoader   *ModelLoader
 }
 
+const pipelineCancelledLogMessage = "[BUILD] Pipeline cancelled for deployment %s: %v"
+const buildBaseDir = "./builds/"
+
 func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapper filesystem.FileSystemWrapper, logger *log.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
 		activeBuilds:  make(map[string]*activeBuild),
@@ -42,7 +45,7 @@ func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapp
 	}
 }
 
-func (b *BuildManager) TriggerBuild(deploymentId string, commit string) {
+func (b *BuildManager) TriggerBuild(deploymentId, commit string) {
 	b.mutex.Lock()
 
 	previous := b.activeBuilds[deploymentId]
@@ -89,14 +92,14 @@ func (b *BuildManager) TriggerBuild(deploymentId string, commit string) {
 	}()
 }
 
-func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, commit string) {
+func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit string) {
 	if ctx.Err() != nil {
 		return
 	}
 
 	// Setup build environment
-	b.fsWrapper.CreateDir("./builds/"+deploymentId, 0755)
-	b.fsWrapper.CreateDir("./builds/"+deploymentId+"/repo", 0755)
+	b.fsWrapper.CreateDir(buildBaseDir+deploymentId, 0755)
+	b.fsWrapper.CreateDir(buildBaseDir+deploymentId+"/repo", 0755)
 
 	err := b.cloneRepo(ctx, deploymentId, commit)
 	if err != nil {
@@ -110,7 +113,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 	// Try three times to run the build
 	for i := 0; i < 3; i++ {
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
 			return
 		}
 
@@ -128,7 +131,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		}
 
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
 			return
 		}
 
@@ -144,7 +147,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		}
 
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
 			return
 		}
 
@@ -156,7 +159,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 		}
 
 		if err := ctx.Err(); err != nil {
-			b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+			b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
 			return
 		}
 
@@ -166,7 +169,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 	}
 
 	if err := ctx.Err(); err != nil {
-		b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+		b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
 		return
 	}
 
@@ -178,7 +181,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 	}
 
 	if err := ctx.Err(); err != nil {
-		b.logger.Printf("[BUILD] Pipeline cancelled for deployment %s: %v", deploymentId, err)
+		b.logger.Printf("pipelineCancelledLogMessage", deploymentId, err)
 		return
 	}
 
@@ -192,14 +195,14 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId string, com
 }
 
 func (b *BuildManager) setupBuildDirs(deploymentId string) {
-	b.fsWrapper.CleanDir("./builds/" + deploymentId + "/bin")
-	b.fsWrapper.CleanDir("./builds/" + deploymentId + "/schema.json")
+	b.fsWrapper.CleanDir(buildBaseDir + deploymentId + "/bin")
+	b.fsWrapper.CleanDir(buildBaseDir + deploymentId + "/schema.json")
 
-	b.fsWrapper.CreateDir("./builds/"+deploymentId+"/bin", 0755)
+	b.fsWrapper.CreateDir(buildBaseDir+deploymentId+"/bin", 0755)
 }
 
 func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commit string) error {
-	workingDir := "./builds/" + deploymentId + "/repo"
+	workingDir := buildBaseDir + deploymentId + "/repo"
 
 	run := func(name string, args ...string) error {
 		_, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
@@ -226,7 +229,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 }
 
 func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) error {
-	workingDir := "./builds/" + deploymentId + "/repo/gvw-office/frontend"
+	workingDir := buildBaseDir + deploymentId + "/repo/gvw-office/frontend"
 
 	b.fsWrapper.CleanDir(workingDir + "/dist")
 
@@ -253,7 +256,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 }
 
 func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) error {
-	workingDir := "./builds/" + deploymentId + "/repo/gvw-office/gvw-backend"
+	workingDir := buildBaseDir + deploymentId + "/repo/gvw-office/gvw-backend"
 
 	b.fsWrapper.CleanDir(workingDir + "/target")
 
@@ -280,7 +283,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 }
 
 func (b *BuildManager) extractBinaries(deploymentId string) error {
-	workingDir := "./builds/" + deploymentId
+	workingDir := buildBaseDir + deploymentId
 
 	b.logger.Printf("[BUILD] Extracting binaries for deployment %s", deploymentId)
 
@@ -309,7 +312,7 @@ func (b *BuildManager) extractBinaries(deploymentId string) error {
 }
 
 func (b *BuildManager) generateSchema(deploymentId string) error {
-	workingDir := "./builds/" + deploymentId + "/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
+	workingDir := buildBaseDir + deploymentId + "/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
 
 	models, err := b.fsWrapper.ListDir(workingDir)
 	if err != nil {
@@ -354,7 +357,7 @@ func (b *BuildManager) generateSchema(deploymentId string) error {
 		return err
 	}
 
-	schemaPath := filepath.Join("./builds/"+deploymentId, "schema.json")
+	schemaPath := filepath.Join(buildBaseDir+deploymentId, "schema.json")
 	if err := b.fsWrapper.WriteToFile(schemaPath, buf.Bytes()); err != nil {
 		b.logger.Printf("[BUILD] Failed to write schema.json for deployment %s: %v", deploymentId, err)
 		return err

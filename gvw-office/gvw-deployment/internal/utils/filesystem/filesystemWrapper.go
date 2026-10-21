@@ -19,7 +19,7 @@ type FileSystemWrapper interface {
 	CopyFile(src, dst string) error
 	ListDir(path string) ([]os.DirEntry, error)
 	CopyDirContents(srcDir, dstDir string) error
-	GetFileByPattern(dir string, filePattern string) (string, error)
+	GetFileByPattern(dir, filePattern string) (string, error)
 }
 
 type FileSystem struct {
@@ -147,7 +147,7 @@ func (f *FileSystem) CopyDirContents(srcDir, dstDir string) error {
 	return nil
 }
 
-func (f *FileSystem) GetFileByPattern(dir string, filePattern string) (string, error) {
+func (f *FileSystem) GetFileByPattern(dir, filePattern string) (string, error) {
 	pattern := filepath.Join(dir, filePattern)
 
 	matches, err := filepath.Glob(pattern)
