@@ -1,75 +1,9 @@
 package build
 
 import (
-	"gvw/gvw-deployment/internal/utils/log"
 	"strings"
 	"testing"
 )
-
-func setupTestLoader() (*log.Logger, *MockFileSystemWrapper, *ModelLoader) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	loader := NewModelLoader(logger, fsWrapper)
-	return logger, fsWrapper, loader
-}
-
-func assertClassField(t *testing.T, class map[string]any, fieldName, expectedType string) {
-	members, ok := class["members"].(map[string]any)
-	if !ok {
-		t.Fatalf("Class has no members map")
-	}
-	if members[fieldName] != expectedType {
-		t.Errorf("Expected field '%s' to be '%s', got '%v'", fieldName, expectedType, members[fieldName])
-	}
-}
-
-func assertEmbedded(t *testing.T, class map[string]any, expected bool) {
-	if class["embedded"] != expected {
-		t.Errorf("Expected embedded=%v, got '%v'", expected, class["embedded"])
-	}
-}
-
-func assertClassExists(t *testing.T, schema map[string]any, className string) map[string]any {
-	class, ok := schema[className].(map[string]any)
-	if !ok {
-		t.Fatalf("Class '%s' not found or not a map", className)
-	}
-	return class
-}
-
-func createClassSchema(objType string, members map[string]any) map[string]any {
-	if objType == "enum" {
-		return map[string]any{"objType": objType}
-	}
-	return map[string]any{
-		"objType": objType,
-		"members": members,
-	}
-}
-
-func createFieldSchema(fieldType string) map[string]any {
-	return map[string]any{
-		"type":  "array",
-		"items": fieldType,
-	}
-}
-
-func createMapSchema(valueType string) map[string]any {
-	return map[string]any{
-		"type":   "object",
-		"values": valueType,
-	}
-}
-
-func assertClassNotEmbedded(t *testing.T, schema map[string]any, className string) {
-	class := assertClassExists(t, schema, className)
-	assertEmbedded(t, class, false)
-}
-
-func assertClassEmbedded(t *testing.T, schema map[string]any, className string) {
-	class := assertClassExists(t, schema, className)
-	assertEmbedded(t, class, true)
-}
 
 func TestParseLines_BasicClassWithFields(t *testing.T) {
 	_, _, loader := setupTestLoader()
@@ -102,8 +36,8 @@ func TestParseLines_BasicClassWithFields(t *testing.T) {
 		t.Fatalf("Expected 2 members, got %d", len(members))
 	}
 
-	assertClassField(t, person, "name", "String")
-	assertClassField(t, person, "age", "int")
+	assertSchemaField(t, result, "Person", "name", "String")
+	assertSchemaField(t, result, "Person", "age", "int")
 }
 
 func TestParseLines_ModifiersIgnored(t *testing.T) {
@@ -627,9 +561,9 @@ func TestNormalizeAndValidateSchema_ClassWithPrimitives(t *testing.T) {
 		t.Fatalf("NormalizeAndValidateSchema failed: %v", err)
 	}
 
-	person := assertClassExists(t, result, "Person")
-	assertClassField(t, person, "name", "string")
-	assertClassField(t, person, "age", "int")
+	assertClassExists(t, result, "Person")
+	assertSchemaField(t, result, "Person", "name", "string")
+	assertSchemaField(t, result, "Person", "age", "int")
 }
 
 func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
@@ -645,8 +579,8 @@ func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
 		t.Fatalf("NormalizeAndValidateSchema failed: %v", err)
 	}
 
-	deployment := assertClassExists(t, result, "Deployment")
-	assertClassField(t, deployment, "migration", "Migration")
+	assertClassExists(t, result, "Deployment")
+	assertSchemaField(t, result, "Deployment", "migration", "Migration")
 }
 
 func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
@@ -662,8 +596,8 @@ func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
 		t.Fatalf("NormalizeAndValidateSchema failed: %v", err)
 	}
 
-	task := assertClassExists(t, result, "Task")
-	assertClassField(t, task, "status", "string")
+	assertClassExists(t, result, "Task")
+	assertSchemaField(t, result, "Task", "status", "string")
 
 	if _, ok := result["Status"]; ok {
 		t.Errorf("Enum should not appear in normalized schema")
