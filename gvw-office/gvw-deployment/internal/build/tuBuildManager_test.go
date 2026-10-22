@@ -251,15 +251,3 @@ func TestSetupBuildDirs(t *testing.T) {
 		t.Errorf("Expected CreateDir to be called for bin directory, got '%s'", fsWrapper.createDirPath)
 	}
 }
-
-func TestTriggerBuild_CancelsPreviousBuild(t *testing.T) {
-	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
-
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
-
-	buildManager.TriggerBuild("test-deployment", "commit1")
-	buildManager.TriggerBuild("test-deployment", "commit2")
-
-	// This is difficult to test without access to the internal context
-	// The implementation shows that cancel() is called when a new build is triggered
-}

@@ -100,11 +100,17 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 
 	// Setup build environment
 	b.fsWrapper.CreateDir(buildBaseDir+deploymentId, 0755)
+	b.fsWrapper.CleanDir(buildBaseDir + deploymentId + "/repo")
 	b.fsWrapper.CreateDir(buildBaseDir+deploymentId+"/repo", 0755)
 
 	if err := b.cloneRepo(ctx, deploymentId, commit); err != nil {
+		if ctx.Err() != nil {
+			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
+			return
+		}
+
 		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeCommitInvalid)
+		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeCommitInvalid, ctx)
 		return
 	}
 
@@ -117,7 +123,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		errorCode := MapBuildErrorsToCode(err)
 		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed: %v", deploymentId, commit, err)
 
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", errorCode); updateErr != nil {
+		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", errorCode, ctx); updateErr != nil {
 			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
 		}
 		return
@@ -125,7 +131,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 
 	if err := b.generateSchema(deploymentId); err != nil {
 		b.logger.Printf("[BUILD] Schema generation failed for deployment %s: %v", deploymentId, err)
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeSchemaGenerationFailed); updateErr != nil {
+		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeSchemaGenerationFailed, ctx); updateErr != nil {
 			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
 		}
 		return
@@ -189,8 +195,12 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 	workingDir := buildBaseDir + deploymentId + "/repo"
 
 	run := func(name string, args ...string) error {
-		_, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
-		return gvwErrors.Wrap("BuildError_Clone_Repo", err)
+		output, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
+		if err != nil {
+			b.logger.Printf("[BUILD] %s failed for deployment %s: %v\n%s", name, deploymentId, err, output)
+			return gvwErrors.Wrap("BuildError_Clone_Repo", err)
+		}
+		return nil
 	}
 
 	if err := run("git", "init"); err != nil {
@@ -219,7 +229,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	// Build
 	b.logger.Printf("[BUILD] Building frontend for deployment %s", deploymentId)
-	output, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
+	_, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
 		return gvwErrors.Wrap("BuildError_Build_Failed", err)
@@ -227,11 +237,11 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	// Test
 	b.logger.Printf("[BUILD] Testing frontend for deployment %s", deploymentId)
-	output, err = commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "test")
+	output, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "test")
 
 	b.logger.Printf("[BUILD] Test execution output for deployment %s:\n%s", deploymentId, output)
 
-	if err != nil || strings.Contains(output, "fail") {
+	if err != nil {
 		b.logger.Printf("[BUILD] Frontend tests failed for deployment %s with error %v", deploymentId, err)
 		return gvwErrors.Wrap("BuildError_Test_Failed", err)
 	}

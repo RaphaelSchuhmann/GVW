@@ -2,10 +2,12 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"gvw/gvw-deployment/internal/utils/errors"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -17,7 +19,7 @@ type StatusPayload struct {
 }
 
 type JavaClient interface {
-	UpdateDeploymentState(deploymentId string, state string, reason uint32) error
+	UpdateDeploymentState(deploymentId string, state string, reason uint32, ctx context.Context) error
 }
 
 type HttpJavaClient struct {
@@ -36,8 +38,8 @@ func NewHttpJavaClient(baseUrl, token string) *HttpJavaClient {
 	}
 }
 
-func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status string, reason uint32) error {
-	url := fmt.Sprintf("%s/internal/deployment/%s/status", c.baseUrl, deploymentId)
+func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status string, reason uint32, ctx context.Context) error {
+	endpoint := fmt.Sprintf("%s/internal/deployment/%s/status", c.baseUrl, url.PathEscape(deploymentId))
 
 	payload := StatusPayload{
 		Status: status,
@@ -49,7 +51,7 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status strin
 		return gvwErrors.Wrap("HttpError_Failed_Marshaling_Payload", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(jsonBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, endpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {
 		return gvwErrors.Wrap("HttpError_Failed_Creating_Request", err)
 	}
@@ -64,7 +66,7 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return gvwErrors.NewError(fmt.Sprintf("java api returned non-sucecss status: %d", resp.StatusCode))
+		return gvwErrors.NewError(fmt.Sprintf("java api returned non-success status: %d", resp.StatusCode))
 	}
 
 	return nil

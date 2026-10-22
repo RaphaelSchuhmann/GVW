@@ -14,7 +14,7 @@ import (
 func loadRealNormalizedSchema(t *testing.T) map[string]any {
     t.Helper()
     
-    modelDir := "../gvw-backend/src/main/java/com/gvw/gvwbackend/model"
+    modelDir := "../../../gvw-backend/src/main/java/com/gvw/gvwbackend/model"
     if _, err := os.Stat(modelDir); os.IsNotExist(err) {
         t.Skip("Backend model directory not found, skipping integration test")
     }

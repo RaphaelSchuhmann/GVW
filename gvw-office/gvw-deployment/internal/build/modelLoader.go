@@ -4,6 +4,7 @@ import (
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
+	"slices"
 	"strings"
 )
 
@@ -56,6 +57,10 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 
 		braceDepth = m.updateBraceDepth(line, braceDepth, &stack)
 		currentClass := m.getCurrentClass(stack)
+		classStartDepth := 0
+		if len(stack) > 0 {
+			classStartDepth = stack[len(stack)-1].startDepth
+		}
 
 		if m.processJsonProperty(line, &pendingJsonProperty) {
 			continue
@@ -65,7 +70,14 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 			continue
 		}
 
-		m.processFieldDeclaration(line, currentClass, &pendingJsonProperty, result)
+		m.processFieldDeclaration(
+			line,
+			currentClass,
+			braceDepth,
+			classStartDepth,
+			&pendingJsonProperty,
+			result,
+		)
 	}
 
 	return result
@@ -141,18 +153,29 @@ func (m *ModelLoader) processClassOrEnumDeclaration(line string, braceDepth int,
 	return false
 }
 
-func (m *ModelLoader) processFieldDeclaration(line, currentClass string, pendingJsonProperty *string, result map[string]any) {
-	if currentClass == "" || !strings.HasSuffix(line, ";") {
+func (m *ModelLoader) processFieldDeclaration(
+	line string,
+	currentClass string,
+	braceDepth int,
+	classStartDepth int,
+	pendingJsonProperty *string,
+	result map[string]any,
+) {
+	if currentClass == "" || braceDepth != classStartDepth || !strings.HasSuffix(line, ";") {
 		return
 	}
 
-	if strings.Contains(line, "{") || strings.Contains(line, "return") || strings.Contains(line, "this") {
+	if strings.Contains(line, "{") {
 		return
 	}
 
 	line = strings.TrimSuffix(line, ";")
 	line = strings.ReplaceAll(line, ", ", ",")
 	parts := strings.Fields(line)
+
+	if slices.Contains(parts, "static") {
+		return
+	}
 
 	cleanParts := m.getCleanParts(parts)
 

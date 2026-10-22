@@ -1,10 +1,12 @@
 package log
 
 import (
-	"gopkg.in/natefinch/lumberjack.v2"
+	"fmt"
 	"io"
 	"log"
 	"os"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type Logger struct {
@@ -30,11 +32,11 @@ func NewLogger() *Logger {
 }
 
 func (l *Logger) Println(v ...any) {
-	l.logObj.Println(v...)
+	_ = l.logObj.Output(2, fmt.Sprintln(v...))
 }
 
 func (l *Logger) Printf(format string, v ...any) {
-	l.logObj.Printf(format, v...)
+	_ = l.logObj.Output(2, fmt.Sprintf(format, v...))
 }
 
 func (l *Logger) Fatal(v ...any) {

@@ -10,6 +10,8 @@ import (
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
 	"net/http"
+	"time"
+	"errors"
 )
 
 type App struct {
@@ -41,6 +43,7 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 	server := &http.Server{
 		Addr:    "127.0.0.1:" + cfg.Port,
 		Handler: handler,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	return &App{
@@ -54,8 +57,8 @@ func (a *App) Start() error {
 	a.Logger.Println("Go backend starting on " + a.HttpServer.Addr + "...")
 
 	err := a.HttpServer.ListenAndServe()
-	if err != nil {
-		return gvwErrors.Wrap("StartUpError", a.HttpServer.ListenAndServe())
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return gvwErrors.Wrap("StartUpError", err)
 	}
 
 	return nil

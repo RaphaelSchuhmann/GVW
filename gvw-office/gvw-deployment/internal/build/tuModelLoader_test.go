@@ -227,7 +227,7 @@ func TestLoadModel_EmptyPath(t *testing.T) {
 
 	_, err := loader.LoadModel("")
 	if err == nil {
-		t.Errorf("Expected error for empty path, got nil")
+		t.Fatalf("Expected error for empty path, got nil")
 	}
 	if err.Error() != "ModelLoader_Invalid_Path" {
 		t.Errorf("Expected error 'ModelLoader_Invalid_Path', got '%v'", err)

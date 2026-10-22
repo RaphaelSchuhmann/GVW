@@ -201,7 +201,7 @@ func TestLoadConfig_ValidFile(t *testing.T) {
 
 	config, err := LoadConfig(tmpFile.Name(), filesystemWrapper)
 	if err != nil {
-		t.Errorf("Expected no error loading valid config, got: %v", err)
+		t.Fatalf("Expected no error loading valid config, got: %v", err)
 	}
 
 	if config.Port != "8080" {
