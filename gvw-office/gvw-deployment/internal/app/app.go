@@ -52,10 +52,10 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 
 func (a *App) Start() error {
 	a.Logger.Println("Go backend starting on " + a.HttpServer.Addr + "...")
-	
+
 	err := a.HttpServer.ListenAndServe()
 	if err != nil {
-		return errors.Wrap("StartUpError", a.HttpServer.ListenAndServe())
+		return gvwErrors.Wrap("StartUpError", a.HttpServer.ListenAndServe())
 	}
 
 	return nil

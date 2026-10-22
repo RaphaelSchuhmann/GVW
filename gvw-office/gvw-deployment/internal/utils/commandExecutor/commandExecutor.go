@@ -7,22 +7,22 @@ import (
 )
 
 func RunCommand(ctx context.Context, workDir string, name string, args ...string) (string, error) {
-    cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...)
 
-    if workDir != "" {
-        cmd.Dir = workDir
-    }
+	if workDir != "" {
+		cmd.Dir = workDir
+	}
 
-    outputBytes, err := cmd.CombinedOutput()
-    outputStr := string(outputBytes)
+	outputBytes, err := cmd.CombinedOutput()
+	outputStr := string(outputBytes)
 
-    if err != nil {
-        if ctx.Err() != nil {
-            return outputStr, errors.Wrap("CommandExecutionError_Cancelled_Or_Timedout", ctx.Err())
-        }
+	if err != nil {
+		if ctx.Err() != nil {
+			return outputStr, gvwErrors.Wrap("CommandExecutionError_Cancelled_Or_Timedout", ctx.Err())
+		}
 
-        return outputStr, errors.Wrap("CommandExecutionError_Command_Failed", err)
-    }
+		return outputStr, gvwErrors.Wrap("CommandExecutionError_Command_Failed", err)
+	}
 
-    return outputStr, nil
+	return outputStr, nil
 }

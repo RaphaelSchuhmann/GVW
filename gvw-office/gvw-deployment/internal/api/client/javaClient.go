@@ -46,12 +46,12 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status strin
 
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
-		return errors.Wrap("HttpError_Failed_Marshaling_Payload", err)
+		return gvwErrors.Wrap("HttpError_Failed_Marshaling_Payload", err)
 	}
 
 	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return errors.Wrap("HttpError_Failed_Creating_Request", err)
+		return gvwErrors.Wrap("HttpError_Failed_Creating_Request", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -59,12 +59,12 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status strin
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return errors.Wrap("HttpError_Failed_To_Execute", err)
+		return gvwErrors.Wrap("HttpError_Failed_To_Execute", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return errors.NewError(fmt.Sprintf("java api returned non-sucecss status: %d", resp.StatusCode)) 
+		return gvwErrors.NewError(fmt.Sprintf("java api returned non-sucecss status: %d", resp.StatusCode))
 	}
 
 	return nil
