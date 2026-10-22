@@ -60,19 +60,23 @@ public class HttpUtil {
       return new GVWHttpResponse(400, null, null, true);
     }
 
-    HttpRequest request =
-            HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "Java-GVW-Http")
-                    .header("Accept", "application/json")
-                    .GET()
-                    .build();
-
     try {
+      HttpRequest request =
+              HttpRequest.newBuilder()
+                      .uri(URI.create(url))
+                      .header("User-Agent", "Java-GVW-Http")
+                      .header("Accept", "application/json")
+                      .GET()
+                      .build();
+
       HttpResponse<String> response =
               httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
       return extractResponse(response, responseType);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.debug("GET request interrupted for URL: {}", url, e);
+      return new GVWHttpResponse(500, null, null, true);
     } catch (Exception e) {
       log.debug("GET request failed for URL: {}", url, e);
       return new GVWHttpResponse(500, null, null, true);
@@ -114,8 +118,12 @@ public class HttpUtil {
       HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
       return extractResponse(response, responseType);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.debug("POST request interrupted for URL: {}", url, e);
+      return new GVWHttpResponse(500, null, null, true);
     } catch (Exception e) {
-      log.debug("POST request failed for URL: " + url, e);
+      log.debug("POST request failed for URL: {}", url, e);
       return new GVWHttpResponse(500, null, null, true);
     }
   }
@@ -139,7 +147,7 @@ public class HttpUtil {
     }
 
     int status = response.statusCode();
-    boolean isError = status >= 400;
+    boolean isError = status < 200 || status >= 300;
     String rawBody = response.body();
 
     Object parsedBody;

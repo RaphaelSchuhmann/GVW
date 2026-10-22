@@ -10,7 +10,6 @@ import org.springframework.http.client.support.BasicAuthenticationInterceptor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.RestTemplate;
-import tools.jackson.databind.ObjectMapper;
 
 /**
  * General Spring application bean configuration.
@@ -53,10 +52,5 @@ public class AppConfig {
   @Bean
   public HttpClient httpclient() {
     return HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build();
-  }
-
-  @Bean
-  public ObjectMapper objectMapper() {
-    return new ObjectMapper();
   }
 }

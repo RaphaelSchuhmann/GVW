@@ -11,10 +11,20 @@ public class InternalAuthInterceptor implements HandlerInterceptor {
   @Value("${internal.api.token}")
   private String expectedToken;
 
+  @jakarta.annotation.PostConstruct
+  void validateToken() {
+    if (expectedToken == null || expectedToken.isBlank()) {
+      throw new IllegalStateException("internal.api.token must not be blank");
+    }
+  }
+
   @Override
   public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
     String token = request.getHeader("X-Internal-Auth");
-    if (expectedToken.equals(token)) {
+    if (token != null
+        && java.security.MessageDigest.isEqual(
+            expectedToken.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+            token.getBytes(java.nio.charset.StandardCharsets.UTF_8))) {
       return true;
     }
     response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access Denied");
