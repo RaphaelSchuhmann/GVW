@@ -5,6 +5,7 @@ import (
 	"gvw/gvw-deployment/internal/utils/log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -157,13 +158,69 @@ func (m *MockDirEntry) Info() (os.FileInfo, error) {
 	return nil, nil
 }
 
-func TestGenerateSchema_Success(t *testing.T) {
+func setupBuildManagerTest() (*log.Logger, *MockFileSystemWrapper, *MockJavaClient, *ModelLoader) {
 	logger := log.NewLogger()
 	fsWrapper := NewMockFileSystemWrapper(logger)
 	mockJavaClient := &MockJavaClient{}
 	modelLoader := NewModelLoader(logger, fsWrapper)
+	return logger, fsWrapper, mockJavaClient, modelLoader
+}
 
-	// Setup mock file system with model files
+func setupModelFile(fsWrapper *MockFileSystemWrapper, filename, content string) string {
+	workingDir := "./builds/test-deployment/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
+	fsWrapper.dirOrFileExistsMap[workingDir] = true
+	filePath := filepath.Join(workingDir, filename)
+	fsWrapper.readFileContent[filePath] = []byte(content)
+	fsWrapper.dirOrFileExistsMap[filePath] = true
+	return filePath
+}
+
+func assertSchemaField(t *testing.T, schema map[string]any, className, fieldName string, expectedType any) {
+	t.Helper()
+
+	class, ok := schema[className].(map[string]any)
+	if !ok {
+		t.Fatalf("Class '%s' not found in schema", className)
+	}
+
+	members, ok := class["members"].(map[string]any)
+	if !ok {
+		t.Fatalf("Class '%s' has no members", className)
+	}
+
+	actual := members[fieldName]
+	if !reflect.DeepEqual(actual, expectedType) {
+		t.Errorf("Expected field '%s' to be '%v', got '%v'", fieldName, expectedType, actual)
+	}
+}
+
+func assertEmbeddedClass(t *testing.T, schema map[string]any, className string) {
+	t.Helper()
+
+	class, ok := schema[className].(map[string]any)
+	if !ok {
+		t.Fatalf("Class '%s' not found in schema", className)
+	}
+	if class["embedded"] != true {
+		t.Errorf("Expected class '%s' to be embedded", className)
+	}
+}
+
+func assertNotEmbeddedClass(t *testing.T, schema map[string]any, className string) {
+	t.Helper()
+
+	class, ok := schema[className].(map[string]any)
+	if !ok {
+		t.Fatalf("Class '%s' not found in schema", className)
+	}
+	if class["embedded"] != false {
+		t.Errorf("Expected class '%s' to not be embedded", className)
+	}
+}
+
+func TestGenerateSchema_Success(t *testing.T) {
+	logger, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
+
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
 		&MockDirEntry{name: "Migration.java", isDir: false},
@@ -182,15 +239,8 @@ public class Migration {
     private String id;
 }`
 
-	// Set up file content for each file - must match the exact path generateSchema uses
-	workingDir := "./builds/test-deployment/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
-	fsWrapper.dirOrFileExistsMap[workingDir] = true
-	deploymentPath := filepath.Join(workingDir, "Deployment.java")
-	migrationPath := filepath.Join(workingDir, "Migration.java")
-	fsWrapper.readFileContent[deploymentPath] = []byte(deploymentContent)
-	fsWrapper.readFileContent[migrationPath] = []byte(migrationContent)
-	fsWrapper.dirOrFileExistsMap[deploymentPath] = true
-	fsWrapper.dirOrFileExistsMap[migrationPath] = true
+	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
+	setupModelFile(fsWrapper, "Migration.java", migrationContent)
 
 	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
 
@@ -199,62 +249,35 @@ public class Migration {
 		t.Fatalf("generateSchema failed: %v", err)
 	}
 
-	// Verify WriteToFile was called
 	if !fsWrapper.writeToFileCalled {
 		t.Errorf("Expected WriteToFile to be called")
 	}
 
-	// Verify the schema was written to the correct path
 	expectedPath := filepath.Join("./builds/test-deployment", "schema.json")
 	if fsWrapper.writeToFilePath != expectedPath {
 		t.Errorf("Expected schema to be written to '%s', got '%s'", expectedPath, fsWrapper.writeToFilePath)
 	}
 
-	// Verify the generated JSON is valid
 	var schema map[string]any
 	err = json.Unmarshal(fsWrapper.writeToFileContent, &schema)
 	if err != nil {
 		t.Fatalf("Generated JSON is invalid: %v", err)
 	}
 
-	// Verify Deployment exists
-	deployment, ok := schema["Deployment"].(map[string]any)
-	if !ok {
-		t.Fatalf("Deployment not found in schema")
-	}
-
-	// Verify migrations field is an array
-	members := deployment["members"].(map[string]any)
-	migrations := members["migrations"].(map[string]any)
-	if migrations["type"] != "array" {
-		t.Errorf("Expected migrations type 'array', got '%v'", migrations["type"])
-	}
-
-	if migrations["items"] != "Migration" {
-		t.Errorf("Expected migrations items 'Migration', got '%v'", migrations["items"])
-	}
-
-	// Verify Migration is marked as embedded
-	migration := schema["Migration"].(map[string]any)
-	if migration["embedded"] != true {
-		t.Errorf("Expected Migration to be embedded, got '%v'", migration["embedded"])
-	}
-
-	// Verify Deployment is not embedded
-	if deployment["embedded"] != false {
-		t.Errorf("Expected Deployment to not be embedded, got '%v'", deployment["embedded"])
-	}
+	assertSchemaField(t, schema, "Deployment", "migrations", map[string]any{
+		"type":  "array",
+		"items": "Migration",
+	})
+	assertEmbeddedClass(t, schema, "Migration")
+	assertNotEmbeddedClass(t, schema, "Deployment")
 }
 
 func TestGenerateSchema_ListDirFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
 	fsWrapper.listDirError = os.ErrNotExist
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err == nil {
@@ -263,17 +286,14 @@ func TestGenerateSchema_ListDirFails(t *testing.T) {
 }
 
 func TestGenerateSchema_ModelFileReadFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
 	}
 	fsWrapper.readFileError = os.ErrPermission
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err == nil {
@@ -282,29 +302,21 @@ func TestGenerateSchema_ModelFileReadFails(t *testing.T) {
 }
 
 func TestGenerateSchema_ValidationFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
 	}
 
-	// Content with unsupported type
 	deploymentContent := `package com.gvw.gvwbackend.model;
 
 public class Deployment {
     private UnsupportedType field;
 }`
 
-	workingDir := "./builds/test-deployment/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
-	fsWrapper.dirOrFileExistsMap[workingDir] = true
-	deploymentPath := filepath.Join(workingDir, "Deployment.java")
-	fsWrapper.readFileContent[deploymentPath] = []byte(deploymentContent)
-	fsWrapper.dirOrFileExistsMap[deploymentPath] = true
+	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err == nil {
@@ -313,10 +325,7 @@ public class Deployment {
 }
 
 func TestGenerateSchema_PreviousSchemaReplaced(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	logger, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
@@ -328,15 +337,10 @@ public class Deployment {
     private String id;
 }`
 
-	workingDir := "./builds/test-deployment/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
-	fsWrapper.dirOrFileExistsMap[workingDir] = true
-	deploymentPath := filepath.Join(workingDir, "Deployment.java")
-	fsWrapper.readFileContent[deploymentPath] = []byte(deploymentContent)
-	fsWrapper.dirOrFileExistsMap[deploymentPath] = true
+	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
 
 	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
 
-	// First generation
 	err := buildManager.generateSchema("test-deployment")
 	if err != nil {
 		t.Fatalf("First generateSchema failed: %v", err)
@@ -344,11 +348,9 @@ public class Deployment {
 
 	firstContent := fsWrapper.writeToFileContent
 
-	// Reset mock
 	fsWrapper.writeToFileCalled = false
 	fsWrapper.writeToFileContent = nil
 
-	// Second generation with different content
 	deploymentContent2 := `package com.gvw.gvwbackend.model;
 
 public class Deployment {
@@ -356,29 +358,24 @@ public class Deployment {
     private String name;
 }`
 
-	fsWrapper.readFileContent[deploymentPath] = []byte(deploymentContent2)
+	setupModelFile(fsWrapper, "Deployment.java", deploymentContent2)
 
 	err = buildManager.generateSchema("test-deployment")
 	if err != nil {
 		t.Fatalf("Second generateSchema failed: %v", err)
 	}
 
-	// Verify WriteToFile was called again
 	if !fsWrapper.writeToFileCalled {
 		t.Errorf("Expected WriteToFile to be called on second generation")
 	}
 
-	// Verify content changed
 	if string(fsWrapper.writeToFileContent) == string(firstContent) {
 		t.Errorf("Expected schema content to change on regeneration")
 	}
 }
 
 func TestGenerateSchema_NestedReferences(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	logger, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
@@ -411,20 +408,10 @@ public class Branch {
     private String id;
 }`
 
-	workingDir := "./builds/test-deployment/repo/gvw-office/gvw-backend/src/main/java/com/gvw/gvwbackend/model"
-	fsWrapper.dirOrFileExistsMap[workingDir] = true
-	deploymentPath := filepath.Join(workingDir, "Deployment.java")
-	migrationPath := filepath.Join(workingDir, "Migration.java")
-	conditionalPath := filepath.Join(workingDir, "Conditional.java")
-	branchPath := filepath.Join(workingDir, "Branch.java")
-	fsWrapper.readFileContent[deploymentPath] = []byte(deploymentContent)
-	fsWrapper.readFileContent[migrationPath] = []byte(migrationContent)
-	fsWrapper.readFileContent[conditionalPath] = []byte(conditionalContent)
-	fsWrapper.readFileContent[branchPath] = []byte(branchContent)
-	fsWrapper.dirOrFileExistsMap[deploymentPath] = true
-	fsWrapper.dirOrFileExistsMap[migrationPath] = true
-	fsWrapper.dirOrFileExistsMap[conditionalPath] = true
-	fsWrapper.dirOrFileExistsMap[branchPath] = true
+	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
+	setupModelFile(fsWrapper, "Migration.java", migrationContent)
+	setupModelFile(fsWrapper, "Conditional.java", conditionalContent)
+	setupModelFile(fsWrapper, "Branch.java", branchContent)
 
 	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
 
@@ -439,170 +426,33 @@ public class Branch {
 		t.Fatalf("Generated JSON is invalid: %v", err)
 	}
 
-	// Verify nested references
-	deployment := schema["Deployment"].(map[string]any)
-	members := deployment["members"].(map[string]any)
-	migrations := members["migrations"].(map[string]any)
-
-	if migrations["items"] != "Migration" {
-		t.Errorf("Expected migrations items 'Migration', got '%v'", migrations["items"])
-	}
-
-	migration := schema["Migration"].(map[string]any)
-	migrationMembers := migration["members"].(map[string]any)
-	if migrationMembers["conditional"] != "Conditional" {
-		t.Errorf("Expected migration conditional to reference Conditional, got '%v'", migrationMembers["conditional"])
-	}
-
-	conditional := schema["Conditional"].(map[string]any)
-	conditionalMembers := conditional["members"].(map[string]any)
-	if conditionalMembers["condition"] != "Branch" {
-		t.Errorf("Expected conditional condition to reference Branch, got '%v'", conditionalMembers["condition"])
-	}
-
-	// Verify all referenced classes are embedded
-	if migration["embedded"] != true {
-		t.Errorf("Expected Migration to be embedded")
-	}
-
-	if conditional["embedded"] != true {
-		t.Errorf("Expected Conditional to be embedded")
-	}
-
-	if branch := schema["Branch"].(map[string]any); branch["embedded"] != true {
-		t.Errorf("Expected Branch to be embedded")
-	}
-
-	// Verify Deployment is not embedded
-	if deployment["embedded"] != false {
-		t.Errorf("Expected Deployment to not be embedded")
-	}
-}
-
-func TestRunPipeline_FirstAttemptFailsSecondSucceeds(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This test would require mocking the command execution
-	// For now, we'll test the cancelledReason reset logic directly
-	// by examining the runPipeline implementation
-
-	// The fix ensures cancelledReason is reset to 0 on successful build
-	// This is tested implicitly by the logic in buildManager.go line 122
-	// where we set cancelledReason = 0 before breaking
-}
-
-func TestRunPipeline_AllThreeAttemptsFail(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking command execution to fail 3 times
-	// The test plan expects the deployment to be cancelled with the reason
-	// from the final failed attempt
-}
-
-func TestRunPipeline_FrontendTestFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking frontend test execution to fail
-	// Expected: attempt fails with BUILD_CodeTestExecutionFailed
-}
-
-func TestRunPipeline_FrontendBuildFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking frontend build to fail
-	// Expected: attempt fails with BUILD_CodeBuildFailed
-}
-
-func TestRunPipeline_BackendTestFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking backend test execution to fail
-	// Expected: attempt fails with BUILD_CodeTestExecutionFailed
-}
-
-func TestRunPipeline_BackendPackagingFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking backend packaging to fail
-	// Expected: attempt fails with BUILD_CodeBuildFailed
-}
-
-func TestRunPipeline_BinaryExtractionFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking binary extraction to fail
-	// Expected: attempt fails with BUILD_CodeBinaryExtractionFailed
-}
-
-func TestRunPipeline_SchemaGenerationFails(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
-
-	NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
-
-	// This would require mocking schema generation to fail
-	// Expected: deployment is cancelled with BUILD_CodeSchemaGenerationFailed
+	assertSchemaField(t, schema, "Deployment", "migrations", map[string]any{
+		"type":  "array",
+		"items": "Migration",
+	})
+	assertSchemaField(t, schema, "Migration", "conditional", "Conditional")
+	assertSchemaField(t, schema, "Conditional", "condition", "Branch")
+	assertEmbeddedClass(t, schema, "Migration")
+	assertEmbeddedClass(t, schema, "Conditional")
+	assertEmbeddedClass(t, schema, "Branch")
+	assertNotEmbeddedClass(t, schema, "Deployment")
 }
 
 func TestSetupBuildDirs(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	buildManager.setupBuildDirs("test-deployment")
 
-	// Verify CleanDir was called for bin
 	if !fsWrapper.cleanDirCalled {
 		t.Errorf("Expected CleanDir to be called")
 	}
 
-	// setupBuildDirs cleans both bin and schema.json paths
-	// Just verify it was called
 	if fsWrapper.cleanDirPath == "" {
 		t.Errorf("Expected CleanDir to be called with a path")
 	}
 
-	// Verify CreateDir was called for bin
 	if !fsWrapper.createDirCalled {
 		t.Errorf("Expected CreateDir to be called")
 	}
@@ -613,20 +463,13 @@ func TestSetupBuildDirs(t *testing.T) {
 }
 
 func TestTriggerBuild_CancelsPreviousBuild(t *testing.T) {
-	logger := log.NewLogger()
-	fsWrapper := NewMockFileSystemWrapper(logger)
-	mockJavaClient := &MockJavaClient{}
-	modelLoader := NewModelLoader(logger, fsWrapper)
+	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
-	// Trigger first build
 	buildManager.TriggerBuild("test-deployment", "commit1")
-
-	// Trigger second build (should cancel first)
 	buildManager.TriggerBuild("test-deployment", "commit2")
 
-	// Verify the cancel function was set
 	// This is difficult to test without access to the internal context
 	// The implementation shows that cancel() is called when a new build is triggered
 }
