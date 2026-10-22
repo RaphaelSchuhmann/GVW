@@ -2,7 +2,7 @@ package com.gvw.gvwbackend.util;
 
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.File;
-import com.gvw.gvwbackend.model.StoredFile;
+import com.gvw.gvwbackend.model.helper.StoredFile;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;

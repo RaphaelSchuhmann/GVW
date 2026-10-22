@@ -6,6 +6,8 @@ import com.gvw.gvwbackend.dto.response.*;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.*;
 import java.util.*;
+
+import com.gvw.gvwbackend.model.helper.TextDocumentSearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;

@@ -15,17 +15,22 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
 class DbServiceTest {
 
   @Mock private RestTemplate restTemplate;
+
+  @Spy
+  private ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
   @InjectMocks private DbService dbService;
 
@@ -171,8 +176,10 @@ class DbServiceTest {
   @Test
   void findById_Success() {
     String json = "{\"_id\":\"doc-1\",\"test\":\"value\"}";
+    Map<String, Object> expectedMap = Map.of("_id", "doc-1", "test", "value");
     when(restTemplate.getForObject(eq(BASE_URL + "/test_db/doc-1"), eq(String.class)))
         .thenReturn(json);
+    when(objectMapper.readValue(eq(json), eq(Map.class))).thenReturn(expectedMap);
 
     Map<String, Object> result = dbService.findById("test_db", "doc-1", Map.class);
 
@@ -195,6 +202,8 @@ class DbServiceTest {
     String json = "invalid json";
     when(restTemplate.getForObject(eq(BASE_URL + "/test_db/doc-1"), eq(String.class)))
         .thenReturn(json);
+    when(objectMapper.readValue(eq(json), eq(Map.class)))
+        .thenThrow(new RuntimeException("JSON parsing error"));
 
     assertThrows(
         DatabaseMappingException.class, () -> dbService.findById("test_db", "doc-1", Map.class));
@@ -204,8 +213,13 @@ class DbServiceTest {
   void findByQuery_Success() {
     Map<String, Object> query = Map.of("selector", Map.of("test", "value"));
     String json = "{\"docs\":[{\"_id\":\"doc-1\",\"test\":\"value1\"}]}";
+    Map<String, Object> responseMap = Map.of("docs", List.of(Map.of("_id", "doc-1", "test", "value1")));
+    Map<String, Object> docMap = Map.of("_id", "doc-1", "test", "value1");
     when(restTemplate.postForObject(eq(BASE_URL + "/test_db/_find"), eq(query), eq(String.class)))
         .thenReturn(json);
+    when(objectMapper.readValue(eq(json), any(tools.jackson.core.type.TypeReference.class)))
+        .thenReturn(responseMap);
+    when(objectMapper.convertValue(eq(docMap), eq(Map.class))).thenReturn(docMap);
 
     List<Map> result = dbService.findByQuery("test_db", query, Map.class);
 
