@@ -1,17 +1,18 @@
 package app
 
 import (
+	"errors"
 	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/api/handler"
 	"gvw/gvw-deployment/internal/api/middleware"
 	"gvw/gvw-deployment/internal/build"
 	"gvw/gvw-deployment/internal/config"
+	"gvw/gvw-deployment/internal/migration"
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
 	"net/http"
 	"time"
-	"errors"
 )
 
 type App struct {
@@ -28,13 +29,22 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 
 	javaClient := client.NewHttpJavaClient(javaBaseURL, cfg.InternalToken)
 
+	// Build System
 	modelLoader := build.NewModelLoader(logger, fsWrapper)
 	buildManager := build.NewBuildManager(cfg.GithubRepoURL, javaClient, fsWrapper, logger, modelLoader)
 
+	// Migration System
+	migrationValidator := migration.NewMigrationValidator()
+	migrationEngine := migration.NewMigrationEngine(logger, fsWrapper, migrationValidator)
+	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine)
+
+	// Handlers
 	buildHandler := handler.NewBuildHandler(buildManager)
+	migrationHandler := handler.NewMigrationHandler(migrationManager)
 
 	mux := http.NewServeMux()
 	buildHandler.RegisterRoutes(mux)
+	migrationHandler.RegisterRoutes(mux)
 
 	var handler http.Handler = mux
 	handler = middleware.LoggingMiddleware(logger, handler)

@@ -98,6 +98,8 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		return
 	}
 
+	b.logger.Printf("[BUILD] Starting build for deployment %s with commit %s", deploymentId, commit)
+
 	// Setup build environment
 	b.fsWrapper.CreateDir(buildBaseDir+deploymentId, 0755)
 	b.fsWrapper.CleanDir(buildBaseDir + deploymentId + "/repo")

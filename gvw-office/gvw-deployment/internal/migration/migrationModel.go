@@ -1,24 +1,24 @@
 package migration
 
 type Migration struct {
-	id          string
-	database    string
-	field       string
-	action      MigrationAction
-	conditional ConditionalMigration
-	value       string
+	Id          string               `json:"id"`
+	Database    string               `json:"database"`
+	Field       string               `json:"field"`
+	Action      MigrationAction      `json:"action"`
+	Conditional ConditionalMigration `json:"conditional"`
+	Value       string               `json:"value"`
 }
 
 type ConditionalMigration struct {
-	condition   Branch
-	trueBranch  Branch
-	falseBranch Branch
-	negated     bool
+	Condition   Branch `json:"condition"`
+	TrueBranch  Branch `json:"trueBranch"`
+	FalseBranch Branch `json:"falseBranch"`
+	Negated     bool   `json:"negated"`
 }
 
 type Branch struct {
-	field string
-	value string
+	Field string `json:"field"`
+	Value string `json:"value"`
 }
 
 type MigrationAction string

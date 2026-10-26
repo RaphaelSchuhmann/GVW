@@ -4,7 +4,6 @@ import (
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
-	"slices"
 	"strings"
 )
 
@@ -172,10 +171,6 @@ func (m *ModelLoader) processFieldDeclaration(
 	line = strings.TrimSuffix(line, ";")
 	line = strings.ReplaceAll(line, ", ", ",")
 	parts := strings.Fields(line)
-
-	if slices.Contains(parts, "static") {
-		return
-	}
 
 	cleanParts := m.getCleanParts(parts)
 
