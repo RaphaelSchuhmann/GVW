@@ -13,6 +13,9 @@ type Config struct {
 	JavaBaseURL      string            `json:"java_base_url"`
 	GithubRepoURL    string            `json:"github_repo_url"`
 	ModelDatabaseMap map[string]string `json:"model_db_map"`
+	DatabaseURL      string            `json:"database_url"`
+	DatabaseUsername string            `json:"database_username"`
+	DatabasePassword string            `json:"database_password"`
 }
 
 func LoadConfig(path string, filesystemWrapper filesystem.FileSystemWrapper) (*Config, error) {
