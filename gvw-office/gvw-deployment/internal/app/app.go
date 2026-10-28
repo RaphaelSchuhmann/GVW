@@ -21,13 +21,14 @@ type App struct {
 	HttpServer *http.Server
 }
 
-func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSystem) (*App, error) {
+func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager *config.ConfigManager) (*App, error) {
 	javaBaseURL := cfg.JavaBaseURL
 	if javaBaseURL == "" {
 		javaBaseURL = "http://localhost:3500/api"
 	}
 
 	javaClient := client.NewHttpJavaClient(javaBaseURL, cfg.InternalToken)
+	dbClient := client.NewDbClient(cfg.DatabaseURL, cfg.DatabaseUsername, cfg.DatabasePassword)
 
 	// Build System
 	modelLoader := build.NewModelLoader(logger, fsWrapper)
@@ -35,14 +36,16 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 
 	// Migration System
 	migrationValidator := migration.NewMigrationValidator()
-	migrationEngine := migration.NewMigrationEngine(logger, fsWrapper, migrationValidator)
+	migrationEngine := migration.NewMigrationEngine(logger, fsWrapper, migrationValidator, dbClient)
 	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine)
 
 	// Handlers
+	configHandler := handler.NewConfigHandler(configManager)
 	buildHandler := handler.NewBuildHandler(buildManager)
 	migrationHandler := handler.NewMigrationHandler(migrationManager)
 
 	mux := http.NewServeMux()
+	configHandler.RegisterRoutes(mux)
 	buildHandler.RegisterRoutes(mux)
 	migrationHandler.RegisterRoutes(mux)
 

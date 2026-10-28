@@ -3,22 +3,26 @@ package migration
 import (
 	"context"
 	"encoding/json"
+	"gvw/gvw-deployment/internal/api/client"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
+	"slices"
 )
 
 type MigrationEngine struct {
 	logger    *log.Logger
 	fsWrapper filesystem.FileSystemWrapper
 	validator *MigrationValidator
+	dbClient  *client.DbClient
 }
 
-func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper, validator *MigrationValidator) *MigrationEngine {
+func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper, validator *MigrationValidator, dbClient *client.DbClient) *MigrationEngine {
 	return &MigrationEngine{
 		logger:    logger,
 		fsWrapper: fsWrapper,
 		validator: validator,
+		dbClient:  dbClient,
 	}
 }
 
@@ -64,4 +68,18 @@ func (e *MigrationEngine) ValidateMigrations(ctx context.Context, migrations []M
 	}
 
 	return nil
+}
+
+func (e *MigrationEngine) ExtractDatabasesFromMigrations(migrations []Migration) []string {
+	var affectedDatabases []string
+
+	for _, migration := range migrations {
+		if slices.Contains(affectedDatabases, migration.Database) {
+			continue
+		}
+
+		affectedDatabases = append(affectedDatabases, migration.Database)
+	}
+
+	return affectedDatabases
 }

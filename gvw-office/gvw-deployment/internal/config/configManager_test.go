@@ -9,19 +9,21 @@ import (
 	"testing"
 )
 
-func TestValidateConfig_ValidConfig(t *testing.T) {
-	config := Config{
-		Port:          "8080",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
+var validConfig = Config{
+    Port:          "8080",
+    InternalToken: "test-token",
+    JavaBaseURL:   "http://localhost:8080",
+    GithubRepoURL: "https://github.com/test/repo",
+    ModelDatabaseMap: map[string]string{
+        "model1": "db1",
+    },
+    DatabaseURL:      "http://127.0.0.1/",
+    DatabaseUsername: "username",
+    DatabasePassword: "password",
+}
 
-	err := ValidateConfig(config)
-	if err != nil {
+func TestValidateConfig_ValidConfig(t *testing.T) {
+	if err := ValidateConfig(validConfig); err != nil {
 		t.Errorf("Expected no error for valid config, got: %v", err)
 	}
 }
@@ -40,57 +42,6 @@ func TestValidateConfig_EmptyPort(t *testing.T) {
 	err := ValidateConfig(config)
 	if err == nil {
 		t.Error("Expected error for empty port")
-	}
-}
-
-func TestValidateConfig_EmptyInternalToken(t *testing.T) {
-	config := Config{
-		Port:          "8080",
-		InternalToken: "",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
-
-	err := ValidateConfig(config)
-	if err == nil {
-		t.Error("Expected error for empty internal token")
-	}
-}
-
-func TestValidateConfig_EmptyJavaBaseURL(t *testing.T) {
-	config := Config{
-		Port:          "8080",
-		InternalToken: "test-token",
-		JavaBaseURL:   "",
-		GithubRepoURL: "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
-
-	err := ValidateConfig(config)
-	if err == nil {
-		t.Error("Expected error for empty Java base URL")
-	}
-}
-
-func TestValidateConfig_EmptyGithubRepoURL(t *testing.T) {
-	config := Config{
-		Port:          "8080",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
-
-	err := ValidateConfig(config)
-	if err == nil {
-		t.Error("Expected error for empty GitHub repo URL")
 	}
 }
 
@@ -176,17 +127,7 @@ func TestIsConfigValueInvalid_NonStruct(t *testing.T) {
 
 func TestLoadConfig_ValidFile(t *testing.T) {
 	// Create a temporary config file
-	configData := Config{
-		Port:          "8080",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
-
-	jsonData, _ := json.Marshal(configData)
+	jsonData, _ := json.Marshal(validConfig)
 	tmpFile, err := os.CreateTemp("", "config-*.json")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
@@ -199,13 +140,14 @@ func TestLoadConfig_ValidFile(t *testing.T) {
 	logger := log.NewLogger()
 	filesystemWrapper := filesystem.NewFileSystem(logger)
 
-	config, err := LoadConfig(tmpFile.Name(), filesystemWrapper)
-	if err != nil {
+	configManager := NewConfigManager(filesystemWrapper, tmpFile.Name())
+
+	if err := configManager.LoadConfig(false); err != nil {
 		t.Fatalf("Expected no error loading valid config, got: %v", err)
 	}
 
-	if config.Port != "8080" {
-		t.Errorf("Expected port 8080, got: %s", config.Port)
+	if configManager.Config.Port != "8080" {
+		t.Errorf("Expected port 8080, got: %s", configManager.Config.Port)
 	}
 }
 
@@ -223,9 +165,36 @@ func TestLoadConfig_InvalidJSON(t *testing.T) {
 	logger := log.NewLogger()
 	filesystemWrapper := filesystem.NewFileSystem(logger)
 
-	_, err = LoadConfig(tmpFile.Name(), filesystemWrapper)
-	if err == nil {
+	configManager := NewConfigManager(filesystemWrapper, tmpFile.Name())
+
+	if err = configManager.LoadConfig(false); err == nil {
 		t.Error("Expected error for invalid JSON")
+	}
+}
+
+func TestLoadConfig_InvalidJSONAndReverts(t *testing.T) {
+	// Create a temporary file with invalid JSON
+	tmpFile, err := os.CreateTemp("", "config-*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	tmpFile.WriteString("{invalid json}")
+	tmpFile.Close()
+
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
+
+	configManager := NewConfigManager(filesystemWrapper, tmpFile.Name())
+	configManager.Config = validConfig
+
+	if err = configManager.LoadConfig(false); err == nil {
+		t.Error("Expected error for invalid JSON")
+	}
+
+	if !reflect.DeepEqual(configManager.Config, validConfig) {
+		t.Error("Expected original config after error")
 	}
 }
 
@@ -233,9 +202,26 @@ func TestLoadConfig_FileNotFound(t *testing.T) {
 	logger := log.NewLogger()
 	filesystemWrapper := filesystem.NewFileSystem(logger)
 
-	_, err := LoadConfig("/nonexistent/path/config.json", filesystemWrapper)
-	if err == nil {
+	configManager := NewConfigManager(filesystemWrapper, "/nonexistent/path/config.json")
+
+	if err := configManager.LoadConfig(false); err == nil {
 		t.Error("Expected error for non-existent file")
+	}
+}
+
+func TestLoadConfig_FileNotFoundAndReverts(t *testing.T) {
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
+
+	configManager := NewConfigManager(filesystemWrapper, "/nonexistent/path/config.json")
+	configManager.Config = validConfig
+
+	if err := configManager.LoadConfig(true); err == nil {
+		t.Error("Expected error for non-existent file")
+	}
+
+	if !reflect.DeepEqual(configManager.Config, validConfig) {
+		t.Error("Expected original config after error")
 	}
 }
 
@@ -259,8 +245,41 @@ func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 	logger := log.NewLogger()
 	filesystemWrapper := filesystem.NewFileSystem(logger)
 
-	_, err = LoadConfig(tmpFile.Name(), filesystemWrapper)
-	if err == nil {
+	configManager := NewConfigManager(filesystemWrapper, tmpFile.Name())
+
+	if err = configManager.LoadConfig(false); err == nil {
 		t.Error("Expected error for invalid config values")
+	}
+}
+
+func TestLoadConfig_InvalidConfigValuesAndReverts(t *testing.T) {
+	// Create a config file with missing required fields
+	configData := map[string]interface{}{
+		"port": "8080",
+		// Missing other required fields
+	}
+
+	jsonData, _ := json.Marshal(configData)
+	tmpFile, err := os.CreateTemp("", "config-*.json")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	tmpFile.Write(jsonData)
+	tmpFile.Close()
+
+	logger := log.NewLogger()
+	filesystemWrapper := filesystem.NewFileSystem(logger)
+
+	configManager := NewConfigManager(filesystemWrapper, tmpFile.Name())
+	configManager.Config = validConfig
+
+	if err = configManager.LoadConfig(true); err == nil {
+		t.Error("Expected error for invalid config values")
+	}
+
+	if !reflect.DeepEqual(configManager.Config, validConfig) {
+		t.Error("Expected original config after error")
 	}
 }

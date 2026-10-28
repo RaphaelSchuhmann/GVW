@@ -2,6 +2,7 @@ package migration
 
 import (
 	"context"
+	"fmt"
 	"gvw/gvw-deployment/internal/api/client"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
@@ -113,10 +114,14 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 	}
 	
 	if isDryRun {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
 		m.logger.Printf("[MIGRATION] Starting migration dry run for deploymentId %s", deploymentId)
-		m.executeDryRunPipeline(ctx, deploymentId, schema)
+		m.executeDryRunPipeline(ctx, deploymentId, schema, migrations)
 	} else {
-		return m.executeMigrationPipeline(deploymentId, schema)
+		return m.executeMigrationPipeline(deploymentId, schema, migrations)
 	}
 
 	return nil
@@ -139,10 +144,15 @@ func (m *MigrationManager) prepareMigrationRun(ctx context.Context, deploymentId
 	return schema, nil
 }
 
-func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deploymentId string, schema map[string]any) {
+func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deploymentId string, schema map[string]any, migrations []Migration) {
+	if ctx.Err() != nil {
+		return
+	}
 	
+	afffectedDatabases := m.engine.ExtractDatabasesFromMigrations(migrations)
+	fmt.Print(afffectedDatabases)
 }
 
-func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema map[string]any) error {
+func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema map[string]any, migrations []Migration) error {
 	return nil
 }

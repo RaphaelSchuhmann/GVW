@@ -18,23 +18,53 @@ type Config struct {
 	DatabasePassword string            `json:"database_password"`
 }
 
-func LoadConfig(path string, filesystemWrapper filesystem.FileSystemWrapper) (*Config, error) {
-	data, err := filesystemWrapper.ReadFile(path)
+type ConfigManager struct {
+	Config            Config
+	FileSystemWrapper filesystem.FileSystemWrapper
+	FilePath          string
+}
+
+func NewConfigManager(filesystemWrapper filesystem.FileSystemWrapper, path string) *ConfigManager {
+	return &ConfigManager{
+		FileSystemWrapper: filesystemWrapper,
+		FilePath:          path,
+	}
+}
+
+func (c *ConfigManager) LoadConfig(revertOnError bool) error {
+	var originalConfig Config
+
+	if revertOnError {
+		originalConfig = c.Config
+	}
+
+	data, err := c.FileSystemWrapper.ReadFile(c.FilePath)
 	if err != nil {
-		return nil, gvwErrors.Wrap("ConfigError", err)
+		c.revertOnError(revertOnError, originalConfig)
+		return gvwErrors.Wrap("ConfigError", err)
 	}
 
 	var config Config
 	err = json.Unmarshal(data, &config)
 	if err != nil {
-		return nil, gvwErrors.Wrap("ConfigError", err)
+		c.revertOnError(revertOnError, originalConfig)
+		return gvwErrors.Wrap("ConfigError", err)
 	}
 
 	if err := ValidateConfig(config); err != nil {
-		return nil, gvwErrors.Wrap("ConfigError", err)
+		c.revertOnError(revertOnError, originalConfig)
+		return gvwErrors.Wrap("ConfigError", err)
 	}
 
-	return &config, nil
+	c.Config = config
+
+	return nil
+}
+
+func (c *ConfigManager) revertOnError(shouldRevert bool, originalConfig Config) {
+	if shouldRevert {
+		c.Config = originalConfig
+	}
 }
 
 func ValidateConfig(config Config) error {
