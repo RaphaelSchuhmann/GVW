@@ -2,6 +2,7 @@ package build
 
 import (
 	"context"
+	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/utils/log"
 	"os"
 	"path/filepath"
@@ -17,15 +18,27 @@ import (
 type MockJavaClient struct {
 	updateDeploymentStateCalled bool
 	deploymentId                string
-	state                       string
+	state                       client.Status
 	reason                      uint32
 	ctx                         context.Context
+	database					string
+	documentId					string
 }
 
-func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state string, reason uint32, ctx context.Context) error {
+func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client.Status, reason uint32, ctx context.Context) error {
 	m.updateDeploymentStateCalled = true
 	m.deploymentId = deploymentId
 	m.state = state
+	m.reason = reason
+	m.ctx = ctx
+	return nil
+}
+
+func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status client.Status, database string, documentId string, reason uint32, ctx context.Context) error {
+	m.deploymentId = deploymentId
+	m.state = status
+	m.database = database
+	m.documentId = documentId
 	m.reason = reason
 	m.ctx = ctx
 	return nil
