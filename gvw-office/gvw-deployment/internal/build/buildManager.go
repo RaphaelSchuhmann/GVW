@@ -112,7 +112,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		}
 
 		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeCommitInvalid, ctx)
+		b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, BUILD_CodeCommitInvalid, ctx)
 		return
 	}
 
@@ -125,7 +125,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		errorCode := MapBuildErrorsToCode(err)
 		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed: %v", deploymentId, commit, err)
 
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", errorCode, ctx); updateErr != nil {
+		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, errorCode, ctx); updateErr != nil {
 			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
 		}
 		return
@@ -133,7 +133,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 
 	if err := b.generateSchema(deploymentId); err != nil {
 		b.logger.Printf("[BUILD] Schema generation failed for deployment %s: %v", deploymentId, err)
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeSchemaGenerationFailed, ctx); updateErr != nil {
+		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, BUILD_CodeSchemaGenerationFailed, ctx); updateErr != nil {
 			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
 		}
 		return
