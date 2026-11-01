@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
-	"gvw/gvw-deployment/internal/utils/errors"
+	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -56,7 +56,7 @@ func NewHttpJavaClient(baseUrl, token string) *HttpJavaClient {
 }
 
 func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Status, reason uint32, ctx context.Context) error {
-	endpoint := fmt.Sprintf("%s/internal/deployment/%s/status", c.baseUrl, url.PathEscape(deploymentId))
+	endpoint := c.baseUrl + "/internal/deployment/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := StatusPayload{
 		Status: status,
@@ -65,12 +65,12 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
-		return gvwErrors.Wrap("HttpError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, endpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return gvwErrors.Wrap("HttpError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError, err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -78,19 +78,21 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return gvwErrors.Wrap("HttpError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return gvwErrors.NewError(fmt.Sprintf("HttpError_%d", resp.StatusCode))
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError,
+			&gvwErrors.StatusError{StatusCode: resp.StatusCode, Body: string(b)})
 	}
 
 	return nil
 }
 
 func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason uint32, ctx context.Context) error {
-	endpoint := fmt.Sprintf("%s/internal/migration/dry-run/%s/status", c.baseUrl, url.PathEscape(deploymentId))
+	endpoint := c.baseUrl + "/internal/migration/dry-run/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := MigrationDryRunPayload{
 		DeploymentId: deploymentId,
@@ -102,12 +104,12 @@ func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status 
 
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
-		return gvwErrors.Wrap("HttpError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError, err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, endpoint, bytes.NewBuffer(jsonBody))
 	if err != nil {
-		return gvwErrors.Wrap("HttpError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError, err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -115,12 +117,14 @@ func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status 
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return gvwErrors.Wrap("HttpError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return gvwErrors.NewError(fmt.Sprintf("HttpError_%d", resp.StatusCode))
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		return gvwErrors.Wrap(gvwErrors.CodeHttpError,
+			&gvwErrors.StatusError{StatusCode: resp.StatusCode, Body: string(b)})
 	}
 
 	return nil

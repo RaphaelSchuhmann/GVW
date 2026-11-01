@@ -119,3 +119,16 @@ func (v *MigrationValidator) hasOverlap(a, b map[string]struct{}) bool {
     }
     return false
 }
+
+func (v *MigrationValidator) allValuesPresent(modelToDbMap map[string]string, items []string) bool {
+	values := make(map[string]struct{}, len(modelToDbMap))
+	for _, val := range modelToDbMap {
+		values[val] = struct{}{}
+	}
+	for _, s := range items {
+		if _, ok := values[s]; !ok {
+			return false
+		}
+	}
+	return true
+}

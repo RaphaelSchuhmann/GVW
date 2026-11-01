@@ -41,19 +41,19 @@ func (c *ConfigManager) LoadConfig(revertOnError bool) error {
 	data, err := c.FileSystemWrapper.ReadFile(c.FilePath)
 	if err != nil {
 		c.revertOnError(revertOnError, originalConfig)
-		return gvwErrors.Wrap("ConfigError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeConfigError, err)
 	}
 
 	var config Config
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		c.revertOnError(revertOnError, originalConfig)
-		return gvwErrors.Wrap("ConfigError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeConfigError, err)
 	}
 
 	if err := ValidateConfig(config); err != nil {
 		c.revertOnError(revertOnError, originalConfig)
-		return gvwErrors.Wrap("ConfigError", err)
+		return gvwErrors.Wrap(gvwErrors.CodeConfigError, err)
 	}
 
 	c.Config = config
@@ -71,18 +71,18 @@ func ValidateConfig(config Config) error {
 	val := reflect.ValueOf(config)
 
 	if val.Kind() != reflect.Struct {
-		return gvwErrors.NewError("InvalidConfig_No_Struct")
+		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigNoStruct)
 	}
 
 	for i := 0; i < val.NumField(); i++ {
 		if IsConfigValueInvalid(val.Field(i)) {
-			return gvwErrors.NewError("InvalidConfig_Empty_Field")
+			return gvwErrors.NewError(gvwErrors.CodeInvalidConfigEmptyField)
 		}
 	}
 
 	// Ensure that model to db map always has at least one value
 	if len(config.ModelDatabaseMap) <= 0 {
-		return gvwErrors.NewError("InvalidConfig_Bad_Model_Map")
+		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigBadModelMap)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package commandExecutor
 
 import (
 	"context"
+	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"strings"
 	"testing"
 	"time"
@@ -41,8 +42,8 @@ func TestRunCommand_CommandFails(t *testing.T) {
 		t.Error("Expected error for failing command")
 	}
 
-	if !strings.Contains(err.Error(), "CommandExecutionError_Command_Failed") {
-		t.Errorf("Expected error message to contain 'CommandExecutionError_Command_Failed', got: %v", err)
+	if !gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCommandFailed) {
+		t.Errorf("Expected error CodeCommandExecutionErrorCommandFailed, got: %v", err)
 	}
 
 	// Output should still be returned even on error
@@ -59,8 +60,8 @@ func TestRunCommand_CommandNotFound(t *testing.T) {
 		t.Error("Expected error for non-existent command")
 	}
 
-	if !strings.Contains(err.Error(), "CommandExecutionError_Command_Failed") {
-		t.Errorf("Expected error message to contain 'CommandExecutionError_Command_Failed', got: %v", err)
+	if !gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCommandFailed) {
+		t.Errorf("Expected error CodeCommandExecutionErrorCommandFailed, got: %v", err)
 	}
 }
 
@@ -74,8 +75,8 @@ func TestRunCommand_ContextCancelled(t *testing.T) {
 		t.Error("Expected error for cancelled context")
 	}
 
-	if !strings.Contains(err.Error(), "CommandExecutionError_Cancelled_Or_Timedout") {
-		t.Errorf("Expected error message to contain 'CommandExecutionError_Cancelled_Or_Timedout', got: %v", err)
+	if !gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout) {
+		t.Errorf("Expected error CodeCommandExecutionErrorCancelledOrTimedout, got: %v", err)
 	}
 }
 
@@ -89,8 +90,8 @@ func TestRunCommand_ContextTimeout(t *testing.T) {
 		t.Error("Expected error for timed out context")
 	}
 
-	if !strings.Contains(err.Error(), "CommandExecutionError_Cancelled_Or_Timedout") {
-		t.Errorf("Expected error message to contain 'CommandExecutionError_Cancelled_Or_Timedout', got: %v", err)
+	if !gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout) {
+		t.Errorf("Expected error CodeCommandExecutionErrorCancelledOrTimedout, got: %v", err)
 	}
 }
 

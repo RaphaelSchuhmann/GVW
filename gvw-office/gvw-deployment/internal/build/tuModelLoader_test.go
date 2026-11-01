@@ -1,7 +1,7 @@
 package build
 
 import (
-	"strings"
+	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"testing"
 )
 
@@ -229,8 +229,8 @@ func TestLoadModel_EmptyPath(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error for empty path, got nil")
 	}
-	if err.Error() != "ModelLoader_Invalid_Path" {
-		t.Errorf("Expected error 'ModelLoader_Invalid_Path', got '%v'", err)
+	if !gvwErrors.HasCode(err, gvwErrors.CodeModelLoaderInvalidPath) {
+		t.Errorf("Expected error CodeModelLoaderInvalidPath, got '%v'", err)
 	}
 }
 
@@ -242,8 +242,8 @@ func TestLoadModel_NonexistentPath(t *testing.T) {
 	if err == nil {
 		t.Errorf("Expected error for nonexistent path, got nil")
 	}
-	if err.Error() != "ModelLoader_Invalid_Path" {
-		t.Errorf("Expected error 'ModelLoader_Invalid_Path', got '%v'", err)
+	if !gvwErrors.HasCode(err, gvwErrors.CodeModelLoaderInvalidPath) {
+		t.Errorf("Expected error CodeModelLoaderInvalidPath, got '%v'", err)
 	}
 }
 
@@ -512,24 +512,24 @@ func TestNormalizeType_ErrorCases(t *testing.T) {
 	enums := map[string]bool{}
 
 	tests := []struct {
-		name        string
-		input       string
-		wantError   string
+		name      string
+		input     string
+		wantCode  gvwErrors.Code
 	}{
 		{
-			name:      "unknown class",
-			input:     "UnknownClass",
-			wantError: "ModelLoder_Unsupported_Type",
+			name:     "unknown class",
+			input:    "UnknownClass",
+			wantCode: gvwErrors.CodeModelLoaderUnsupportedType,
 		},
 		{
-			name:      "list of unknown model",
-			input:     "List<UnknownModel>",
-			wantError: "ModelLoder_Normalizing_Collections",
+			name:     "list of unknown model",
+			input:    "List<UnknownModel>",
+			wantCode: gvwErrors.CodeModelLoaderNormalizingCollections,
 		},
 		{
-			name:      "invalid map declaration",
-			input:     "Map<String>",
-			wantError: "ModelLoder_Invalid_Map_Format",
+			name:     "invalid map declaration",
+			input:    "Map<String>",
+			wantCode: gvwErrors.CodeModelLoaderInvalidMapFormat,
 		},
 	}
 
@@ -539,8 +539,8 @@ func TestNormalizeType_ErrorCases(t *testing.T) {
 			if err == nil {
 				t.Errorf("Expected error for %s, got nil", tt.input)
 			}
-			if err.Error() != tt.wantError {
-				t.Errorf("Expected error '%s', got '%v'", tt.wantError, err)
+			if !gvwErrors.HasCode(err, tt.wantCode) {
+				t.Errorf("Expected error code '%v', got '%v'", tt.wantCode, err)
 			}
 		})
 	}
@@ -636,8 +636,8 @@ func TestNormalizeAndValidateSchema_UnknownTypes(t *testing.T) {
 			if err == nil {
 				t.Errorf("Expected error for %s, got nil", tt.name)
 			}
-			if !strings.Contains(err.Error(), "ModelLoader_Normalize_Type") {
-				t.Errorf("Expected error to contain 'ModelLoader_Normalize_Type', got '%v'", err)
+			if !gvwErrors.HasCode(err, gvwErrors.CodeModelLoaderNormalizeType) {
+				t.Errorf("Expected error CodeModelLoaderNormalizeType, got '%v'", err)
 			}
 		})
 	}
@@ -647,14 +647,10 @@ func assertErrorContains(t *testing.T, err error, wantError string) {
 	if err == nil {
 		t.Errorf("Expected error, got nil")
 	}
-	if strings.Contains(wantError, "ModelLoader_Normalize_Type") {
-		if !strings.Contains(err.Error(), wantError) {
-			t.Errorf("Expected error to contain '%s', got '%v'", wantError, err)
-		}
-	} else {
-		if err.Error() != wantError {
-			t.Errorf("Expected error '%s', got '%v'", wantError, err)
-		}
+	// This function is deprecated - use HasCode instead
+	// Keeping for backward compatibility during transition
+	if err.Error() != wantError {
+		t.Errorf("Expected error '%s', got '%v'", wantError, err)
 	}
 }
 

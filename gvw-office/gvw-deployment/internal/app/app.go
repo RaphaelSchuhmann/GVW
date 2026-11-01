@@ -37,7 +37,7 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 	// Migration System
 	migrationValidator := migration.NewMigrationValidator()
 	migrationEngine := migration.NewMigrationEngine(logger, fsWrapper, migrationValidator, dbClient)
-	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine)
+	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine, configManager, migrationValidator)
 
 	// Handlers
 	configHandler := handler.NewConfigHandler(configManager)
@@ -54,8 +54,8 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 	handler = middleware.LocalhostOnlyMiddleware(logger, handler)
 
 	server := &http.Server{
-		Addr:    "127.0.0.1:" + cfg.Port,
-		Handler: handler,
+		Addr:              "127.0.0.1:" + cfg.Port,
+		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

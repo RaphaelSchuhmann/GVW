@@ -26,12 +26,12 @@ func NewModelLoader(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper) 
 
 func (m *ModelLoader) LoadModel(path string) (map[string]any, error) {
 	if path == "" || !m.fsWrapper.DirOrFileExists(path) {
-		return nil, gvwErrors.NewError("ModelLoader_Invalid_Path")
+		return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderInvalidPath)
 	}
 
 	data, err := m.fsWrapper.ReadFile(path)
 	if err != nil {
-		return nil, gvwErrors.Wrap("ModelLoder_Failed_Reading_File", err)
+		return nil, gvwErrors.Wrap(gvwErrors.CodeModelLoaderFailedReadingFile, err)
 	}
 
 	modelString := string(data)
@@ -243,7 +243,7 @@ func (m *ModelLoader) NormalizeAndValidateSchema(rawSchema map[string]any) (map[
 		classMap, ok := val.(map[string]any)
 		if !ok {
 			m.logger.Printf("[BUILD] Invalid class structure for class %s detected", className)
-			return nil, gvwErrors.NewError("ModelLoder_Invalid_Class_Structure")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderInvalidClassStructure)
 		}
 
 		objType, _ := classMap["objType"].(string)
@@ -287,13 +287,13 @@ func (m *ModelLoader) normalizeMembers(className string, members map[string]any,
 		fieldType, ok := fieldTypeRaw.(string)
 		if !ok {
 			m.logger.Printf("[BUILD] Invalid type representation for class %s, field %s detected", className, fieldName)
-			return nil, gvwErrors.NewError("ModelLoader_Invalid_Type_Representation")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderInvalidTypeRepresentation)
 		}
 
 		normType, err := normalizeType(fieldType, classes, enums)
 		if err != nil {
 			m.logger.Printf("[BUILD] Error normalizing type for class %s, field %s: %v", className, fieldName, err)
-			return nil, gvwErrors.NewError("ModelLoader_Normalize_Type")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderNormalizeType)
 		}
 
 		newMembers[fieldName] = normType
@@ -332,7 +332,7 @@ func normalizeType(typeName string, classes map[string]bool, enums map[string]bo
 		inner := typeName[strings.Index(typeName, "<")+1 : len(typeName)-1]
 		normInner, err := normalizeType(inner, classes, enums)
 		if err != nil {
-			return nil, gvwErrors.NewError("ModelLoder_Normalizing_Collections")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderNormalizingCollections)
 		}
 		return map[string]any{
 			"type":  "array",
@@ -344,7 +344,7 @@ func normalizeType(typeName string, classes map[string]bool, enums map[string]bo
 		inner := strings.TrimSuffix(typeName, "[]")
 		normInner, err := normalizeType(inner, classes, enums)
 		if err != nil {
-			return nil, gvwErrors.NewError("ModelLoder_Normalizing_Arrays")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderNormalizingArrays)
 		}
 		return map[string]any{
 			"type":  "array",
@@ -358,14 +358,14 @@ func normalizeType(typeName string, classes map[string]bool, enums map[string]bo
 		if len(parts) != 2 {
 			// Unlikely to happen as this would be a java error
 			// "How did we get here"
-			return nil, gvwErrors.NewError("ModelLoder_Invalid_Map_Format")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderInvalidMapFormat)
 		}
 
 		valType := strings.TrimSpace(parts[1])
 
 		normVal, err := normalizeType(valType, classes, enums)
 		if err != nil {
-			return nil, gvwErrors.NewError("ModelLoder_Normalize_Map")
+			return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderNormalizeMap)
 		}
 
 		return map[string]any{
@@ -374,7 +374,7 @@ func normalizeType(typeName string, classes map[string]bool, enums map[string]bo
 		}, nil
 	}
 
-	return nil, gvwErrors.NewError("ModelLoder_Unsupported_Type")
+	return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderUnsupportedType)
 }
 
 func (m *ModelLoader) MarkEmbeddedClasses(schema map[string]any) {

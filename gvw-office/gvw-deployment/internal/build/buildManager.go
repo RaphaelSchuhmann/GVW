@@ -200,7 +200,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		output, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
 		if err != nil {
 			b.logger.Printf("[BUILD] %s failed for deployment %s: %v\n%s", name, deploymentId, err, output)
-			return gvwErrors.Wrap("BuildError_Clone_Repo", err)
+			return gvwErrors.Wrap(gvwErrors.CodeBuildErrorCloneRepo, err)
 		}
 		return nil
 	}
@@ -234,7 +234,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 	_, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Build_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
 	}
 
 	// Test
@@ -245,7 +245,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend tests failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Test_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorTestFailed, err)
 	}
 
 	return nil
@@ -264,7 +264,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 
 	if err != nil || !strings.Contains(output, "BUILD SUCCESS") {
 		b.logger.Printf("[BUILD] Backend tests failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Test_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorTestFailed, err)
 	}
 
 	// Package
@@ -272,7 +272,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 	_, err = commandExecutor.RunCommand(ctx, workingDir, "./mvnw", "package")
 	if err != nil {
 		b.logger.Printf("[BUILD] Backend build failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Build_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
 	}
 
 	return nil

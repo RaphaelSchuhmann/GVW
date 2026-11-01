@@ -35,20 +35,20 @@ func (e *MigrationEngine) LoadSchema(ctx context.Context, deploymentId string) (
 
 	if !e.fsWrapper.DirOrFileExists(schemaPath) {
 		e.logger.Printf("[MIGRATION] No schema found for deployment %s at path %s", deploymentId, schemaPath)
-		return nil, gvwErrors.NewError("MigrationEngineError_No_Build_Found")
+		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineNoBuildFound)
 	}
 
 	data, err := e.fsWrapper.ReadFile(schemaPath)
 	if err != nil {
 		e.logger.Printf("[MIGRATION] Error while reading schema for deployment %s: %v", deploymentId, err)
-		return nil, gvwErrors.Wrap("MigrationEngineError_Read_Error", err)
+		return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineReadError, err)
 	}
 
 	var result map[string]any
 
 	if err := json.Unmarshal(data, &result); err != nil {
 		e.logger.Printf("[MIGRATION] Error while unmarshaling schema for deployment %s: %v", deploymentId, err)
-		return nil, gvwErrors.Wrap("MigrationEngineError_Json_Error", err)
+		return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineJsonError, err)
 	}
 
 	return result, nil
@@ -60,11 +60,11 @@ func (e *MigrationEngine) ValidateMigrations(ctx context.Context, migrations []M
 	}
 
 	if isValid := e.validator.AreMigrationFieldsValid(migrations); !isValid {
-		return gvwErrors.NewError("MigrationEngineError_Invalid_Migration_Field")
+		return gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidField)
 	}
 
 	if isValid := e.validator.IsMigrationSequenceValid(migrations); !isValid {
-		return gvwErrors.NewError("MigrationEngineError_Invalid_Migration_Sequence")
+		return gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidSequence)
 	}
 
 	return nil
@@ -82,4 +82,26 @@ func (e *MigrationEngine) ExtractDatabasesFromMigrations(migrations []Migration)
 	}
 
 	return affectedDatabases
+}
+
+func (e *MigrationEngine) GenerateMigrationToDbMap(migrations []Migration, affectedDatabases []string) (map[string][]Migration, error) {
+	result := make(map[string][]Migration, len(affectedDatabases))
+
+	for _, key := range affectedDatabases {
+		result[key] = nil
+	}
+
+	for _, value := range migrations {
+		if _, ok := result[value.Database]; !ok {
+			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineBadAffectedDBs)
+		}
+		result[value.Database] = append(result[value.Database], value)
+	}
+
+	return result, nil
+}
+
+func (e *MigrationEngine) TestMigrationsAgainstDatabase(database string, migrations []Migration) (error, string) {
+
+	return nil, ""
 }
