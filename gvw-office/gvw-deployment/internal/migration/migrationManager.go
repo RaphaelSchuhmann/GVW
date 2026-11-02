@@ -155,7 +155,7 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 	return nil
 }
 
-func (m *MigrationManager) prepareMigrationRun(ctx context.Context, deploymentId string, migrations []Migration) (map[string]any, error) {
+func (m *MigrationManager) prepareMigrationRun(ctx context.Context, deploymentId string, migrations []Migration) (*Schema, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -172,7 +172,7 @@ func (m *MigrationManager) prepareMigrationRun(ctx context.Context, deploymentId
 	return schema, nil
 }
 
-func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deploymentId string, schema map[string]any, migrations []Migration) bool {
+func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deploymentId string, schema *Schema, migrations []Migration) bool {
 	if ctx.Err() != nil {
 		return false
 	}
@@ -193,8 +193,21 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 		return false
 	}
 
-	for k, v := range dbToMigrationMap {
-		if err := m.engine.TestMigrationsAgainstDatabase(ctx, k, v); err != nil {
+	// Plan every database first (expand model prefixes / embedded models, check against the schema)
+	// so that bad migrations are reported before any document is read.
+	plans := make(map[string]dbPlan, len(dbToMigrationMap))
+	for database, dbMigrations := range dbToMigrationMap {
+		plan, err := m.engine.PlanDatabaseMigrations(database, dbMigrations, schema, modelToDbMap)
+		if err != nil {
+			m.logger.Printf("[MIGRATION] Bad migration found while planning deployment %s in db %s with err: %v", deploymentId, database, err)
+			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, database, "")
+			return false
+		}
+		plans[database] = plan
+	}
+
+	for database, plan := range plans {
+		if err := m.engine.TestMigrationsAgainstDatabase(ctx, database, plan, schema); err != nil {
 			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
 				return false
 			}
@@ -206,8 +219,8 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 				documentId = me.DocumentId
 			}
 
-			m.logger.Printf("[MIGRATION] Bad migration found for deployment %s in db %s with err: %v", deploymentId, k, err)
-			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, k, documentId)
+			m.logger.Printf("[MIGRATION] Bad migration found for deployment %s in db %s with err: %v", deploymentId, database, err)
+			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, database, documentId)
 			return false
 		}
 	}
@@ -215,7 +228,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 	return true
 }
 
-func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema map[string]any, migrations []Migration) error {
+func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema *Schema, migrations []Migration) error {
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -32,24 +33,89 @@ func (v *MigrationValidator) isMigrationValid(migration Migration) bool {
 		return false
 	}
 
-	if migration.Field == "_id" || migration.Field == "_rev" || migration.Value == "_id" || migration.Value == "_rev" {
-		return false
-	}
-
 	switch migration.Action {
 	case MigrationAdd, MigrationDelete:
-		return migration.Field != ""
+		return isValidFieldPath(migration.Field)
 	case MigrationRename:
-		return migration.Field != "" && migration.Value != ""
+		return isValidFieldPath(migration.Field) && isValidMemberName(migration.Value)
 	case MigrationConditional:
-		return v.isValidCondition(migration.Conditional.Condition)
+		c := migration.Conditional
+		if !v.isValidCondition(c.Condition) {
+			return false
+		}
+		for _, b := range []Branch{c.TrueBranch, c.FalseBranch} {
+			if b.Field != "" && !isValidFieldPath(b.Field) {
+				return false
+			}
+		}
+		return true
 	default:
 		return false
 	}
 }
 
 func (v *MigrationValidator) isValidCondition(branch Branch) bool {
-	return branch.Field != ""
+	return isValidReadPath(branch.Field)
+}
+
+// isValidReadPath checks the syntax of a path that is only read: no empty or padded segments.
+func isValidReadPath(p string) bool {
+	if strings.TrimSpace(p) == "" {
+		return false
+	}
+	for _, seg := range splitPath(p) {
+		if seg == "" || seg != strings.TrimSpace(seg) {
+			return false
+		}
+	}
+	return true
+}
+
+// isValidFieldPath checks a path that is written to: additionally the leaf may not be "*", "_id" or "_rev".
+func isValidFieldPath(p string) bool {
+	if !isValidReadPath(p) {
+		return false
+	}
+	leaf := leafOf(p)
+	return leaf != "*" && leaf != "_id" && leaf != "_rev"
+}
+
+// isValidMemberName checks the new name of a renamed member (a single name, not a path).
+func isValidMemberName(n string) bool {
+	return n != "" && n == strings.TrimSpace(n) && !strings.Contains(n, ".") && n != "*" && n != "_id" && n != "_rev"
+}
+
+// ValidateMigrationAgainstSchema checks a concrete (already expanded) migration against the latest models.
+// It does nothing when the models of the database are unknown.
+func (v *MigrationValidator) ValidateMigrationAgainstSchema(migration Migration, roots []string, schema *Schema) error {
+	if schema == nil || len(roots) == 0 {
+		return nil
+	}
+
+	switch migration.Action {
+	case MigrationAdd:
+		if !schema.PathExists(roots, migration.Field) {
+			return notInSchema("add: field %q does not exist in the models of this database", migration.Field)
+		}
+	case MigrationRename:
+		target := siblingPath(migration.Field, migration.Value)
+		if !schema.PathExists(roots, target) {
+			return notInSchema("rename: target field %q does not exist in the models of this database", target)
+		}
+	case MigrationConditional:
+		c := migration.Conditional
+		for _, b := range []Branch{c.TrueBranch, c.FalseBranch} {
+			if b.Field != "" && !schema.PathExists(roots, b.Field) {
+				return notInSchema("conditional: field %q does not exist in the models of this database", b.Field)
+			}
+		}
+	}
+
+	return nil
+}
+
+func notInSchema(format string, args ...any) error {
+	return gvwErrors.Wrap(gvwErrors.CodeMigrationEngineFieldNotInSchema, fmt.Errorf(format, args...))
 }
 
 func (v *MigrationValidator) IsMigrationSequenceValid(migrations []Migration) bool {
@@ -62,12 +128,12 @@ func (v *MigrationValidator) IsMigrationSequenceValid(migrations []Migration) bo
 			continue
 		}
 
-		candidateField := v.extractAllReferencedFields(candidate)
-		if len(candidateField) == 0 {
+		candidateFields := v.extractAllReferencedFields(candidate)
+		if len(candidateFields) == 0 {
 			continue
 		}
 
-		if v.hasConflictingPriorMigration(migrations[:i], candidate, candidateField) {
+		if v.hasConflictingPriorMigration(migrations[:i], candidate, candidateFields) {
 			return false
 		}
 	}
@@ -75,7 +141,7 @@ func (v *MigrationValidator) IsMigrationSequenceValid(migrations []Migration) bo
 	return true
 }
 
-func (v *MigrationValidator) hasConflictingPriorMigration(priorMigrations []Migration, candidate Migration, candidateFields map[string]struct{}) bool {
+func (v *MigrationValidator) hasConflictingPriorMigration(priorMigrations []Migration, candidate Migration, candidateFields []string) bool {
 	for _, existing := range priorMigrations {
 		if !strings.EqualFold(candidate.Database, existing.Database) {
 			continue
@@ -95,33 +161,40 @@ func (v *MigrationValidator) hasConflictingPriorMigration(priorMigrations []Migr
 	return false
 }
 
-func (v *MigrationValidator) extractAllReferencedFields(m Migration) map[string]struct{} {
-	fields := make(map[string]struct{})
-
-	if m.Action == MigrationConditional {
-		cond := m.Conditional
-		branches := []Branch{cond.Condition, cond.TrueBranch, cond.FalseBranch}
-		for _, b := range branches {
-			field := strings.TrimSpace(b.Field)
-			if field != "" {
-				fields[field] = struct{}{}
-			}
+func (v *MigrationValidator) extractAllReferencedFields(m Migration) []string {
+	var fields []string
+	add := func(p string) {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			fields = append(fields, p)
 		}
-		return fields
 	}
 
-	field := strings.TrimSpace(m.Field)
-	if field != "" {
-		fields[field] = struct{}{}
+	switch m.Action {
+	case MigrationConditional:
+		c := m.Conditional
+		add(c.Condition.Field)
+		add(c.TrueBranch.Field)
+		add(c.FalseBranch.Field)
+	case MigrationRename:
+		add(m.Field)
+		if f, val := strings.TrimSpace(m.Field), strings.TrimSpace(m.Value); f != "" && val != "" {
+			add(siblingPath(f, val))
+		}
+	default:
+		add(m.Field)
 	}
 
 	return fields
 }
 
-func (v *MigrationValidator) hasOverlap(a, b map[string]struct{}) bool {
-	for field := range a {
-		if _, exists := b[field]; exists {
-			return true
+// hasOverlap treats a path and everything below it as overlapping ("recurrence" vs "recurrence.weekDay").
+func (v *MigrationValidator) hasOverlap(a, b []string) bool {
+	for _, x := range a {
+		for _, y := range b {
+			if pathsOverlap(x, y) {
+				return true
+			}
 		}
 	}
 	return false
@@ -160,64 +233,100 @@ func (v *MigrationValidator) ValidateMigrationApplication(ctx context.Context, o
 }
 
 func (v *MigrationValidator) validateAddAction(originalDoc, updatedDoc map[string]any, migration Migration) error {
-	if _, existed := originalDoc[migration.Field]; existed {
-		return fail("add: field %q already existed", migration.Field)
+	before, leaf := resolvePath(originalDoc, migration.Field)
+	after, _ := resolvePath(updatedDoc, migration.Field)
+	if len(before) != len(after) {
+		return fail("add: document structure changed around %q", migration.Field)
 	}
-	if val, ok := updatedDoc[migration.Field]; !ok || val != nil {
-		return fail("add: field %q should exist with value null", migration.Field)
+
+	for _, p := range before {
+		if _, existed := p[leaf]; existed {
+			return fail("add: field %q already existed", migration.Field)
+		}
 	}
-	return onlyKeysChanged(originalDoc, updatedDoc, migration.Field)
+	for _, p := range after {
+		if val, ok := p[leaf]; !ok || val != nil {
+			return fail("add: field %q should exist with value null", migration.Field)
+		}
+	}
+	return onlyPathsChanged(originalDoc, updatedDoc, migration.Field)
 }
 
 func (v *MigrationValidator) validateDeleteAction(originalDoc, updatedDoc map[string]any, migration Migration) error {
-	if _, ok := updatedDoc[migration.Field]; ok {
-		return fail("delete: field %q still present", migration.Field)
+	before, leaf := resolvePath(originalDoc, migration.Field)
+	after, _ := resolvePath(updatedDoc, migration.Field)
+	if len(before) != len(after) {
+		return fail("delete: document structure changed around %q", migration.Field)
 	}
-	return onlyKeysChanged(originalDoc, updatedDoc, migration.Field)
+
+	for _, p := range after {
+		if _, ok := p[leaf]; ok {
+			return fail("delete: field %q still present", migration.Field)
+		}
+	}
+	return onlyPathsChanged(originalDoc, updatedDoc, migration.Field)
 }
 
 func (v *MigrationValidator) validateRenameAction(originalDoc, updatedDoc map[string]any, migration Migration) error {
-	oldVal, ok := originalDoc[migration.Field]
-	if !ok {
-		return fail("rename: source field %q missing in original", migration.Field)
+	before, leaf := resolvePath(originalDoc, migration.Field)
+	after, _ := resolvePath(updatedDoc, migration.Field)
+	if len(before) != len(after) {
+		return fail("rename: document structure changed around %q", migration.Field)
 	}
-	if migration.Field != migration.Value {
-		if _, still := updatedDoc[migration.Field]; still {
-			return fail("rename: old field %q still present", migration.Field)
+
+	for i := range before {
+		oldVal, ok := before[i][leaf]
+		if !ok {
+			return fail("rename: source field %q missing in original", migration.Field)
+		}
+		if leaf != migration.Value {
+			if _, still := after[i][leaf]; still {
+				return fail("rename: old field %q still present", migration.Field)
+			}
+		}
+		newVal, ok := after[i][migration.Value]
+		if !ok {
+			return fail("rename: new field %q missing", siblingPath(migration.Field, migration.Value))
+		}
+		if !reflect.DeepEqual(oldVal, newVal) {
+			return fail("rename: value changed while renaming %q to %q", migration.Field, migration.Value)
 		}
 	}
-	newVal, ok := updatedDoc[migration.Value]
-	if !ok {
-		return fail("rename: new field %q missing", migration.Value)
-	}
-	if !reflect.DeepEqual(oldVal, newVal) {
-		return fail("rename: value changed while renaming %q to %q", migration.Field, migration.Value)
-	}
-	return onlyKeysChanged(originalDoc, updatedDoc, migration.Field, migration.Value)
+	return onlyPathsChanged(originalDoc, updatedDoc, migration.Field, siblingPath(migration.Field, migration.Value))
 }
 
 func (v *MigrationValidator) validateConditionalAction(originalDoc, updatedDoc map[string]any, migration Migration) error {
 	c := migration.Conditional
-	allowed := []string{}
+
+	var allowed []string
 	if c.TrueBranch.Field != "" {
 		allowed = append(allowed, c.TrueBranch.Field)
 	}
-	if c.FalseBranch.Field != "" {
+	if c.FalseBranch.Field != "" && c.FalseBranch.Field != c.TrueBranch.Field {
 		allowed = append(allowed, c.FalseBranch.Field)
 	}
-	if err := onlyKeysChanged(originalDoc, updatedDoc, allowed...); err != nil {
+	if err := onlyPathsChanged(originalDoc, updatedDoc, allowed...); err != nil {
 		return err
 	}
+
 	// Any field that did change must hold the value of a branch that targets it.
-	for _, k := range allowed {
-		if !keyChanged(originalDoc, updatedDoc, k) {
-			continue
+	for _, field := range allowed {
+		before, leaf := resolvePath(originalDoc, field)
+		after, _ := resolvePath(updatedDoc, field)
+		if len(before) != len(after) {
+			return fail("conditional: document structure changed around %q", field)
 		}
-		got := updatedDoc[k]
-		okTrue := k == c.TrueBranch.Field && matchesRaw(got, c.TrueBranch.Value)
-		okFalse := k == c.FalseBranch.Field && matchesRaw(got, c.FalseBranch.Value)
-		if !okTrue && !okFalse {
-			return fail("conditional: field %q has unexpected value %v", k, got)
+
+		for i := range before {
+			if !keyChanged(before[i], after[i], leaf) {
+				continue
+			}
+			got := after[i][leaf]
+			okTrue := field == c.TrueBranch.Field && matchesRaw(got, c.TrueBranch.Value)
+			okFalse := field == c.FalseBranch.Field && matchesRaw(got, c.FalseBranch.Value)
+			if !okTrue && !okFalse {
+				return fail("conditional: field %q has unexpected value %v", field, got)
+			}
 		}
 	}
 	return nil
@@ -233,21 +342,29 @@ func keyChanged(before, after map[string]any, k string) bool {
 	return bOk != aOk || !reflect.DeepEqual(b, a)
 }
 
-func onlyKeysChanged(before, after map[string]any, allowed ...string) error {
-	ok := make(map[string]struct{}, len(allowed))
-	for _, k := range allowed {
-		ok[k] = struct{}{}
+// onlyPathsChanged fails if anything outside the allowed paths (or below them) differs between the two documents.
+func onlyPathsChanged(before, after map[string]any, allowed ...string) error {
+	b, a := flattenDoc(before), flattenDoc(after)
+
+	seen := make(map[string]struct{}, len(b)+len(a))
+	paths := make([]string, 0, len(b)+len(a))
+	for p := range b {
+		seen[p] = struct{}{}
+		paths = append(paths, p)
 	}
-	for k := range before {
-		if _, a := ok[k]; !a && keyChanged(before, after, k) {
-			return fail("unexpected change to field %q", k)
+	for p := range a {
+		if _, ok := seen[p]; !ok {
+			paths = append(paths, p)
 		}
 	}
-	for k := range after {
-		if _, inBefore := before[k]; !inBefore {
-			if _, a := ok[k]; !a {
-				return fail("unexpected new field %q", k)
-			}
+	sort.Strings(paths)
+
+	for _, p := range paths {
+		if reflect.DeepEqual(b[p], a[p]) {
+			continue
+		}
+		if !pathAllowed(p, allowed) {
+			return fail("unexpected change at %q", p)
 		}
 	}
 	return nil

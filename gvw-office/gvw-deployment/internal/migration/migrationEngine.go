@@ -2,14 +2,15 @@ package migration
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
+	"fmt"
 	"gvw/gvw-deployment/internal/api/client"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
-	"maps"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 type MigrationEngine struct {
@@ -17,6 +18,13 @@ type MigrationEngine struct {
 	fsWrapper filesystem.FileSystemWrapper
 	validator *MigrationValidator
 	db        *client.DbClient
+}
+
+// dbPlan is the concrete work for one database: the root models stored in it and the
+// migrations after model prefixes and embedded models have been expanded into plain paths.
+type dbPlan struct {
+	Models     []string
+	Migrations []Migration
 }
 
 func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper, validator *MigrationValidator, dbClient *client.DbClient) *MigrationEngine {
@@ -28,7 +36,7 @@ func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapp
 	}
 }
 
-func (e *MigrationEngine) LoadSchema(ctx context.Context, deploymentId string) (map[string]any, error) {
+func (e *MigrationEngine) LoadSchema(ctx context.Context, deploymentId string) (*Schema, error) {
 	schemaPath := "./builds/" + deploymentId + "/schema.json"
 
 	if err := ctx.Err(); err != nil {
@@ -46,19 +54,22 @@ func (e *MigrationEngine) LoadSchema(ctx context.Context, deploymentId string) (
 		return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineReadError, err)
 	}
 
-	var result map[string]any
-
-	if err := json.Unmarshal(data, &result); err != nil {
-		e.logger.Printf("[MIGRATION] Error while unmarshaling schema for deployment %s: %v", deploymentId, err)
+	schema, err := ParseSchema(data)
+	if err != nil {
+		e.logger.Printf("[MIGRATION] Error while parsing schema for deployment %s: %v", deploymentId, err)
 		return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineJsonError, err)
 	}
 
-	return result, nil
+	return schema, nil
 }
 
-func (e *MigrationEngine) ValidateMigrations(ctx context.Context, migrations []Migration, schema map[string]any) error {
+func (e *MigrationEngine) ValidateMigrations(ctx context.Context, migrations []Migration, schema *Schema) error {
 	if err := ctx.Err(); err != nil {
 		return err
+	}
+
+	if schema == nil || len(schema.Models) == 0 {
+		return gvwErrors.Wrap(gvwErrors.CodeMigrationEngineJsonError, errors.New("schema contains no models"))
 	}
 
 	if isValid := e.validator.AreMigrationFieldsValid(migrations); !isValid {
@@ -103,7 +114,42 @@ func (e *MigrationEngine) GenerateMigrationToDbMap(migrations []Migration, affec
 	return result, nil
 }
 
-func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, database string, migrations []Migration) error {
+// PlanDatabaseMigrations expands the migrations of one database into concrete paths (model prefixes,
+// embedded models), validates them against the schema and re-checks the sequence on the expanded list.
+// Every error carries the id of the migration that caused it.
+func (e *MigrationEngine) PlanDatabaseMigrations(database string, migrations []Migration, schema *Schema, modelToDbMap map[string]string) (dbPlan, error) {
+	roots := schema.RootModelsFor(database, modelToDbMap)
+	plan := dbPlan{Models: roots}
+
+	if len(roots) == 0 {
+		e.logger.Printf("[MIGRATION] No model of the schema is mapped to database %s: schema checks are skipped for it", database)
+	}
+
+	for _, migration := range migrations {
+		expanded, err := schema.ExpandMigration(migration, roots)
+		if err != nil {
+			return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, err)
+		}
+
+		for _, concrete := range expanded {
+			if !e.validator.isMigrationValid(concrete) {
+				return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidField))
+			}
+			if err := e.validator.ValidateMigrationAgainstSchema(concrete, roots, schema); err != nil {
+				return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, err)
+			}
+			plan.Migrations = append(plan.Migrations, concrete)
+		}
+	}
+
+	if !e.validator.IsMigrationSequenceValid(plan.Migrations) {
+		return dbPlan{}, gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidSequence)
+	}
+
+	return plan, nil
+}
+
+func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, database string, plan dbPlan, schema *Schema) error {
 	if ctx.Err() != nil {
 		return &gvwErrors.MigrationError{
 			Err:        gvwErrors.NewError(gvwErrors.CodeCancelledError),
@@ -111,7 +157,10 @@ func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, dat
 		}
 	}
 
-	query := make(map[string]any)
+	// _find requires a selector; this one matches every document.
+	query := map[string]any{
+		"selector": map[string]any{"_id": map[string]any{"$gt": nil}},
+	}
 
 	for doc, err := range e.db.FindEachByQuery(ctx, database, query, 100) {
 		if err != nil {
@@ -121,17 +170,20 @@ func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, dat
 			}
 		}
 
-		var documentId string
-		if id, ok := doc["_id"].(string); ok {
-			documentId = id
-		} else {
+		documentId, ok := doc["_id"].(string)
+		if !ok {
 			return &gvwErrors.MigrationError{
 				Err:        gvwErrors.NewError(gvwErrors.CodeMigrationEngineDbQueryError),
 				DocumentId: "",
 			}
 		}
 
-		_, err := e.runMigrationsOnDoc(ctx, doc, migrations)
+		// Design documents are not model documents.
+		if strings.HasPrefix(documentId, "_design/") {
+			continue
+		}
+
+		updated, err := e.runMigrationsOnDoc(ctx, doc, plan.Migrations)
 		if err != nil {
 			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
 				return &gvwErrors.MigrationError{
@@ -144,9 +196,36 @@ func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, dat
 				DocumentId: documentId,
 			}
 		}
+
+		// The migrated document has to match the latest models.
+		if err := e.checkConformance(updated, plan.Models, schema); err != nil {
+			return &gvwErrors.MigrationError{
+				Err:        err,
+				DocumentId: documentId,
+			}
+		}
 	}
 
 	return nil
+}
+
+// checkConformance accepts the document if it matches at least one of the models stored in the database.
+func (e *MigrationEngine) checkConformance(doc map[string]any, models []string, schema *Schema) error {
+	if !enforceSchemaConformance || schema == nil || len(models) == 0 {
+		return nil
+	}
+
+	var firstErr error
+	for _, model := range models {
+		err := schema.CheckDocument(model, doc)
+		if err == nil {
+			return nil
+		}
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string]any, migrations []Migration) (map[string]any, error) {
@@ -160,7 +239,8 @@ func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string
 	for _, migration := range migrations {
 		before := updatedDoc
 
-		after, err := e.applyMigrationOnDoc(ctx, maps.Clone(before), migration)
+		// Deep clone: migrations may change nested objects and `before` must stay untouched for validation.
+		after, err := e.applyMigrationOnDoc(ctx, deepCloneMap(before), migration)
 		if err != nil {
 			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
 				return nil, err
@@ -189,66 +269,102 @@ func (e *MigrationEngine) applyMigrationOnDoc(ctx context.Context, doc map[strin
 
 	switch migration.Action {
 	case MigrationAdd:
-		if _, ok := doc[migration.Field]; ok {
-			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineAddFieldAlreadyExists)
-		}
-		doc[migration.Field] = nil
+		return e.applyAddMigration(doc, migration)
 	case MigrationDelete:
-		delete(doc, migration.Field)
+		return e.applyDeleteMigration(doc, migration)
 	case MigrationRename:
-		return e.applyRenameMigration(ctx, doc, migration)
+		return e.applyRenameMigration(doc, migration)
 	case MigrationConditional:
-		return e.applyConditionalMigration(ctx, doc, migration)
+		return e.applyConditionalMigration(doc, migration)
 	default:
 		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidAction)
 	}
+}
+
+// For all actions below, a path whose intermediate objects do not exist (e.g. "recurrence.weekDay" on a document
+// without recurrence) resolves to no objects and the migration is a no-op for that document.
+
+func (e *MigrationEngine) applyAddMigration(doc map[string]any, migration Migration) (map[string]any, error) {
+	parents, leaf := resolvePath(doc, migration.Field)
+
+	for _, p := range parents {
+		if _, ok := p[leaf]; ok {
+			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineAddFieldAlreadyExists)
+		}
+	}
+	for _, p := range parents {
+		p[leaf] = nil
+	}
 
 	return doc, nil
 }
 
-func (e *MigrationEngine) applyRenameMigration(ctx context.Context, doc map[string]any, migration Migration) (map[string]any, error) {
-	if ctx.Err() != nil {
-		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
-	}
+func (e *MigrationEngine) applyDeleteMigration(doc map[string]any, migration Migration) (map[string]any, error) {
+	parents, leaf := resolvePath(doc, migration.Field)
 
-	if _, exists := doc[migration.Value]; exists && migration.Value != migration.Field {
-		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineRenameTargetExists)
+	// If the field does not exist it is technically still valid!
+	for _, p := range parents {
+		delete(p, leaf)
 	}
-
-	val, ok := doc[migration.Field]
-	if !ok {
-		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineRenamingFieldFailed)
-	}
-	delete(doc, migration.Field)
-	doc[migration.Value] = val
 
 	return doc, nil
 }
 
-func (e *MigrationEngine) applyConditionalMigration(ctx context.Context, doc map[string]any, migration Migration) (map[string]any, error) {
-	if ctx.Err() != nil {
-		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
+func (e *MigrationEngine) applyRenameMigration(doc map[string]any, migration Migration) (map[string]any, error) {
+	parents, leaf := resolvePath(doc, migration.Field)
+	newName := migration.Value
+
+	// Check everything first so a failing document is never half-renamed.
+	for _, p := range parents {
+		if _, ok := p[leaf]; !ok {
+			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineRenamingFieldFailed)
+		}
+		if _, exists := p[newName]; exists && newName != leaf {
+			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineRenameTargetExists)
+		}
 	}
 
+	for _, p := range parents {
+		val := p[leaf]
+		delete(p, leaf)
+		p[newName] = val
+	}
+
+	return doc, nil
+}
+
+// applyConditionalMigration evaluates the condition on every object that contains the condition field and
+// sets the field of the chosen branch in that same object (the plan guarantees both live in the same object).
+func (e *MigrationEngine) applyConditionalMigration(doc map[string]any, migration Migration) (map[string]any, error) {
 	c := migration.Conditional
+	scope := parentPath(c.Condition.Field)
+	parents, condLeaf := resolvePath(doc, c.Condition.Field)
 
-	cur, exists := doc[c.Condition.Field]
-	matches := exists && valueEquals(cur, c.Condition.Value)
-	if c.Negated {
-		matches = !matches
-	}
+	for _, parent := range parents {
+		cur, exists := parent[condLeaf]
+		matches := exists && valueEquals(cur, c.Condition.Value)
+		if c.Negated {
+			matches = !matches
+		}
 
-	branch := c.FalseBranch
-	if matches {
-		branch = c.TrueBranch
-	}
+		branch := c.FalseBranch
+		if matches {
+			branch = c.TrueBranch
+		}
 
-	if branch.Field != "" {
-		newVal, err := coerceLike(doc[branch.Field], branch.Value)
+		if branch.Field == "" {
+			continue
+		}
+		if parentPath(branch.Field) != scope {
+			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineConditionalScopeMismatch)
+		}
+
+		leaf := leafOf(branch.Field)
+		newVal, err := coerceLike(parent[leaf], branch.Value)
 		if err != nil {
 			return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineConditionalValueInvalid, err)
 		}
-		doc[branch.Field] = newVal
+		parent[leaf] = newVal
 	}
 
 	return doc, nil

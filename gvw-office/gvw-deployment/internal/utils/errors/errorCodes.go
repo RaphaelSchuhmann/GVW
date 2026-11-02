@@ -31,6 +31,11 @@ const (
 	CodeMigrationEngineRenameTargetExists               Code = "MigrationEngineError_Rename_Target_Exists"
 	CodeMigrationEngineConditionalValueInvalid          Code = "MigrationEngineError_Conditional_Value_Invalid"
 	CodeMigrationEngineErrorApplicationValidationFailed Code = "MigrationEngineError_Application_Validation_Failed"
+	CodeMigrationEngineSchemaMismatch                   Code = "CodeMigrationEngine_Schema_Mismatch"
+	CodeMigrationEngineInvalidFieldPath                 Code = "CodeMigrationEngine_Invalid_Field_Path"
+	CodeMigrationEngineEmbeddedModelNotUsed             Code = "CodeMigrationEngine_Embedded_Model_Not_Used"
+	CodeMigrationEngineConditionalScopeMismatch         Code = "CodeMigrationEngine_Conditional_Scope_Mismatch"
+	CodeMigrationEngineFieldNotInSchema                 Code = "CodeMigrationEngine_Field_Not_In_Schema"
 
 	// Migration manager codes
 	CodeMigrationManagerInvalidDeploymentId Code = "MigrationManagerError_Invalid_Deployment_Id"
