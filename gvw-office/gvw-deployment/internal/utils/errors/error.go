@@ -45,5 +45,16 @@ type StatusError struct {
 }
 
 func (e *StatusError) Error() string {
-	return fmt.Sprintf("unexpected status %d", e.StatusCode)
+	return fmt.Sprintf("unexpected status %d with body %s", e.StatusCode, e.Body)
 }
+
+type MigrationError struct {
+	Err        error
+	DocumentId string
+}
+
+func (e *MigrationError) Error() string {
+	return fmt.Sprintf("Migration error %v for document id %s", e.Err, e.DocumentId)
+}
+
+func (e *MigrationError) Unwrap() error { return e.Err }

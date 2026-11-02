@@ -47,18 +47,16 @@ public class MigrationValidator {
       return false;
     }
 
-    return isValidBranch(conditional.getCondition())
-        && isValidBranch(conditional.getTruePath())
-        && isValidBranch(conditional.getFalsePath());
+    return isValidCondition(conditional.getCondition());
   }
 
   /**
-   * Validates an individual migration branch.
+   * Validates a condition.
    *
-   * @param branch The branch to validate.
-   * @return True if the branch is non-null and has a non-blank field, false otherwise.
+   * @param branch The condition to validate.
+   * @return True if the condition is non-null and has a non-blank field, false otherwise.
    */
-  private boolean isValidBranch(Migration.Branch branch) {
+  private boolean isValidCondition(Migration.Branch branch) {
     if (branch == null) {
       return false;
     }

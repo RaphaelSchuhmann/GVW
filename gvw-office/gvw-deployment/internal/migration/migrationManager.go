@@ -2,6 +2,7 @@ package migration
 
 import (
 	"context"
+	"errors"
 	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/config"
 	"gvw/gvw-deployment/internal/utils/errors"
@@ -140,11 +141,16 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 		}
 
 		m.logger.Printf("[MIGRATION] Starting migration dry run for deploymentId %s", deploymentId)
-		m.executeDryRunPipeline(ctx, deploymentId, schema, migrations)
+		successful := m.executeDryRunPipeline(ctx, deploymentId, schema, migrations)
+		if successful {
+			m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
+		}
 	} else {
 		m.logger.Printf("[MIGRATION] Starting migration execution for deploymentId %s", deploymentId)
 		return m.executeMigrationPipeline(deploymentId, schema, migrations)
 	}
+
+	m.logger.Printf("[MIGRATION] Migration pipeline for deploymentId %s finished successfully", deploymentId)
 
 	return nil
 }
@@ -166,31 +172,47 @@ func (m *MigrationManager) prepareMigrationRun(ctx context.Context, deploymentId
 	return schema, nil
 }
 
-func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deploymentId string, schema map[string]any, migrations []Migration) {
+func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deploymentId string, schema map[string]any, migrations []Migration) bool {
 	if ctx.Err() != nil {
-		return
+		return false
 	}
 
-	afffectedDatabases := m.engine.ExtractDatabasesFromMigrations(migrations)
+	affectedDatabases := m.engine.ExtractDatabasesFromMigrations(migrations)
 	modelToDbMap := m.configManager.Config.ModelDatabaseMap
 
-	if !m.validator.allValuesPresent(modelToDbMap, afffectedDatabases) {
+	if !m.validator.AllValuesPresent(modelToDbMap, affectedDatabases) {
+		m.logger.Printf("[MIGRATION] Found missing db in map for deployment: %s", deploymentId)
 		m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeMissingDbInMap, client.StatusCancelled, "", "")
-		return
+		return false
 	}
 
-	dbToMigrationMap, err := m.engine.GenerateMigrationToDbMap(migrations, afffectedDatabases)
+	dbToMigrationMap, err := m.engine.GenerateMigrationToDbMap(migrations, affectedDatabases)
 	if err != nil {
+		m.logger.Printf("[MIGRATION] Error while generating migration to db map for deployment: %s", deploymentId)
 		m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeBadAffectedDbs, client.StatusCancelled, "", "")
-		return
+		return false
 	}
 
 	for k, v := range dbToMigrationMap {
-		if err, doc := m.engine.TestMigrationsAgainstDatabase(k, v); err != nil {
-			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, k, doc)
-			return
+		if err := m.engine.TestMigrationsAgainstDatabase(ctx, k, v); err != nil {
+			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
+				return false
+			}
+
+			documentId := ""
+
+			var me *gvwErrors.MigrationError
+			if errors.As(err, &me) {
+				documentId = me.DocumentId
+			}
+
+			m.logger.Printf("[MIGRATION] Bad migration found for deployment %s in db %s with err: %v", deploymentId, k, err)
+			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, k, documentId)
+			return false
 		}
 	}
+
+	return true
 }
 
 func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema map[string]any, migrations []Migration) error {
@@ -199,6 +221,6 @@ func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema 
 
 func (m *MigrationManager) sendDryRunResponse(ctx context.Context, deploymentId string, reason uint32, status client.Status, database string, documentId string) {
 	if err := m.javaClient.UpdateMigrationDryRunState(deploymentId, status, database, documentId, reason, ctx); err != nil {
-		m.logger.Printf("[MIGRATION] Error updating migration dry run status for deployment %s: %v", deploymentId, err)
+		m.logger.Printf("[MIGRATION] Error updating migration dry run status for deployment %s with status %s: %v", deploymentId, string(status), err)
 	}
 }

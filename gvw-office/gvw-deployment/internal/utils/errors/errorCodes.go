@@ -13,13 +13,26 @@ const (
 	// HTTP client error codes
 	CodeHttpError Code = "HttpError"
 
-	// Migration error codes
-	CodeMigrationEngineNoBuildFound         Code = "MigrationEngineError_No_Build_Found"
-	CodeMigrationEngineReadError            Code = "MigrationEngineError_Read_Error"
-	CodeMigrationEngineJsonError            Code = "MigrationEngineError_Json_Error"
-	CodeMigrationEngineInvalidField         Code = "MigrationEngineError_Invalid_Migration_Field"
-	CodeMigrationEngineInvalidSequence      Code = "MigrationEngineError_Invalid_Migration_Sequence"
-	CodeMigrationEngineBadAffectedDBs       Code = "MigrationEngineError_Bad_Affected_DBs"
+	// Migration engine codes
+	CodeMigrationEngineNoBuildFound    Code = "MigrationEngineError_No_Build_Found"
+	CodeMigrationEngineReadError       Code = "MigrationEngineError_Read_Error"
+	CodeMigrationEngineJsonError       Code = "MigrationEngineError_Json_Error"
+	CodeMigrationEngineInvalidField    Code = "MigrationEngineError_Invalid_Migration_Field"
+	CodeMigrationEngineInvalidSequence Code = "MigrationEngineError_Invalid_Migration_Sequence"
+	CodeMigrationEngineBadAffectedDBs  Code = "MigrationEngineError_Bad_Affected_DBs"
+	CodeMigrationEngineDbQueryError    Code = "MigrationEngineError_Db_Query_Error"
+	CodeMigrationEngineMigrationFailed Code = "MigrationEngineError_Migration_Failed"
+
+	// Migration application codes
+	CodeMigrationEngineApplyMigrationsFailed            Code = "MigrationEngineError_Apply_Migrations_Failed"
+	CodeMigrationEngineAddFieldAlreadyExists            Code = "MigrationEngineError_Add_Field_Already_Exists"
+	CodeMigrationEngineRenamingFieldFailed              Code = "MigrationEngineError_Renaming_Field_Failed"
+	CodeMigrationEngineInvalidAction                    Code = "MigrationEngineError_Invalid_Action"
+	CodeMigrationEngineRenameTargetExists               Code = "MigrationEngineError_Rename_Target_Exists"
+	CodeMigrationEngineConditionalValueInvalid          Code = "MigrationEngineError_Conditional_Value_Invalid"
+	CodeMigrationEngineErrorApplicationValidationFailed Code = "MigrationEngineError_Application_Validation_Failed"
+
+	// Migration manager codes
 	CodeMigrationManagerInvalidDeploymentId Code = "MigrationManagerError_Invalid_Deployment_Id"
 	CodeMigrationManagerError               Code = "MigrationManagerError"
 
@@ -53,4 +66,8 @@ const (
 	CodeBuildErrorCloneRepo   Code = "BuildError_Clone_Repo"
 	CodeBuildErrorBuildFailed Code = "BuildError_Build_Failed"
 	CodeBuildErrorTestFailed  Code = "BuildError_Test_Failed"
+
+	// General codes
+	CodeCancelledError Code = "TaskCancelled"
+	CodeTimeoutError   Code = "TaskTimedout"
 )

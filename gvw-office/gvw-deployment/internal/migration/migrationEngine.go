@@ -7,14 +7,16 @@ import (
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
+	"maps"
 	"slices"
+	"strconv"
 )
 
 type MigrationEngine struct {
 	logger    *log.Logger
 	fsWrapper filesystem.FileSystemWrapper
 	validator *MigrationValidator
-	dbClient  *client.DbClient
+	db        *client.DbClient
 }
 
 func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper, validator *MigrationValidator, dbClient *client.DbClient) *MigrationEngine {
@@ -22,7 +24,7 @@ func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapp
 		logger:    logger,
 		fsWrapper: fsWrapper,
 		validator: validator,
-		dbClient:  dbClient,
+		db:        dbClient,
 	}
 }
 
@@ -101,7 +103,188 @@ func (e *MigrationEngine) GenerateMigrationToDbMap(migrations []Migration, affec
 	return result, nil
 }
 
-func (e *MigrationEngine) TestMigrationsAgainstDatabase(database string, migrations []Migration) (error, string) {
+func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, database string, migrations []Migration) error {
+	if ctx.Err() != nil {
+		return &gvwErrors.MigrationError{
+			Err:        gvwErrors.NewError(gvwErrors.CodeCancelledError),
+			DocumentId: "",
+		}
+	}
 
-	return nil, ""
+	query := make(map[string]any)
+
+	for doc, err := range e.db.FindEachByQuery(ctx, database, query, 100) {
+		if err != nil {
+			return &gvwErrors.MigrationError{
+				Err:        gvwErrors.Wrap(gvwErrors.CodeMigrationEngineDbQueryError, err),
+				DocumentId: "",
+			}
+		}
+
+		var documentId string
+		if id, ok := doc["_id"].(string); ok {
+			documentId = id
+		} else {
+			return &gvwErrors.MigrationError{
+				Err:        gvwErrors.NewError(gvwErrors.CodeMigrationEngineDbQueryError),
+				DocumentId: "",
+			}
+		}
+
+		_, err := e.runMigrationsOnDoc(ctx, doc, migrations)
+		if err != nil {
+			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
+				return &gvwErrors.MigrationError{
+					Err:        err,
+					DocumentId: "",
+				}
+			}
+			return &gvwErrors.MigrationError{
+				Err:        err,
+				DocumentId: documentId,
+			}
+		}
+	}
+
+	return nil
+}
+
+func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string]any, migrations []Migration) (map[string]any, error) {
+	if ctx.Err() != nil {
+		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
+	}
+
+	updatedDoc := doc
+
+	// Apply migrations on document
+	for _, migration := range migrations {
+		before := updatedDoc
+
+		after, err := e.applyMigrationOnDoc(ctx, maps.Clone(before), migration)
+		if err != nil {
+			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
+				return nil, err
+			}
+			return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineApplyMigrationsFailed, err)
+		}
+
+		// Validate that migration was successful
+		if err := e.validator.ValidateMigrationApplication(ctx, before, after, migration); err != nil {
+			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
+				return nil, err
+			}
+			return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineApplyMigrationsFailed, err)
+		}
+
+		updatedDoc = after
+	}
+
+	return updatedDoc, nil
+}
+
+func (e *MigrationEngine) applyMigrationOnDoc(ctx context.Context, doc map[string]any, migration Migration) (map[string]any, error) {
+	if ctx.Err() != nil {
+		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
+	}
+
+	switch migration.Action {
+	case MigrationAdd:
+		if _, ok := doc[migration.Field]; ok {
+			return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineAddFieldAlreadyExists)
+		}
+		doc[migration.Field] = nil
+	case MigrationDelete:
+		delete(doc, migration.Field)
+	case MigrationRename:
+		return e.applyRenameMigration(ctx, doc, migration)
+	case MigrationConditional:
+		return e.applyConditionalMigration(ctx, doc, migration)
+	default:
+		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidAction)
+	}
+
+	return doc, nil
+}
+
+func (e *MigrationEngine) applyRenameMigration(ctx context.Context, doc map[string]any, migration Migration) (map[string]any, error) {
+	if ctx.Err() != nil {
+		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
+	}
+
+	if _, exists := doc[migration.Value]; exists && migration.Value != migration.Field {
+		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineRenameTargetExists)
+	}
+
+	val, ok := doc[migration.Field]
+	if !ok {
+		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineRenamingFieldFailed)
+	}
+	delete(doc, migration.Field)
+	doc[migration.Value] = val
+
+	return doc, nil
+}
+
+func (e *MigrationEngine) applyConditionalMigration(ctx context.Context, doc map[string]any, migration Migration) (map[string]any, error) {
+	if ctx.Err() != nil {
+		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
+	}
+
+	c := migration.Conditional
+
+	cur, exists := doc[c.Condition.Field]
+	matches := exists && valueEquals(cur, c.Condition.Value)
+	if c.Negated {
+		matches = !matches
+	}
+
+	branch := c.FalseBranch
+	if matches {
+		branch = c.TrueBranch
+	}
+
+	if branch.Field != "" {
+		newVal, err := coerceLike(doc[branch.Field], branch.Value)
+		if err != nil {
+			return nil, gvwErrors.Wrap(gvwErrors.CodeMigrationEngineConditionalValueInvalid, err)
+		}
+		doc[branch.Field] = newVal
+	}
+
+	return doc, nil
+}
+
+func valueEquals(actual any, expected string) bool {
+	switch v := actual.(type) {
+	case string:
+		return v == expected
+	case float64:
+		f, err := strconv.ParseFloat(expected, 64)
+		return err == nil && v == f
+	case bool:
+		b, err := strconv.ParseBool(expected)
+		return err == nil && v == b
+	case nil:
+		return expected == "" || expected == "null"
+	default: // objects and arrays never equal a plain string
+		return false
+	}
+}
+
+func coerceLike(existing any, raw string) (any, error) {
+	if raw == "" {
+		switch existing.(type) {
+		case float64, bool:
+			return nil, nil
+		}
+		return "", nil
+	}
+	switch existing.(type) {
+	case float64:
+		return strconv.ParseFloat(raw, 64)
+	case bool:
+		return strconv.ParseBool(raw)
+	default:
+		return raw, nil
+	}
 }

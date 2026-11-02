@@ -24,8 +24,8 @@ type Branch struct {
 type MigrationAction string
 
 const (
-	Add         MigrationAction = "ADD"
-	Delete      MigrationAction = "DELETE"
-	Rename      MigrationAction = "RENAME"
-	Conditional MigrationAction = "CONDITIONAL"
+	MigrationAdd         MigrationAction = "ADD"
+	MigrationDelete      MigrationAction = "DELETE"
+	MigrationRename      MigrationAction = "RENAME"
+	MigrationConditional MigrationAction = "CONDITIONAL"
 )
