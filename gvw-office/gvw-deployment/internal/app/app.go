@@ -37,7 +37,7 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 	// Migration System
 	migrationValidator := migration.NewMigrationValidator()
 	migrationEngine := migration.NewMigrationEngine(logger, fsWrapper, migrationValidator, dbClient)
-	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine, configManager, migrationValidator)
+	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine, configManager, migrationValidator, dbClient)
 
 	// Handlers
 	configHandler := handler.NewConfigHandler(configManager)

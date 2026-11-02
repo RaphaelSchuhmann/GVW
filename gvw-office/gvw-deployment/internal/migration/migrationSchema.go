@@ -220,53 +220,48 @@ func (s *Schema) typeHasPath(t *TypeRef, segs []string) bool {
 	}
 }
 
-// embeddedPaths returns every path inside the root models at which the embedded model `target` is stored,
-// e.g. ["recurrence"] for Event or ["helpCenterCategories"] for AppSettings (arrays are transparent,
-// maps of models are reported as "name.*").
 func (s *Schema) embeddedPaths(roots []string, target string) []string {
 	seen := make(map[string]struct{})
 	var out []string
-
-	var walkModel func(name, prefix string, stack map[string]bool)
-	var walkType func(t *TypeRef, path string, stack map[string]bool)
-
-	walkModel = func(name, prefix string, stack map[string]bool) {
-		m := s.lookup(name)
-		if m == nil || stack[m.Name] {
-			return
-		}
-		stack[m.Name] = true
-		defer delete(stack, m.Name)
-
-		for _, member := range sortedKeys(m.Members) {
-			walkType(m.Members[member], joinPath(prefix, member), stack)
-		}
-	}
-
-	walkType = func(t *TypeRef, path string, stack map[string]bool) {
-		if t == nil {
-			return
-		}
-		switch t.Kind {
-		case kindModel:
-			if strings.EqualFold(t.Model, target) {
-				if _, ok := seen[path]; !ok {
-					seen[path] = struct{}{}
-					out = append(out, path)
-				}
-			}
-			walkModel(t.Model, path, stack)
-		case kindArray:
-			walkType(t.Items, path, stack)
-		case kindMap:
-			walkType(t.Values, joinPath(path, "*"), stack)
-		}
-	}
+	stack := make(map[string]bool)
 
 	for _, r := range roots {
-		walkModel(r, "", make(map[string]bool))
+		s.walkModel(r, "", target, seen, stack, &out)
 	}
 	return out
+}
+
+func (s *Schema) walkModel(name, prefix, target string, seen map[string]struct{}, stack map[string]bool, out *[]string) {
+	m := s.lookup(name)
+	if m == nil || stack[m.Name] {
+		return
+	}
+	stack[m.Name] = true
+	defer delete(stack, m.Name)
+
+	for _, member := range sortedKeys(m.Members) {
+		s.walkType(m.Members[member], joinPath(prefix, member), target, seen, stack, out)
+	}
+}
+
+func (s *Schema) walkType(t *TypeRef, path, target string, seen map[string]struct{}, stack map[string]bool, out *[]string) {
+	if t == nil {
+		return
+	}
+	switch t.Kind {
+	case kindModel:
+		if strings.EqualFold(t.Model, target) {
+			if _, ok := seen[path]; !ok {
+				seen[path] = struct{}{}
+				*out = append(*out, path)
+			}
+		}
+		s.walkModel(t.Model, path, target, seen, stack, out)
+	case kindArray:
+		s.walkType(t.Items, path, target, seen, stack, out)
+	case kindMap:
+		s.walkType(t.Values, joinPath(path, "*"), target, seen, stack, out)
+	}
 }
 
 // fieldRefs returns pointers to every field path of a migration that is resolved against the document.
@@ -306,36 +301,12 @@ func checkConditionalScope(m Migration) error {
 //   - anything else is a plain path and is returned unchanged.
 func (s *Schema) ExpandMigration(m Migration, roots []string) ([]Migration, error) {
 	base := m
-	embeddedModel := ""
-	nonEmpty, embeddedCount := 0, 0
+	var embeddedModel string
+	var nonEmpty, embeddedCount int
 
 	for _, ref := range fieldRefs(&base) {
-		if *ref == "" {
-			continue
-		}
-		nonEmpty++
-
-		segs := splitPath(*ref)
-		head := segs[0]
-		model, isModel := s.Models[head]
-		if !isModel || s.memberOfAny(roots, head) {
-			continue // plain path, resolved against the document at runtime
-		}
-
-		switch {
-		case model.Embedded:
-			if embeddedModel != "" && embeddedModel != head {
-				return nil, invalidPathErr(*ref, "a migration may only reference one embedded model")
-			}
-			embeddedModel = head
-			embeddedCount++
-		case slices.Contains(roots, head):
-			if len(segs) == 1 {
-				return nil, invalidPathErr(*ref, "a model name needs a field after it")
-			}
-			*ref = strings.Join(segs[1:], ".")
-		default:
-			return nil, invalidPathErr(*ref, fmt.Sprintf("model %s is not stored in this database", head))
+		if err := s.processFieldRef(ref, roots, &embeddedModel, &embeddedCount, &nonEmpty); err != nil {
+			return nil, err
 		}
 	}
 
@@ -357,6 +328,39 @@ func (s *Schema) ExpandMigration(m Migration, roots []string) ([]Migration, erro
 	}
 
 	return s.generateExpandMigrationOutput(prefixes, m)
+}
+
+func (s *Schema) processFieldRef(ref *string, roots []string, embeddedModel *string, embeddedCount, nonEmpty *int) error {
+	if *ref == "" {
+		return nil
+	}
+	*nonEmpty++
+
+	segs := splitPath(*ref)
+	head := segs[0]
+	model, isModel := s.Models[head]
+	if !isModel || s.memberOfAny(roots, head) {
+		return nil // plain path, resolved against the document at runtime
+	}
+
+	if model.Embedded {
+		if *embeddedModel != "" && *embeddedModel != head {
+			return invalidPathErr(*ref, "a migration may only reference one embedded model")
+		}
+		*embeddedModel = head
+		*embeddedCount++
+		return nil
+	}
+
+	if slices.Contains(roots, head) {
+		if len(segs) == 1 {
+			return invalidPathErr(*ref, "a model name needs a field after it")
+		}
+		*ref = strings.Join(segs[1:], ".")
+		return nil
+	}
+
+	return invalidPathErr(*ref, fmt.Sprintf("model %s is not stored in this database", head))
 }
 
 func (s *Schema) generateExpandMigrationOutput(prefixes []string, m Migration) ([]Migration, error) {
@@ -418,56 +422,85 @@ func (s *Schema) checkValue(t *TypeRef, v any, path string) error {
 
 	switch t.Kind {
 	case kindString:
-		if _, ok := v.(string); !ok {
-			return typeErr(path, "string", v)
-		}
+		return s.checkStringValue(v, path)
 	case kindNumber:
-		f, ok := toFloat(v)
-		if !ok {
-			return typeErr(path, "number", v)
-		}
-		if t.IntOnly && f != math.Trunc(f) {
-			return fmt.Errorf("%s: expected a whole number, got %v", path, v)
-		}
+		return s.checkNumberValue(t, v, path)
 	case kindBool:
-		if _, ok := v.(bool); !ok {
-			return typeErr(path, "bool", v)
-		}
+		return s.checkBoolValue(v, path)
 	case kindModel:
-		sub := s.lookup(t.Model)
-		if sub == nil {
-			return nil
-		}
-		if sub.IsEnum {
-			if _, ok := v.(string); !ok {
-				return typeErr(path, "string (enum "+sub.Name+")", v)
-			}
-			return nil
-		}
-		obj, ok := v.(map[string]any)
-		if !ok {
-			return typeErr(path, "object ("+sub.Name+")", v)
-		}
-		return s.checkObject(sub, obj, path)
+		return s.checkModelValue(t, v, path)
 	case kindArray:
-		arr, ok := v.([]any)
-		if !ok {
-			return typeErr(path, "array", v)
-		}
-		for i, el := range arr {
-			if err := s.checkValue(t.Items, el, fmt.Sprintf("%s[%d]", path, i)); err != nil {
-				return err
-			}
-		}
+		return s.checkArrayValue(t, v, path)
 	case kindMap:
-		obj, ok := v.(map[string]any)
-		if !ok {
-			return typeErr(path, "object", v)
+		return s.checkMapValue(t, v, path)
+	}
+	return nil
+}
+
+func (s *Schema) checkStringValue(v any, path string) error {
+	if _, ok := v.(string); !ok {
+		return typeErr(path, "string", v)
+	}
+	return nil
+}
+
+func (s *Schema) checkNumberValue(t *TypeRef, v any, path string) error {
+	f, ok := toFloat(v)
+	if !ok {
+		return typeErr(path, "number", v)
+	}
+	if t.IntOnly && f != math.Trunc(f) {
+		return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+	}
+	return nil
+}
+
+func (s *Schema) checkBoolValue(v any, path string) error {
+	if _, ok := v.(bool); !ok {
+		return typeErr(path, "bool", v)
+	}
+	return nil
+}
+
+func (s *Schema) checkModelValue(t *TypeRef, v any, path string) error {
+	sub := s.lookup(t.Model)
+	if sub == nil {
+		return nil
+	}
+	if sub.IsEnum {
+		if _, ok := v.(string); !ok {
+			return typeErr(path, "string (enum "+sub.Name+")", v)
 		}
-		for _, k := range sortedKeys(obj) {
-			if err := s.checkValue(t.Values, obj[k], joinPath(path, k)); err != nil {
-				return err
-			}
+		return nil
+	}
+	obj, ok := v.(map[string]any)
+	if !ok {
+		return typeErr(path, "object ("+sub.Name+")", v)
+	}
+	return s.checkObject(sub, obj, path)
+}
+
+func (s *Schema) checkArrayValue(t *TypeRef, v any, path string) error {
+	arr, ok := v.([]any)
+	if !ok {
+		return typeErr(path, "array", v)
+	}
+	for i, el := range arr {
+		if err := s.checkValue(t.Items, el, fmt.Sprintf("%s[%d]", path, i)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Schema) checkMapValue(t *TypeRef, v any, path string) error {
+	obj, ok := v.(map[string]any)
+	if !ok {
+		return typeErr(path, "object", v)
+	}
+	for _, k := range sortedKeys(obj) {
+		if err := s.checkValue(t.Values, obj[k], joinPath(path, k)); err != nil {
+			return err
 		}
 	}
 	return nil

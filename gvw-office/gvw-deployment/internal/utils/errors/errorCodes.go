@@ -4,11 +4,17 @@ type Code string
 
 const (
 	// Database client error codes
-	CodeDbEncodeBody   Code = "DbClientError_Encode_Body"
-	CodeDbBuildRequest Code = "DbClientError_Build_Request"
-	CodeDbSendRequest  Code = "DbClientError_Send_Request"
-	CodeDbBadStatus    Code = "DbClientError_Bad_Status"
-	CodeDbDecodeBody   Code = "DbClientError_Decode_Body"
+	CodeDbEncodeBody                Code = "DbClientError_Encode_Body"
+	CodeDbBuildRequest              Code = "DbClientError_Build_Request"
+	CodeDbSendRequest               Code = "DbClientError_Send_Request"
+	CodeDbBadStatus                 Code = "DbClientError_Bad_Status"
+	CodeDbDecodeBody                Code = "DbClientError_Decode_Body"
+	CodeBulkUpdateContainedError    Code = "DbClientError_Bulk_Update_Contained_Error"
+	CodeDbBackupDbCreationFailed    Code = "DbClientError_Backup_Db_Creation_Failed"
+	CodeDbBackupDbReplicationFailed Code = "DbClientError_Backup_Db_Replication_Failed"
+	CodeDbBackupRestorationFailed   Code = "DbClientError_Backup_Restoration_Failed"
+	CodeDbBackupDbDeletionFailed    Code = "DbClientError_Backup_Db_Deletion_Failed"
+	CodeDbFindAllFailed             Code = "DbClientError_Find_All_Failed"
 
 	// HTTP client error codes
 	CodeHttpError Code = "HttpError"
@@ -22,6 +28,7 @@ const (
 	CodeMigrationEngineBadAffectedDBs  Code = "MigrationEngineError_Bad_Affected_DBs"
 	CodeMigrationEngineDbQueryError    Code = "MigrationEngineError_Db_Query_Error"
 	CodeMigrationEngineMigrationFailed Code = "MigrationEngineError_Migration_Failed"
+	CodeMigrationEngineMissingDbInMap  Code = "MigrationEngineError_Missing_Db_In_Map"
 
 	// Migration application codes
 	CodeMigrationEngineApplyMigrationsFailed            Code = "MigrationEngineError_Apply_Migrations_Failed"

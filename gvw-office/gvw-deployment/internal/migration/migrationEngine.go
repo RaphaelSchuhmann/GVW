@@ -8,10 +8,18 @@ import (
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 )
+
+const bulkWriteBatchSize = 100
+
+type migrationStats struct {
+	Processed int
+	Changed   int
+}
 
 type MigrationEngine struct {
 	logger    *log.Logger
@@ -114,6 +122,32 @@ func (e *MigrationEngine) GenerateMigrationToDbMap(migrations []Migration, affec
 	return result, nil
 }
 
+// BuildPlans builds the plan of every affected database with the same steps the dry run uses,
+// so a real run applies exactly the migrations that were tested.
+func (e *MigrationEngine) BuildPlans(migrations []Migration, schema *Schema, modelToDbMap map[string]string) (map[string]dbPlan, error) {
+	databases := e.ExtractDatabasesFromMigrations(migrations)
+
+	if !e.validator.AllValuesPresent(modelToDbMap, databases) {
+		return nil, gvwErrors.NewError(gvwErrors.CodeMigrationEngineMissingDbInMap)
+	}
+
+	dbToMigrations, err := e.GenerateMigrationToDbMap(migrations, databases)
+	if err != nil {
+		return nil, err
+	}
+
+	plans := make(map[string]dbPlan, len(dbToMigrations))
+	for _, database := range databases {
+		plan, err := e.PlanDatabaseMigrations(database, dbToMigrations[database], schema, modelToDbMap)
+		if err != nil {
+			return nil, fmt.Errorf("database %s: %w", database, err)
+		}
+		plans[database] = plan
+	}
+
+	return plans, nil
+}
+
 // PlanDatabaseMigrations expands the migrations of one database into concrete paths (model prefixes,
 // embedded models), validates them against the schema and re-checks the sequence on the expanded list.
 // Every error carries the id of the migration that caused it.
@@ -149,64 +183,100 @@ func (e *MigrationEngine) PlanDatabaseMigrations(database string, migrations []M
 	return plan, nil
 }
 
+// TestMigrationsAgainstDatabase is the read-only run (dry run / pre-flight): nothing is written.
 func (e *MigrationEngine) TestMigrationsAgainstDatabase(ctx context.Context, database string, plan dbPlan, schema *Schema) error {
-	if ctx.Err() != nil {
-		return &gvwErrors.MigrationError{
+	_, err := e.processDatabase(ctx, database, plan, schema, false)
+	return err
+}
+
+// ExecuteMigrationsOnDatabase migrates every document of the database and writes the changed ones back.
+// Documents are validated and checked against the schema before they are written, and unchanged
+// documents are not written at all (their _rev stays the same).
+func (e *MigrationEngine) ExecuteMigrationsOnDatabase(ctx context.Context, database string, plan dbPlan, schema *Schema) (migrationStats, error) {
+	return e.processDatabase(ctx, database, plan, schema, true)
+}
+
+func (e *MigrationEngine) processDatabase(ctx context.Context, database string, plan dbPlan, schema *Schema, write bool) (migrationStats, error) {
+	var stats migrationStats
+
+	if err := ctx.Err(); err != nil {
+		return stats, &gvwErrors.MigrationError{
 			Err:        gvwErrors.NewError(gvwErrors.CodeCancelledError),
 			DocumentId: "",
 		}
 	}
 
-	// _find requires a selector; this one matches every document.
 	query := map[string]any{
 		"selector": map[string]any{"_id": map[string]any{"$gt": nil}},
 	}
 
+	batcher := NewBatchProcessor(e, database, &stats)
+
 	for doc, err := range e.db.FindEachByQuery(ctx, database, query, 100) {
 		if err != nil {
-			return &gvwErrors.MigrationError{
+			return stats, &gvwErrors.MigrationError{
 				Err:        gvwErrors.Wrap(gvwErrors.CodeMigrationEngineDbQueryError, err),
 				DocumentId: "",
 			}
 		}
 
-		documentId, ok := doc["_id"].(string)
-		if !ok {
-			return &gvwErrors.MigrationError{
-				Err:        gvwErrors.NewError(gvwErrors.CodeMigrationEngineDbQueryError),
-				DocumentId: "",
-			}
-		}
-
-		// Design documents are not model documents.
-		if strings.HasPrefix(documentId, "_design/") {
-			continue
-		}
-
-		updated, err := e.runMigrationsOnDoc(ctx, doc, plan.Migrations)
+		updated, shouldProcess, documentId, err := e.evaluateAndPrepareDoc(ctx, doc, plan, schema, write)
 		if err != nil {
-			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
-				return &gvwErrors.MigrationError{
-					Err:        err,
-					DocumentId: "",
-				}
-			}
-			return &gvwErrors.MigrationError{
-				Err:        err,
-				DocumentId: documentId,
-			}
+			return stats, err
 		}
+		if documentId == "" {
+			continue // Design document
+		}
+		stats.Processed++
 
-		// The migrated document has to match the latest models.
-		if err := e.checkConformance(updated, plan.Models, schema); err != nil {
-			return &gvwErrors.MigrationError{
-				Err:        err,
-				DocumentId: documentId,
+		if shouldProcess {
+			if err := batcher.Add(ctx, updated); err != nil {
+				return stats, err
 			}
 		}
 	}
 
-	return nil
+	if write {
+		if err := batcher.Flush(ctx); err != nil {
+			return stats, err
+		}
+	}
+
+	return stats, nil
+}
+
+func (e *MigrationEngine) evaluateAndPrepareDoc(ctx context.Context, doc map[string]any, plan dbPlan, schema *Schema, write bool) (updated map[string]any, shouldBatch bool, documentId string, err error) {
+	documentId, ok := doc["_id"].(string)
+	if !ok {
+		return nil, false, "", &gvwErrors.MigrationError{
+			Err:        gvwErrors.NewError(gvwErrors.CodeMigrationEngineDbQueryError),
+			DocumentId: "",
+		}
+	}
+
+	// Design documents are not model documents.
+	if strings.HasPrefix(documentId, "_design/") {
+		return nil, false, "", nil
+	}
+
+	updated, runErr := e.runMigrationsOnDoc(ctx, doc, plan.Migrations)
+	if runErr != nil {
+		if gvwErrors.HasCode(runErr, gvwErrors.CodeCancelledError) {
+			return nil, false, "", &gvwErrors.MigrationError{Err: runErr, DocumentId: ""}
+		}
+		return nil, false, documentId, &gvwErrors.MigrationError{Err: runErr, DocumentId: documentId}
+	}
+
+	// The migrated document has to match the latest models.
+	if confErr := e.checkConformance(updated, plan.Models, schema); confErr != nil {
+		return nil, false, documentId, &gvwErrors.MigrationError{Err: confErr, DocumentId: documentId}
+	}
+
+	if !write || reflect.DeepEqual(doc, updated) {
+		return updated, false, documentId, nil
+	}
+
+	return updated, true, documentId, nil
 }
 
 // checkConformance accepts the document if it matches at least one of the models stored in the database.

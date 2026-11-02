@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-// TASK: Improve migration validation by returning the id of the bad migration
-
 type MigrationValidator struct{}
 
 func NewMigrationValidator() *MigrationValidator {
@@ -297,7 +295,21 @@ func (v *MigrationValidator) validateRenameAction(originalDoc, updatedDoc map[st
 
 func (v *MigrationValidator) validateConditionalAction(originalDoc, updatedDoc map[string]any, migration Migration) error {
 	c := migration.Conditional
+	allowed := v.getAllowedFields(c)
 
+	if err := onlyPathsChanged(originalDoc, updatedDoc, allowed...); err != nil {
+		return err
+	}
+
+	for _, field := range allowed {
+		if err := v.validateFieldChanges(originalDoc, updatedDoc, field, c); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (v *MigrationValidator) getAllowedFields(c ConditionalMigration) []string {
 	var allowed []string
 	if c.TrueBranch.Field != "" {
 		allowed = append(allowed, c.TrueBranch.Field)
@@ -305,31 +317,33 @@ func (v *MigrationValidator) validateConditionalAction(originalDoc, updatedDoc m
 	if c.FalseBranch.Field != "" && c.FalseBranch.Field != c.TrueBranch.Field {
 		allowed = append(allowed, c.FalseBranch.Field)
 	}
-	if err := onlyPathsChanged(originalDoc, updatedDoc, allowed...); err != nil {
-		return err
+	return allowed
+}
+
+func (v *MigrationValidator) validateFieldChanges(originalDoc, updatedDoc map[string]any, field string, c ConditionalMigration) error {
+	before, leaf := resolvePath(originalDoc, field)
+	after, _ := resolvePath(updatedDoc, field)
+
+	if len(before) != len(after) {
+		return fail("conditional: document structure changed around %q", field)
 	}
 
-	// Any field that did change must hold the value of a branch that targets it.
-	for _, field := range allowed {
-		before, leaf := resolvePath(originalDoc, field)
-		after, _ := resolvePath(updatedDoc, field)
-		if len(before) != len(after) {
-			return fail("conditional: document structure changed around %q", field)
+	for i := range before {
+		if !keyChanged(before[i], after[i], leaf) {
+			continue
 		}
-
-		for i := range before {
-			if !keyChanged(before[i], after[i], leaf) {
-				continue
-			}
-			got := after[i][leaf]
-			okTrue := field == c.TrueBranch.Field && matchesRaw(got, c.TrueBranch.Value)
-			okFalse := field == c.FalseBranch.Field && matchesRaw(got, c.FalseBranch.Value)
-			if !okTrue && !okFalse {
-				return fail("conditional: field %q has unexpected value %v", field, got)
-			}
+		got := after[i][leaf]
+		if !v.matchesBranchCondition(field, got, c) {
+			return fail("conditional: field %q has unexpected value %v", field, got)
 		}
 	}
 	return nil
+}
+
+func (v *MigrationValidator) matchesBranchCondition(field string, got any, c ConditionalMigration) bool {
+	okTrue := field == c.TrueBranch.Field && matchesRaw(got, c.TrueBranch.Value)
+	okFalse := field == c.FalseBranch.Field && matchesRaw(got, c.FalseBranch.Value)
+	return okTrue || okFalse
 }
 
 func fail(format string, args ...any) error {

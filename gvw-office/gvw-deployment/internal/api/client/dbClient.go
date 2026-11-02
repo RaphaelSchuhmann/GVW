@@ -5,19 +5,57 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"io"
 	"iter"
 	"maps"
 	"net/http"
 	"net/url"
 	"time"
+
+	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 )
 
 type FindResponse struct {
 	Docs     []map[string]any `json:"docs"`
 	Bookmark string           `json:"bookmark"`
 	Warning  string           `json:"warning"`
+}
+
+type BulkFailure struct {
+	ID     string
+	Error  string
+	Reason string
+}
+
+type bulkResult struct {
+	ID     string `json:"id"`
+	OK     bool   `json:"ok"`
+	Error  string `json:"error"`
+	Reason string `json:"reason"`
+}
+
+type BulkError struct {
+	Failed []BulkFailure
+}
+
+func (e *BulkError) Error() string {
+	if len(e.Failed) == 0 {
+		return "bulk update failed"
+	}
+	first := e.Failed[0]
+	return fmt.Sprintf("%d document(s) failed to update, first: %s (%s: %s)", len(e.Failed), first.ID, first.Error, first.Reason)
+}
+
+type DocRow struct {
+	ID  string         `json:"id"`
+	Key string         `json:"key"`
+	Doc map[string]any `json:"doc"`
+}
+
+type AllDocsResponse struct {
+	TotalRows int      `json:"total_rows"`
+	Offset    int      `json:"offset"`
+	Rows      []DocRow `json:"rows"`
 }
 
 type DbClient struct {
@@ -85,7 +123,59 @@ func (d *DbClient) FindEachByQuery(ctx context.Context, database string, query m
 	}
 }
 
+func (d *DbClient) FetchAllDocsWithBody(ctx context.Context, dbName string) ([]map[string]any, error) {
+	endpoint := fmt.Sprintf("%s/%s/_all_docs?include_docs=true", d.baseUrl, url.PathEscape(dbName))
+
+	var resp AllDocsResponse
+	if err := d.executeDbRequest(ctx, endpoint, http.MethodGet, nil, &resp); err != nil {
+		return nil, fmt.Errorf("failed to fetch all docs: %w", err)
+	}
+
+	var docs []map[string]any
+	for _, row := range resp.Rows {
+		if row.Doc != nil {
+			docs = append(docs, row.Doc)
+		}
+	}
+
+	return docs, nil
+}
+
+// BulkUpdate writes the given documents (each must contain _id and the current _rev) with one request.
+//
+// CouchDB answers 201 even when single documents were rejected, so the result array is inspected:
+// any entry with an error turns into a *BulkError wrapped in CodeDbBulkUpdateFailed.
+func (d *DbClient) BulkUpdate(ctx context.Context, database string, docs []map[string]any) error {
+	if len(docs) == 0 {
+		return nil
+	}
+
+	endpoint := fmt.Sprintf("%s/%s/_bulk_docs", d.baseUrl, url.PathEscape(database))
+
+	var results []bulkResult
+	body := map[string]any{"docs": docs}
+	if err := d.executeDbRequest(ctx, endpoint, http.MethodPost, body, &results); err != nil {
+		return err
+	}
+
+	var failed []BulkFailure
+	for _, r := range results {
+		if r.Error != "" || !r.OK {
+			failed = append(failed, BulkFailure{ID: r.ID, Error: r.Error, Reason: r.Reason})
+		}
+	}
+	if len(failed) > 0 {
+		return gvwErrors.Wrap(gvwErrors.CodeBulkUpdateContainedError, &BulkError{Failed: failed})
+	}
+
+	return nil
+}
+
 func (d *DbClient) executeDbRequest(ctx context.Context, url, method string, in, out any) error {
+	return d.doDbRequest(ctx, d.httpClient, url, method, in, out)
+}
+
+func (d *DbClient) doDbRequest(ctx context.Context, httpClient *http.Client, url, method string, in, out any) error {
 	var body io.Reader
 	if in != nil {
 		b, err := json.Marshal(in)
@@ -106,7 +196,7 @@ func (d *DbClient) executeDbRequest(ctx context.Context, url, method string, in,
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	resp, err := d.httpClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return gvwErrors.Wrap(gvwErrors.CodeDbSendRequest, err)
 	}
