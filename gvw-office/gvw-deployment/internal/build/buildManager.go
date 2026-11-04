@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"gvw/gvw-deployment/internal/api/client"
+	"gvw/gvw-deployment/internal/config"
 	"gvw/gvw-deployment/internal/utils/commandExecutor"
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
@@ -23,26 +24,26 @@ type activeBuild struct {
 }
 
 type BuildManager struct {
-	mutex         sync.Mutex
-	activeBuilds  map[string]*activeBuild
-	githubRepoURL string
-	javaClient    client.JavaClient
-	fsWrapper     filesystem.FileSystemWrapper
-	logger        *log.Logger
-	modelLoader   *ModelLoader
+	mutex        sync.Mutex
+	activeBuilds map[string]*activeBuild
+	cfg          *config.ConfigManager
+	javaClient   client.JavaClient
+	fsWrapper    filesystem.FileSystemWrapper
+	logger       *log.Logger
+	modelLoader  *ModelLoader
 }
 
 const pipelineCancelledLogMessage = "[BUILD] Pipeline cancelled for deployment %s: %v"
 const buildBaseDir = "./builds/"
 
-func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapper filesystem.FileSystemWrapper, logger *log.Logger, modelLoader *ModelLoader) *BuildManager {
+func NewBuildManager(cfg *config.ConfigManager, javaClient client.JavaClient, fsWrapper filesystem.FileSystemWrapper, logger *log.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
-		activeBuilds:  make(map[string]*activeBuild),
-		githubRepoURL: githubRepoURL,
-		javaClient:    javaClient,
-		fsWrapper:     fsWrapper,
-		logger:        logger,
-		modelLoader:   modelLoader,
+		activeBuilds: make(map[string]*activeBuild),
+		cfg:          cfg,
+		javaClient:   javaClient,
+		fsWrapper:    fsWrapper,
+		logger:       logger,
+		modelLoader:  modelLoader,
 	}
 }
 
@@ -98,6 +99,8 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		return
 	}
 
+	b.logger.Printf("[BUILD] Starting build for deployment %s with commit %s", deploymentId, commit)
+
 	// Setup build environment
 	b.fsWrapper.CreateDir(buildBaseDir+deploymentId, 0755)
 	b.fsWrapper.CleanDir(buildBaseDir + deploymentId + "/repo")
@@ -110,7 +113,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		}
 
 		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-		b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeCommitInvalid, ctx)
+		b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, BUILD_CodeCommitInvalid, ctx)
 		return
 	}
 
@@ -123,7 +126,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		errorCode := MapBuildErrorsToCode(err)
 		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed: %v", deploymentId, commit, err)
 
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", errorCode, ctx); updateErr != nil {
+		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, errorCode, ctx); updateErr != nil {
 			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
 		}
 		return
@@ -131,7 +134,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 
 	if err := b.generateSchema(deploymentId); err != nil {
 		b.logger.Printf("[BUILD] Schema generation failed for deployment %s: %v", deploymentId, err)
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, "CANCELLED", BUILD_CodeSchemaGenerationFailed, ctx); updateErr != nil {
+		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, BUILD_CodeSchemaGenerationFailed, ctx); updateErr != nil {
 			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
 		}
 		return
@@ -198,7 +201,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		output, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
 		if err != nil {
 			b.logger.Printf("[BUILD] %s failed for deployment %s: %v\n%s", name, deploymentId, err, output)
-			return gvwErrors.Wrap("BuildError_Clone_Repo", err)
+			return gvwErrors.Wrap(gvwErrors.CodeBuildErrorCloneRepo, err)
 		}
 		return nil
 	}
@@ -207,7 +210,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		return err
 	}
 
-	if err := run("git", "remote", "add", "origin", b.githubRepoURL); err != nil {
+	if err := run("git", "remote", "add", "origin", b.cfg.Config.GithubRepoURL); err != nil {
 		return err
 	}
 
@@ -232,7 +235,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 	_, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Build_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
 	}
 
 	// Test
@@ -243,7 +246,7 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend tests failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Test_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorTestFailed, err)
 	}
 
 	return nil
@@ -262,7 +265,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 
 	if err != nil || !strings.Contains(output, "BUILD SUCCESS") {
 		b.logger.Printf("[BUILD] Backend tests failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Test_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorTestFailed, err)
 	}
 
 	// Package
@@ -270,7 +273,7 @@ func (b *BuildManager) buildBackend(ctx context.Context, deploymentId string) er
 	_, err = commandExecutor.RunCommand(ctx, workingDir, "./mvnw", "package")
 	if err != nil {
 		b.logger.Printf("[BUILD] Backend build failed for deployment %s with error %v", deploymentId, err)
-		return gvwErrors.Wrap("BuildError_Build_Failed", err)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
 	}
 
 	return nil

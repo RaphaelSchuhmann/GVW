@@ -10,14 +10,14 @@ import (
 func main() {
 	var logger *log.Logger = log.NewLogger()
 	var fsWrapper *filesystem.FileSystem = filesystem.NewFileSystem(logger)
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
 
-	cfg, err := config.LoadConfig("./config.json", fsWrapper)
-	if err != nil {
+	if err := configManager.LoadConfig(false); err != nil {
 		logger.Fatalf("Failed to load server config: %v", err)
 		return
 	}
 
-	application, err := app.NewApp(cfg, logger, fsWrapper)
+	application, err := app.NewApp(logger, fsWrapper, configManager)
 	if err != nil {
 		logger.Fatalf("Failed to initialize app: %v", err)
 		return

@@ -25,10 +25,10 @@ func RunCommand(ctx context.Context, workDir string, name string, args ...string
 
 	if err != nil {
 		if ctx.Err() != nil {
-			return outputStr, gvwErrors.Wrap("CommandExecutionError_Cancelled_Or_Timedout", ctx.Err())
+			return outputStr, gvwErrors.Wrap(gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout, ctx.Err())
 		}
 
-		return outputStr, gvwErrors.Wrap("CommandExecutionError_Command_Failed", err)
+		return outputStr, gvwErrors.Wrap(gvwErrors.CodeCommandExecutionErrorCommandFailed, err)
 	}
 
 	return outputStr, nil

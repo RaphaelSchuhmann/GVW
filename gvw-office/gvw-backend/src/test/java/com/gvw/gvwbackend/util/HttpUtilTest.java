@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
-
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -55,11 +54,16 @@ class HttpUtilTest {
     HttpResponse<String> mockResponse = mock(HttpResponse.class);
     when(mockResponse.statusCode()).thenReturn(200);
     when(mockResponse.body()).thenReturn(responseBody);
-    when(mockResponse.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of("Content-Type", java.util.List.of("application/json")), (k, v) -> true));
+    when(mockResponse.headers())
+        .thenReturn(
+            java.net.http.HttpHeaders.of(
+                java.util.Map.of("Content-Type", java.util.List.of("application/json")),
+                (k, v) -> true));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
-    when(objectMapper.readValue(eq(responseBody), eq(TestResponse.class))).thenReturn(parsedResponse);
+    when(objectMapper.readValue(eq(responseBody), eq(TestResponse.class)))
+        .thenReturn(parsedResponse);
 
     GVWHttpResponse response = httpUtil.sendGetRequest(url, TestResponse.class);
 
@@ -77,7 +81,8 @@ class HttpUtilTest {
     HttpResponse<String> mockResponse = mock(HttpResponse.class);
     when(mockResponse.statusCode()).thenReturn(404);
     when(mockResponse.body()).thenReturn(responseBody);
-    when(mockResponse.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
+    when(mockResponse.headers())
+        .thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
@@ -110,7 +115,8 @@ class HttpUtilTest {
     HttpResponse<String> mockResponse = mock(HttpResponse.class);
     when(mockResponse.statusCode()).thenReturn(200);
     when(mockResponse.body()).thenReturn(responseBody);
-    when(mockResponse.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
+    when(mockResponse.headers())
+        .thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
@@ -124,7 +130,8 @@ class HttpUtilTest {
 
   @Test
   void sendPostRequest_NullUrl_ReturnsBadRequest() {
-    GVWHttpResponse response = httpUtil.sendPostRequest(null, new TestRequest("value"), String.class);
+    GVWHttpResponse response =
+        httpUtil.sendPostRequest(null, new TestRequest("value"), String.class);
 
     assertEquals(400, response.status());
     assertTrue(response.isError());
@@ -132,7 +139,8 @@ class HttpUtilTest {
 
   @Test
   void sendPostRequest_BlankUrl_ReturnsBadRequest() {
-    GVWHttpResponse response = httpUtil.sendPostRequest("   ", new TestRequest("value"), String.class);
+    GVWHttpResponse response =
+        httpUtil.sendPostRequest("   ", new TestRequest("value"), String.class);
 
     assertEquals(400, response.status());
     assertTrue(response.isError());
@@ -151,11 +159,16 @@ class HttpUtilTest {
     HttpResponse<String> mockResponse = mock(HttpResponse.class);
     when(mockResponse.statusCode()).thenReturn(201);
     when(mockResponse.body()).thenReturn(responseBody);
-    when(mockResponse.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of("Content-Type", java.util.List.of("application/json")), (k, v) -> true));
+    when(mockResponse.headers())
+        .thenReturn(
+            java.net.http.HttpHeaders.of(
+                java.util.Map.of("Content-Type", java.util.List.of("application/json")),
+                (k, v) -> true));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
-    when(objectMapper.readValue(eq(responseBody), eq(TestResponse.class))).thenReturn(parsedResponse);
+    when(objectMapper.readValue(eq(responseBody), eq(TestResponse.class)))
+        .thenReturn(parsedResponse);
 
     GVWHttpResponse response = httpUtil.sendPostRequest(url, requestBody, TestResponse.class);
 
@@ -177,7 +190,8 @@ class HttpUtilTest {
     HttpResponse<String> mockResponse = mock(HttpResponse.class);
     when(mockResponse.statusCode()).thenReturn(400);
     when(mockResponse.body()).thenReturn(responseBody);
-    when(mockResponse.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
+    when(mockResponse.headers())
+        .thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
@@ -231,7 +245,8 @@ class HttpUtilTest {
     HttpResponse<String> mockResponse = mock(HttpResponse.class);
     when(mockResponse.statusCode()).thenReturn(200);
     when(mockResponse.body()).thenReturn(responseBody);
-    when(mockResponse.headers()).thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
+    when(mockResponse.headers())
+        .thenReturn(java.net.http.HttpHeaders.of(java.util.Map.of(), (k, v) -> true));
 
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);

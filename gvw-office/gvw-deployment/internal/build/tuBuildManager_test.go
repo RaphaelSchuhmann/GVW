@@ -2,14 +2,31 @@ package build
 
 import (
 	"encoding/json"
+	"gvw/gvw-deployment/internal/config"
 	"gvw/gvw-deployment/internal/utils/log"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
+var validConfig = config.Config{
+    Port:          "8080",
+    InternalToken: "test-token",
+    JavaBaseURL:   "http://localhost:8080",
+    GithubRepoURL: "https://github.com/test/repo",
+    ModelDatabaseMap: map[string]string{
+        "model1": "db1",
+    },
+    DatabaseURL:      "http://127.0.0.1/",
+    DatabaseUsername: "username",
+    DatabasePassword: "password",
+}
+
 func TestGenerateSchema_Success(t *testing.T) {
 	logger, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
+
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
 
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
@@ -32,7 +49,7 @@ public class Migration {
 	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
 	setupModelFile(fsWrapper, "Migration.java", migrationContent)
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, logger, modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err != nil {
@@ -65,9 +82,12 @@ public class Migration {
 func TestGenerateSchema_ListDirFails(t *testing.T) {
 	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
+
 	fsWrapper.listDirError = os.ErrNotExist
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err == nil {
@@ -78,12 +98,15 @@ func TestGenerateSchema_ListDirFails(t *testing.T) {
 func TestGenerateSchema_ModelFileReadFails(t *testing.T) {
 	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
+
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
 	}
 	fsWrapper.readFileError = os.ErrPermission
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err == nil {
@@ -94,19 +117,22 @@ func TestGenerateSchema_ModelFileReadFails(t *testing.T) {
 func TestGenerateSchema_ValidationFails(t *testing.T) {
 	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
+
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
 	}
 
 	deploymentContent := `package com.gvw.gvwbackend.model;
 
-public class Deployment {
-    private UnsupportedType field;
-}`
+	public class Deployment {
+	    private UnsupportedType field;
+	}`
 
 	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err == nil {
@@ -116,6 +142,9 @@ public class Deployment {
 
 func TestGenerateSchema_PreviousSchemaReplaced(t *testing.T) {
 	logger, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
+
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
 
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
@@ -129,7 +158,7 @@ public class Deployment {
 
 	setupModelFile(fsWrapper, "Deployment.java", deploymentContent)
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, logger, modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err != nil {
@@ -167,6 +196,9 @@ public class Deployment {
 func TestGenerateSchema_NestedReferences(t *testing.T) {
 	logger, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
+
 	fsWrapper.listDirEntries = []os.DirEntry{
 		&MockDirEntry{name: "Deployment.java", isDir: false},
 		&MockDirEntry{name: "Migration.java", isDir: false},
@@ -203,7 +235,7 @@ public class Branch {
 	setupModelFile(fsWrapper, "Conditional.java", conditionalContent)
 	setupModelFile(fsWrapper, "Branch.java", branchContent)
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, logger, modelLoader)
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, logger, modelLoader)
 
 	err := buildManager.generateSchema("test-deployment")
 	if err != nil {
@@ -231,7 +263,10 @@ public class Branch {
 func TestSetupBuildDirs(t *testing.T) {
 	_, fsWrapper, mockJavaClient, modelLoader := setupBuildManagerTest()
 
-	buildManager := NewBuildManager("https://github.com/test/repo", mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
+	var configManager *config.ConfigManager = config.NewConfigManager(fsWrapper, "./config.json")
+	configManager.Config = validConfig
+
+	buildManager := NewBuildManager(configManager, mockJavaClient, fsWrapper, log.NewLogger(), modelLoader)
 
 	buildManager.setupBuildDirs("test-deployment")
 

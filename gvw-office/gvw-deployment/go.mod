@@ -1,5 +1,5 @@
 module gvw/gvw-deployment
 
-go 1.26.8
+go 1.27
 
 require gopkg.in/natefinch/lumberjack.v2 v2.2.1

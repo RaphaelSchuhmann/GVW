@@ -1,15 +1,14 @@
 package com.gvw.gvwbackend.util;
 
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
-import tools.jackson.databind.ObjectMapper;
-
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Utility class for making HTTP requests with automatic JSON serialization and deserialization.
@@ -53,7 +52,8 @@ public class HttpUtil {
    * @param responseType the class type to deserialize the response body to, or null to keep as raw
    *     string
    * @param <T> the type of the deserialized response body
-   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error state
+   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error
+   *     state
    */
   public <T> GVWHttpResponse sendGetRequest(String url, Class<T> responseType) {
     if (url == null || url.isBlank()) {
@@ -62,15 +62,15 @@ public class HttpUtil {
 
     try {
       HttpRequest request =
-              HttpRequest.newBuilder()
-                      .uri(URI.create(url))
-                      .header("User-Agent", "Java-GVW-Http")
-                      .header("Accept", "application/json")
-                      .GET()
-                      .build();
+          HttpRequest.newBuilder()
+              .uri(URI.create(url))
+              .header("User-Agent", "Java-GVW-Http")
+              .header("Accept", "application/json")
+              .GET()
+              .build();
 
       HttpResponse<String> response =
-              httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
       return extractResponse(response, responseType);
     } catch (InterruptedException e) {
@@ -96,7 +96,8 @@ public class HttpUtil {
    *     string
    * @param <T> the type of the request body
    * @param <U> the type of the deserialized response body
-   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error state
+   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error
+   *     state
    */
   public <T, U> GVWHttpResponse sendPostRequest(String url, T requestBody, Class<U> responseType) {
     if (url == null || url.isBlank()) {
@@ -107,15 +108,16 @@ public class HttpUtil {
       String jsonPayload = objectMapper.writeValueAsString(requestBody);
 
       HttpRequest request =
-              HttpRequest.newBuilder()
-                      .uri(URI.create(url))
-                      .header("User-Agent", "Java-GVW-Http")
-                      .header("Content-Type", "application/json")
-                      .header("Accept", "application/json")
-                      .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                      .build();
+          HttpRequest.newBuilder()
+              .uri(URI.create(url))
+              .header("User-Agent", "Java-GVW-Http")
+              .header("Content-Type", "application/json")
+              .header("Accept", "application/json")
+              .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+              .build();
 
-      HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
       return extractResponse(response, responseType);
     } catch (InterruptedException e) {
@@ -139,9 +141,11 @@ public class HttpUtil {
    * @param responseType the class type to deserialize the response body to, or null to keep as raw
    *     string
    * @param <T> the type of the deserialized response body
-   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error state
+   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error
+   *     state
    */
-  private <T> GVWHttpResponse extractResponse (HttpResponse<String> response, Class<T> responseType) {
+  private <T> GVWHttpResponse extractResponse(
+      HttpResponse<String> response, Class<T> responseType) {
     if (response == null) {
       return new GVWHttpResponse(500, null, null, true);
     }
