@@ -43,7 +43,13 @@ public class DeploymentService {
       DeploymentValidator deploymentValidator,
       MigrationValidator migrationValidator,
       HashUtil hashUtil) {
-    this(dbService, sseService, deploymentValidator, migrationValidator, hashUtil, Clock.systemUTC());
+    this(
+        dbService,
+        sseService,
+        deploymentValidator,
+        migrationValidator,
+        hashUtil,
+        Clock.systemUTC());
   }
 
   public DeploymentService(
@@ -79,10 +85,13 @@ public class DeploymentService {
 
     for (Deployment deployment : deployments) {
       LocalDate inputDate =
-          OffsetDateTime.parse(deployment.getDate()).atZoneSameInstant(ZoneOffset.UTC).toLocalDate();
+          OffsetDateTime.parse(deployment.getDate())
+              .atZoneSameInstant(ZoneOffset.UTC)
+              .toLocalDate();
 
       boolean isToday = inputDate.equals(LocalDate.now(clock.withZone(ZoneOffset.UTC)));
-      boolean isBeforeTargetTime = LocalTime.now(clock.withZone(ZoneOffset.UTC)).isBefore(deployment.getStartTime());
+      boolean isBeforeTargetTime =
+          LocalTime.now(clock.withZone(ZoneOffset.UTC)).isBefore(deployment.getStartTime());
 
       if (!isToday || !isBeforeTargetTime) continue;
 
@@ -186,7 +195,7 @@ public class DeploymentService {
 
     if (!request.endTime().isAfter(request.startTime())) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     Deployment deployment =
@@ -222,7 +231,8 @@ public class DeploymentService {
 
     if (deployment.getStatus() == DeploymentStatus.RUNNING) {
       throw new ForbiddenException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403, ErrorResource.MIGRATION)));
+          String.valueOf(
+              ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403, ErrorResource.MIGRATION)));
     }
 
     Migration newMigration =
@@ -289,7 +299,7 @@ public class DeploymentService {
 
     if (!request.endTime().isAfter(request.startTime())) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
     deployment.setRev(request.rev());

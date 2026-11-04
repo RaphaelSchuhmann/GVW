@@ -95,7 +95,10 @@ class DeploymentValidatorTest {
   @Test
   void isTodayAndAlreadyStarted_TodayMidnight_ReturnsTrue() {
     String todayIso =
-        LocalDate.now(fixedClock.withZone(ZoneOffset.UTC)).atStartOfDay(ZoneOffset.UTC).toInstant().toString();
+        LocalDate.now(fixedClock.withZone(ZoneOffset.UTC))
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .toString();
     assertTrue(validator.isTodayAndAlreadyStarted(todayIso, LocalTime.MIDNIGHT));
   }
 

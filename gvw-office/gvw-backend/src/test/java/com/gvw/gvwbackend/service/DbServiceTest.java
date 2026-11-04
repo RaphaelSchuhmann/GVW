@@ -29,8 +29,7 @@ class DbServiceTest {
 
   @Mock private RestTemplate restTemplate;
 
-  @Spy
-  private ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
+  @Spy private ObjectMapper objectMapper = tools.jackson.databind.json.JsonMapper.builder().build();
 
   @InjectMocks private DbService dbService;
 
@@ -213,7 +212,8 @@ class DbServiceTest {
   void findByQuery_Success() {
     Map<String, Object> query = Map.of("selector", Map.of("test", "value"));
     String json = "{\"docs\":[{\"_id\":\"doc-1\",\"test\":\"value1\"}]}";
-    Map<String, Object> responseMap = Map.of("docs", List.of(Map.of("_id", "doc-1", "test", "value1")));
+    Map<String, Object> responseMap =
+        Map.of("docs", List.of(Map.of("_id", "doc-1", "test", "value1")));
     Map<String, Object> docMap = Map.of("_id", "doc-1", "test", "value1");
     when(restTemplate.postForObject(eq(BASE_URL + "/test_db/_find"), eq(query), eq(String.class)))
         .thenReturn(json);

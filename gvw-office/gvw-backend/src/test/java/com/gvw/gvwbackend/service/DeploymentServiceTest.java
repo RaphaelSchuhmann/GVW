@@ -371,7 +371,8 @@ class DeploymentServiceTest {
     when(dbService.findAll(anyString(), eq(Deployment.class))).thenReturn(List.of(deployment));
 
     assertThrows(
-        com.gvw.gvwbackend.exception.ForbiddenException.class, () -> deploymentService.updateDeploymentInformation(request));
+        com.gvw.gvwbackend.exception.ForbiddenException.class,
+        () -> deploymentService.updateDeploymentInformation(request));
   }
 
   @Test
