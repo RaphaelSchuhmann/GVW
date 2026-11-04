@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"gvw/gvw-deployment/internal/config"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"io"
 	"net/http"
@@ -40,15 +41,13 @@ type JavaClient interface {
 }
 
 type HttpJavaClient struct {
-	baseUrl    string
-	token      string
+	cfg        *config.ConfigManager
 	httpClient *http.Client
 }
 
-func NewHttpJavaClient(baseUrl, token string) *HttpJavaClient {
+func NewHttpJavaClient(cfg *config.ConfigManager) *HttpJavaClient {
 	return &HttpJavaClient{
-		baseUrl: baseUrl,
-		token:   token,
+		cfg: cfg,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -56,7 +55,7 @@ func NewHttpJavaClient(baseUrl, token string) *HttpJavaClient {
 }
 
 func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Status, reason uint32, ctx context.Context) error {
-	endpoint := c.baseUrl + "/internal/deployment/" + url.PathEscape(deploymentId) + "/status"
+	endpoint := c.cfg.Config.JavaBaseURL + "/internal/deployment/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := StatusPayload{
 		Status: status,
@@ -74,7 +73,7 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Internal-Auth", c.token)
+	req.Header.Set("X-Internal-Auth", c.cfg.Config.InternalToken)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -92,7 +91,7 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 }
 
 func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason uint32, ctx context.Context) error {
-	endpoint := c.baseUrl + "/internal/migration/dry-run/" + url.PathEscape(deploymentId) + "/status"
+	endpoint := c.cfg.Config.JavaBaseURL + "/internal/migration/dry-run/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := MigrationDryRunPayload{
 		DeploymentId: deploymentId,
@@ -113,7 +112,7 @@ func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Internal-Auth", c.token)
+	req.Header.Set("X-Internal-Auth", c.cfg.Config.InternalToken)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

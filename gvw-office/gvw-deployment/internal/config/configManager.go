@@ -5,6 +5,8 @@ import (
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"reflect"
+	"strings"
+	"sync"
 )
 
 type Config struct {
@@ -22,6 +24,7 @@ type ConfigManager struct {
 	Config            Config
 	FileSystemWrapper filesystem.FileSystemWrapper
 	FilePath          string
+	mu                sync.RWMutex
 }
 
 func NewConfigManager(filesystemWrapper filesystem.FileSystemWrapper, path string) *ConfigManager {
@@ -32,6 +35,9 @@ func NewConfigManager(filesystemWrapper filesystem.FileSystemWrapper, path strin
 }
 
 func (c *ConfigManager) LoadConfig(revertOnError bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	var originalConfig Config
 
 	if revertOnError {
@@ -81,11 +87,25 @@ func ValidateConfig(config Config) error {
 	}
 
 	// Ensure that model to db map always has at least one value
-	if len(config.ModelDatabaseMap) <= 0 {
+	if !isModelToDbMapValid(config.ModelDatabaseMap) {
 		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigBadModelMap)
 	}
 
 	return nil
+}
+
+func isModelToDbMapValid(modelToDbMap map[string]string) bool {
+	if len(modelToDbMap) <= 0 {
+		return false
+	}
+
+	for k, v := range modelToDbMap {
+		if strings.TrimSpace(k) == "" || strings.TrimSpace(v) == "" {
+			return false
+		}
+	}
+
+	return true
 }
 
 func IsConfigValueInvalid(member reflect.Value) bool {

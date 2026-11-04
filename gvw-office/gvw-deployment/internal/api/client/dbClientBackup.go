@@ -33,6 +33,7 @@ type replicationResult struct {
 
 type revRow struct {
 	ID    string `json:"id"`
+	Key   string `json:"key"`
 	Value struct {
 		Rev string `json:"rev"`
 	} `json:"value"`
@@ -43,7 +44,7 @@ type revsResponse struct {
 }
 
 func (d *DbClient) dbURL(name string) string {
-	return fmt.Sprintf("%s/%s", d.baseUrl, url.PathEscape(name))
+	return fmt.Sprintf("%s/%s", d.configManager.Config.DatabaseURL, url.PathEscape(name))
 }
 
 // CreateBackupOfDatabase copies the database into "<database>_backup" and verifies the copy.
@@ -72,7 +73,7 @@ func (d *DbClient) CreateBackupOfDatabase(ctx context.Context, database string) 
 func (d *DbClient) replicateAndVerify(ctx context.Context, source, target string) error {
 	var result replicationResult
 	payload := map[string]any{"source": source, "target": target}
-	if err := d.doDbRequest(ctx, longRunningClient, d.baseUrl+"/_replicate", http.MethodPost, payload, &result); err != nil {
+	if err := d.doDbRequest(ctx, longRunningClient, d.configManager.Config.DatabaseURL+"/_replicate", http.MethodPost, payload, &result); err != nil {
 		return err
 	}
 
@@ -126,50 +127,140 @@ func (d *DbClient) deleteDatabase(ctx context.Context, name string) error {
 // backup revision were never touched and are skipped.
 //
 // Not covered: documents that were created in the target after the backup was taken are not deleted.
-func (d *DbClient) RestoreDatabaseFromBackup(ctx context.Context, targetDatabase, backupDatabase string) error {
-	var revs revsResponse
-	if err := d.doDbRequest(ctx, longRunningClient, d.dbURL(targetDatabase)+"/_all_docs", http.MethodGet, nil, &revs); err != nil {
-		return gvwErrors.Wrap(gvwErrors.CodeDbBackupRestorationFailed, fmt.Errorf("failed to read current revisions: %w", err))
-	}
-	currentRevs := make(map[string]string, len(revs.Rows))
-	for _, row := range revs.Rows {
-		currentRevs[row.ID] = row.Value.Rev
-	}
+func (d *DbClient) RestoreDatabaseFromBackup(ctx context.Context, targetDatabase string, backupDatabase string) error {
+	// Read the current target revisions page-by-page.
+	var revPage revsResponse
+	var revPageIndex int
+	var revPageStartKey *string
+	revPageLoaded := false
+	revPagesDone := false
 
-	var backup AllDocsResponse
-	if err := d.doDbRequest(ctx, longRunningClient, d.dbURL(backupDatabase)+"/_all_docs?include_docs=true", http.MethodGet, nil, &backup); err != nil {
-		return gvwErrors.Wrap(gvwErrors.CodeDbBackupRestorationFailed, fmt.Errorf("failed to read backup docs: %w", err))
-	}
-
-	var toWrite []map[string]any
-	for _, row := range backup.Rows {
-		doc := row.Doc
-		if doc == nil {
-			continue
-		}
-
-		id, _ := doc["_id"].(string)
-		backupRev, _ := doc["_rev"].(string)
-
-		if current, exists := currentRevs[id]; exists {
-			if current == backupRev {
-				continue // untouched since the backup
+	nextCurrentRevision := func() (revRow, bool, error) {
+		for {
+			if revPageIndex < len(revPage.Rows) {
+				row := revPage.Rows[revPageIndex]
+				revPageIndex++
+				return row, true, nil
 			}
-			doc["_rev"] = current
-		} else {
-			delete(doc, "_rev") // deleted in the target: recreate it
+
+			if revPagesDone {
+				return revRow{}, false, nil
+			}
+
+			if revPageLoaded {
+				if len(revPage.Rows) < restoreBatchSize {
+					revPagesDone = true
+					return revRow{}, false, nil
+				}
+
+				lastKey := revPage.Rows[len(revPage.Rows)-1].Key
+				revPageStartKey = &lastKey
+			}
+
+			if err := d.fetchAllDocsPage(
+				ctx,
+				targetDatabase,
+				false,
+				revPageStartKey,
+				&revPage,
+			); err != nil {
+				return revRow{}, false, gvwErrors.Wrap(
+					gvwErrors.CodeDbBackupRestorationFailed,
+					fmt.Errorf("failed to read current revisions: %w", err),
+				)
+			}
+
+			revPageLoaded = true
+			revPageIndex = 0
+
+			if len(revPage.Rows) == 0 {
+				revPagesDone = true
+				return revRow{}, false, nil
+			}
 		}
-		toWrite = append(toWrite, doc)
 	}
 
-	for start := 0; start < len(toWrite); start += restoreBatchSize {
-		end := min(start+restoreBatchSize, len(toWrite))
-		if err := d.BulkUpdate(ctx, targetDatabase, toWrite[start:end]); err != nil {
-			return gvwErrors.Wrap(gvwErrors.CodeDbBackupRestorationFailed, fmt.Errorf("failed to restore docs: %w", err))
-		}
+	currentRev, hasCurrentRev, err := nextCurrentRevision()
+	if err != nil {
+		return err
 	}
 
-	return nil
+	// Backup documents and target revisions are both ordered by document ID.
+	// Walk them together instead of retaining every target revision in memory.
+	var backupPage AllDocsResponse
+	var backupPageStartKey *string
+
+	toWrite := make([]map[string]any, 0, restoreBatchSize)
+
+	flushBatch := func() error {
+		if len(toWrite) == 0 {
+			return nil
+		}
+
+		if err := d.BulkUpdate(ctx, targetDatabase, toWrite); err != nil {
+			return gvwErrors.Wrap(
+				gvwErrors.CodeDbBackupRestorationFailed,
+				fmt.Errorf("failed to restore docs: %w", err),
+			)
+		}
+
+		toWrite = toWrite[:0]
+		return nil
+	}
+
+	for {
+		if err := d.fetchAllDocsPage(ctx, backupDatabase, true, backupPageStartKey, &backupPage); err != nil {
+			return gvwErrors.Wrap(
+				gvwErrors.CodeDbBackupRestorationFailed,
+				fmt.Errorf("failed to read backup docs: %w", err),
+			)
+		}
+
+		for _, row := range backupPage.Rows {
+			doc := row.Doc
+			if doc == nil {
+				continue
+			}
+
+			backupRev, _ := doc["_rev"].(string)
+
+			// Advance the target revision stream until it reaches this
+			// backup document or passes it.
+			for hasCurrentRev && currentRev.Key < row.Key {
+				currentRev, hasCurrentRev, err = nextCurrentRevision()
+				if err != nil {
+					return err
+				}
+			}
+
+			if hasCurrentRev && currentRev.Key == row.Key {
+				if currentRev.Value.Rev == backupRev {
+					continue // untouched since the backup
+				}
+
+				doc["_rev"] = currentRev.Value.Rev
+			} else {
+				delete(doc, "_rev") // deleted in the target: recreate it
+			}
+
+			toWrite = append(toWrite, doc)
+
+			if len(toWrite) == restoreBatchSize {
+				if err := flushBatch(); err != nil {
+					return err
+				}
+			}
+		}
+
+		if len(backupPage.Rows) < restoreBatchSize {
+			break
+		}
+
+		lastKey := backupPage.Rows[len(backupPage.Rows)-1].Key
+		backupPageStartKey = &lastKey
+	}
+
+	return flushBatch()
 }
 
 // ClearDatabaseBackups deletes all backup databases. It keeps going after a failure and reports all of them.

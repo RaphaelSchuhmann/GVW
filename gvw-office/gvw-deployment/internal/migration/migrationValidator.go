@@ -102,6 +102,9 @@ func (v *MigrationValidator) ValidateMigrationAgainstSchema(migration Migration,
 		}
 	case MigrationConditional:
 		c := migration.Conditional
+		if !schema.PathExists(roots, c.Condition.Field) {
+			return notInSchema("conditional: condition field %q does not exist in the models of this database", c.Condition.Field)
+		}
 		for _, b := range []Branch{c.TrueBranch, c.FalseBranch} {
 			if b.Field != "" && !schema.PathExists(roots, b.Field) {
 				return notInSchema("conditional: field %q does not exist in the models of this database", b.Field)

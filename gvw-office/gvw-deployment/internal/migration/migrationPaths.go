@@ -10,7 +10,28 @@ import (
 // and "*" matches every value of a map with dynamic keys: "feedbackCategories.*".
 
 func splitPath(path string) []string {
-	return strings.Split(path, ".")
+	var segments []string
+	var current strings.Builder
+
+	for i := 0; i < len(path); i++ {
+		switch path[i] {
+		case '\\':
+			if i+1 < len(path) && (path[i+1] == '.' || path[i+1] == '\\') {
+				i++
+				current.WriteByte(path[i])
+			} else {
+				current.WriteByte('\\')
+			}
+		case '.':
+			segments = append(segments, current.String())
+			current.Reset()
+		default:
+			current.WriteByte(path[i])
+		}
+	}
+
+	segments = append(segments, current.String())
+	return segments
 }
 
 // parentPath returns everything before the last segment ("" for top-level fields).
@@ -28,6 +49,11 @@ func leafOf(path string) string {
 }
 
 func joinPath(parent, name string) string {
+	name = strings.NewReplacer(
+		`\`, `\\`,
+		`.`, `\.`,
+	).Replace(name)
+
 	if parent == "" {
 		return name
 	}
@@ -120,6 +146,7 @@ func deepCloneValue(v any) any {
 
 // flattenDoc maps every leaf path of a document to the values found there.
 // Arrays are transparent, so "helpCenterCategories.icon" holds one value per element.
+// Dots and backslashes in map keys are escaped to preserve individual path segments.
 func flattenDoc(doc map[string]any) map[string][]any {
 	out := make(map[string][]any)
 	collectLeaves("", doc, out)
@@ -130,7 +157,6 @@ func collectLeaves(prefix string, v any, out map[string][]any) {
 	switch t := v.(type) {
 	case map[string]any:
 		if len(t) == 0 {
-			out[prefix] = append(out[prefix], t)
 			return
 		}
 		for _, k := range sortedKeys(t) {
@@ -152,11 +178,13 @@ func collectLeaves(prefix string, v any, out map[string][]any) {
 // pathAllowed reports whether p equals, or lies below, one of the allowed patterns ("*" matches any segment).
 func pathAllowed(p string, patterns []string) bool {
 	ps := splitPath(p)
+
 	for _, pat := range patterns {
 		pp := splitPath(pat)
 		if len(pp) > len(ps) {
 			continue
 		}
+
 		match := true
 		for i := range pp {
 			if pp[i] != "*" && pp[i] != ps[i] {
@@ -164,10 +192,12 @@ func pathAllowed(p string, patterns []string) bool {
 				break
 			}
 		}
+
 		if match {
 			return true
 		}
 	}
+
 	return false
 }
 

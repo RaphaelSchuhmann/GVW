@@ -16,23 +16,17 @@ import (
 )
 
 type App struct {
-	Config     *config.Config
 	Logger     *log.Logger
 	HttpServer *http.Server
 }
 
-func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager *config.ConfigManager) (*App, error) {
-	javaBaseURL := cfg.JavaBaseURL
-	if javaBaseURL == "" {
-		javaBaseURL = "http://localhost:3500/api"
-	}
-
-	javaClient := client.NewHttpJavaClient(javaBaseURL, cfg.InternalToken)
-	dbClient := client.NewDbClient(cfg.DatabaseURL, cfg.DatabaseUsername, cfg.DatabasePassword)
+func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager *config.ConfigManager) (*App, error) {
+	javaClient := client.NewHttpJavaClient(configManager)
+	dbClient := client.NewDbClient(configManager)
 
 	// Build System
 	modelLoader := build.NewModelLoader(logger, fsWrapper)
-	buildManager := build.NewBuildManager(cfg.GithubRepoURL, javaClient, fsWrapper, logger, modelLoader)
+	buildManager := build.NewBuildManager(configManager, javaClient, fsWrapper, logger, modelLoader)
 
 	// Migration System
 	migrationValidator := migration.NewMigrationValidator()
@@ -54,13 +48,12 @@ func NewApp(cfg *config.Config, logger *log.Logger, fsWrapper *filesystem.FileSy
 	handler = middleware.LocalhostOnlyMiddleware(logger, handler)
 
 	server := &http.Server{
-		Addr:              "127.0.0.1:" + cfg.Port,
+		Addr:              "127.0.0.1:" + configManager.Config.Port,
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	return &App{
-		Config:     cfg,
 		Logger:     logger,
 		HttpServer: server,
 	}, nil

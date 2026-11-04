@@ -17,7 +17,7 @@ func main() {
 		return
 	}
 
-	application, err := app.NewApp(&configManager.Config, logger, fsWrapper, configManager)
+	application, err := app.NewApp(logger, fsWrapper, configManager)
 	if err != nil {
 		logger.Fatalf("Failed to initialize app: %v", err)
 		return

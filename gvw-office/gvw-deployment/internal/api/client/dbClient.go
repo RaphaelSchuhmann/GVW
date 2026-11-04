@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"time"
 
+	"gvw/gvw-deployment/internal/config"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 )
 
@@ -59,17 +60,13 @@ type AllDocsResponse struct {
 }
 
 type DbClient struct {
-	baseUrl    string
-	username   string
-	password   string
-	httpClient *http.Client
+	configManager *config.ConfigManager
+	httpClient    *http.Client
 }
 
-func NewDbClient(baseUrl, username, password string) *DbClient {
+func NewDbClient(configManager *config.ConfigManager) *DbClient {
 	return &DbClient{
-		baseUrl:  baseUrl,
-		username: username,
-		password: password,
+		configManager: configManager,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -77,7 +74,7 @@ func NewDbClient(baseUrl, username, password string) *DbClient {
 }
 
 func (d *DbClient) FindByQuery(ctx context.Context, database string, query map[string]any, limit int, bookmark string) (*FindResponse, error) {
-	endpoint := fmt.Sprintf("%s/%s/_find", d.baseUrl, url.PathEscape(database))
+	endpoint := fmt.Sprintf("%s/_find", d.dbURL(database))
 
 	q := make(map[string]any, len(query)+2)
 	maps.Copy(q, query)
@@ -123,22 +120,29 @@ func (d *DbClient) FindEachByQuery(ctx context.Context, database string, query m
 	}
 }
 
-func (d *DbClient) FetchAllDocsWithBody(ctx context.Context, dbName string) ([]map[string]any, error) {
-	endpoint := fmt.Sprintf("%s/%s/_all_docs?include_docs=true", d.baseUrl, url.PathEscape(dbName))
+// fetchAllDocsPage fetches one page from _all_docs.
+// startKey is exclusive: the previous page's final row is skipped.
+func (d *DbClient) fetchAllDocsPage(ctx context.Context, database string, includeDocs bool, startKey *string, out any) error {
+	params := url.Values{}
+	params.Set("limit", fmt.Sprintf("%d", restoreBatchSize))
 
-	var resp AllDocsResponse
-	if err := d.executeDbRequest(ctx, endpoint, http.MethodGet, nil, &resp); err != nil {
-		return nil, fmt.Errorf("failed to fetch all docs: %w", err)
+	if includeDocs {
+		params.Set("include_docs", "true")
 	}
 
-	var docs []map[string]any
-	for _, row := range resp.Rows {
-		if row.Doc != nil {
-			docs = append(docs, row.Doc)
+	if startKey != nil {
+		encodedKey, err := json.Marshal(*startKey)
+		if err != nil {
+			return err
 		}
+
+		params.Set("startkey", string(encodedKey))
+		params.Set("skip", "1")
 	}
 
-	return docs, nil
+	endpoint := d.dbURL(database) + "/_all_docs?" + params.Encode()
+
+	return d.doDbRequest(ctx, longRunningClient, endpoint, http.MethodGet, nil, out)
 }
 
 // BulkUpdate writes the given documents (each must contain _id and the current _rev) with one request.
@@ -150,7 +154,7 @@ func (d *DbClient) BulkUpdate(ctx context.Context, database string, docs []map[s
 		return nil
 	}
 
-	endpoint := fmt.Sprintf("%s/%s/_bulk_docs", d.baseUrl, url.PathEscape(database))
+	endpoint := fmt.Sprintf("%s/_bulk_docs", d.dbURL(database))
 
 	var results []bulkResult
 	body := map[string]any{"docs": docs}
@@ -191,7 +195,7 @@ func (d *DbClient) doDbRequest(ctx context.Context, httpClient *http.Client, url
 	}
 
 	req.Header.Set("Accept", "application/json")
-	req.SetBasicAuth(d.username, d.password)
+	req.SetBasicAuth(d.configManager.Config.DatabaseUsername, d.configManager.Config.DatabasePassword)
 	if in != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -211,7 +215,11 @@ func (d *DbClient) doDbRequest(ctx context.Context, httpClient *http.Client, url
 	if out == nil {
 		return nil
 	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+
+	decoder := json.NewDecoder(resp.Body)
+	decoder.UseNumber()
+
+	if err := decoder.Decode(out); err != nil {
 		return gvwErrors.Wrap(gvwErrors.CodeDbDecodeBody, err)
 	}
 	return nil

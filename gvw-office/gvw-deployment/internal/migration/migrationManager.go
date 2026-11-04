@@ -149,17 +149,17 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 
 		m.logger.Printf("[MIGRATION] Starting migration dry run for deploymentId %s", deploymentId)
 		successful := m.executeDryRunPipeline(ctx, deploymentId, schema, migrations)
-		if successful {
-			m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
+		if !successful {
+			return nil
 		}
+
+		m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
+		m.logger.Printf("[MIGRATION] Migration dry run for deploymentId %s finished successfully", deploymentId)
+		return nil
 	} else {
 		m.logger.Printf("[MIGRATION] Starting migration execution for deploymentId %s", deploymentId)
 		return m.executeMigrationPipeline(deploymentId, schema, migrations)
 	}
-
-	m.logger.Printf("[MIGRATION] Migration pipeline for deploymentId %s finished successfully", deploymentId)
-
-	return nil
 }
 
 func (m *MigrationManager) prepareMigrationRun(ctx context.Context, deploymentId string, migrations []Migration) (*Schema, error) {

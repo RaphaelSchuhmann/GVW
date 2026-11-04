@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"gvw/gvw-deployment/internal/api/client"
+	"gvw/gvw-deployment/internal/config"
 	"gvw/gvw-deployment/internal/utils/commandExecutor"
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
@@ -23,26 +24,26 @@ type activeBuild struct {
 }
 
 type BuildManager struct {
-	mutex         sync.Mutex
-	activeBuilds  map[string]*activeBuild
-	githubRepoURL string
-	javaClient    client.JavaClient
-	fsWrapper     filesystem.FileSystemWrapper
-	logger        *log.Logger
-	modelLoader   *ModelLoader
+	mutex        sync.Mutex
+	activeBuilds map[string]*activeBuild
+	cfg          *config.ConfigManager
+	javaClient   client.JavaClient
+	fsWrapper    filesystem.FileSystemWrapper
+	logger       *log.Logger
+	modelLoader  *ModelLoader
 }
 
 const pipelineCancelledLogMessage = "[BUILD] Pipeline cancelled for deployment %s: %v"
 const buildBaseDir = "./builds/"
 
-func NewBuildManager(githubRepoURL string, javaClient client.JavaClient, fsWrapper filesystem.FileSystemWrapper, logger *log.Logger, modelLoader *ModelLoader) *BuildManager {
+func NewBuildManager(cfg *config.ConfigManager, javaClient client.JavaClient, fsWrapper filesystem.FileSystemWrapper, logger *log.Logger, modelLoader *ModelLoader) *BuildManager {
 	return &BuildManager{
-		activeBuilds:  make(map[string]*activeBuild),
-		githubRepoURL: githubRepoURL,
-		javaClient:    javaClient,
-		fsWrapper:     fsWrapper,
-		logger:        logger,
-		modelLoader:   modelLoader,
+		activeBuilds: make(map[string]*activeBuild),
+		cfg:          cfg,
+		javaClient:   javaClient,
+		fsWrapper:    fsWrapper,
+		logger:       logger,
+		modelLoader:  modelLoader,
 	}
 }
 
@@ -209,7 +210,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		return err
 	}
 
-	if err := run("git", "remote", "add", "origin", b.githubRepoURL); err != nil {
+	if err := run("git", "remote", "add", "origin", b.cfg.Config.GithubRepoURL); err != nil {
 		return err
 	}
 

@@ -80,11 +80,11 @@ func (e *MigrationEngine) ValidateMigrations(ctx context.Context, migrations []M
 		return gvwErrors.Wrap(gvwErrors.CodeMigrationEngineJsonError, errors.New("schema contains no models"))
 	}
 
-	if e.validator.AreMigrationFieldsValid(migrations) {
+	if !e.validator.AreMigrationFieldsValid(migrations) {
 		return gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidField)
 	}
 
-	if e.validator.IsMigrationSequenceValid(migrations) {
+	if !e.validator.IsMigrationSequenceValid(migrations) {
 		return gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidSequence)
 	}
 
