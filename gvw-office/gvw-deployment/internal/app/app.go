@@ -7,6 +7,7 @@ import (
 	"gvw/gvw-deployment/internal/api/middleware"
 	"gvw/gvw-deployment/internal/build"
 	"gvw/gvw-deployment/internal/config"
+	"gvw/gvw-deployment/internal/deploy"
 	"gvw/gvw-deployment/internal/migration"
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
@@ -33,16 +34,22 @@ func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager 
 	migrationEngine := migration.NewMigrationEngine(logger, fsWrapper, migrationValidator, dbClient)
 	migrationManager := migration.NewMigrationManager(logger, fsWrapper, javaClient, migrationEngine, configManager, migrationValidator, dbClient)
 
+	// Deployment System
+	serviceManager := deploy.NewServiceManager(logger, configManager)
+	deploymentManager := deploy.NewBuildManager(configManager, buildManager, migrationManager, logger, javaClient, serviceManager)
+
 	// Handlers
 	configHandler := handler.NewConfigHandler(configManager)
 	buildHandler := handler.NewBuildHandler(buildManager)
 	migrationHandler := handler.NewMigrationHandler(migrationManager)
+	deploymentHandler := handler.NewDeploymentHandler(deploymentManager)
 
 	mux := http.NewServeMux()
 	configHandler.RegisterRoutes(mux)
 	buildHandler.RegisterRoutes(mux)
 	migrationHandler.RegisterRoutes(mux)
-
+	deploymentHandler.RegisterRoutes(mux)
+	
 	var handler http.Handler = mux
 	handler = middleware.LoggingMiddleware(logger, handler)
 	handler = middleware.LocalhostOnlyMiddleware(logger, handler)

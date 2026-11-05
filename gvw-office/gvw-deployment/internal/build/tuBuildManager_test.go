@@ -20,6 +20,7 @@ var validConfig = config.Config{
     DatabaseURL:      "http://127.0.0.1/",
     DatabaseUsername: "username",
     DatabasePassword: "password",
+	ShutdownTimeout: 15,
 }
 
 func TestGenerateSchema_Success(t *testing.T) {

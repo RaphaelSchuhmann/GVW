@@ -18,6 +18,8 @@ type Config struct {
 	DatabaseURL      string            `json:"database_url"`
 	DatabaseUsername string            `json:"database_username"`
 	DatabasePassword string            `json:"database_password"`
+	ShutdownTimeout  int               `json:"shutdown_timeout_s"` // in seconds
+	StartupTimeout   int               `json:"startup_timeout_s"` // in seconds
 }
 
 type ConfigManager struct {

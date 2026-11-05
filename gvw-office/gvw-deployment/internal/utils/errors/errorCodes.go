@@ -48,6 +48,13 @@ const (
 	CodeMigrationManagerInvalidDeploymentId Code = "MigrationManagerError_Invalid_Deployment_Id"
 	CodeMigrationManagerError               Code = "MigrationManagerError"
 
+	// Service manager codes
+	CodeServiceManagerSystemdConnectionFailed Code = "ServiceManagerError_Systemd_Connection_Failed"
+	CodeServiceManagerFailedToQueueSystemdJob Code = "ServiceManagerError_Failed_To_Queue_Systemd_Job"
+	CodeServiceManagerBadServiceName          Code = "ServiceManagerError_Bad_Service_Name"
+	CodeServiceManagerJobFinishedNonSucces    Code = "ServiceManagerError_Job_Finished_With_Non_Success"
+	CodeServiceManagerJobTimedout             Code = "ServiceManagerError_Job_Timedout"
+
 	// Config error codes
 	CodeConfigError              Code = "ConfigError"
 	CodeInvalidConfigNoStruct    Code = "InvalidConfig_No_Struct"

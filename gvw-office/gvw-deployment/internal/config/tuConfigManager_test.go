@@ -10,16 +10,15 @@ import (
 )
 
 var validConfig = Config{
-    Port:          "8080",
-    InternalToken: "test-token",
-    JavaBaseURL:   "http://localhost:8080",
-    GithubRepoURL: "https://github.com/test/repo",
-    ModelDatabaseMap: map[string]string{
-        "model1": "db1",
-    },
-    DatabaseURL:      "http://127.0.0.1/",
-    DatabaseUsername: "username",
-    DatabasePassword: "password",
+	Port:                       "8080",
+	InternalToken:              "test-token",
+	JavaBaseURL:                "http://localhost:8080",
+	GithubRepoURL:              "https://github.com/test/repo",
+	ModelDatabaseMap:           map[string]string{"model1": "db1"},
+	DatabaseURL:                "http://127.0.0.1/",
+	DatabaseUsername:           "username",
+	DatabasePassword:           "password",
+	ShutdownTimeout: 15,
 }
 
 func TestValidateConfig_ValidConfig(t *testing.T) {
@@ -29,15 +28,8 @@ func TestValidateConfig_ValidConfig(t *testing.T) {
 }
 
 func TestValidateConfig_EmptyPort(t *testing.T) {
-	config := Config{
-		Port:          "",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
+	config := validConfig
+	config.Port = ""
 
 	err := ValidateConfig(config)
 	if err == nil {
@@ -46,13 +38,8 @@ func TestValidateConfig_EmptyPort(t *testing.T) {
 }
 
 func TestValidateConfig_EmptyModelDatabaseMap(t *testing.T) {
-	config := Config{
-		Port:             "8080",
-		InternalToken:    "test-token",
-		JavaBaseURL:      "http://localhost:8080",
-		GithubRepoURL:    "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{},
-	}
+	config := validConfig
+	config.ModelDatabaseMap = map[string]string{}
 
 	err := ValidateConfig(config)
 	if err == nil {
@@ -61,13 +48,8 @@ func TestValidateConfig_EmptyModelDatabaseMap(t *testing.T) {
 }
 
 func TestValidateConfig_NilModelDatabaseMap(t *testing.T) {
-	config := Config{
-		Port:             "8080",
-		InternalToken:    "test-token",
-		JavaBaseURL:      "http://localhost:8080",
-		GithubRepoURL:    "https://github.com/test/repo",
-		ModelDatabaseMap: nil,
-	}
+	config := validConfig
+	config.ModelDatabaseMap = nil
 
 	err := ValidateConfig(config)
 	if err == nil {
@@ -228,7 +210,7 @@ func TestLoadConfig_FileNotFoundAndReverts(t *testing.T) {
 func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 	// Create a config file with missing required fields
 	configData := map[string]interface{}{
-		"port": "8080",
+		"port": 8080,
 		// Missing other required fields
 	}
 
@@ -255,7 +237,7 @@ func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 func TestLoadConfig_InvalidConfigValuesAndReverts(t *testing.T) {
 	// Create a config file with missing required fields
 	configData := map[string]interface{}{
-		"port": "8080",
+		"port": 8080,
 		// Missing other required fields
 	}
 
