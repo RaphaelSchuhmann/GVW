@@ -49,11 +49,9 @@ const (
 	CodeMigrationManagerError               Code = "MigrationManagerError"
 
 	// Service manager codes
-	CodeServiceManagerSystemdConnectionFailed Code = "ServiceManagerError_Systemd_Connection_Failed"
-	CodeServiceManagerFailedToQueueSystemdJob Code = "ServiceManagerError_Failed_To_Queue_Systemd_Job"
-	CodeServiceManagerBadServiceName          Code = "ServiceManagerError_Bad_Service_Name"
-	CodeServiceManagerJobFinishedNonSucces    Code = "ServiceManagerError_Job_Finished_With_Non_Success"
-	CodeServiceManagerJobTimedout             Code = "ServiceManagerError_Job_Timedout"
+	CodeServiceManagerBadServiceName Code = "ServiceManagerError_Bad_Service_Name"
+	CodeServiceManagerJobTimedout    Code = "ServiceManagerError_Job_Timedout"
+	CodeServiceManagerJobFailed      Code = "ServiceManagerError_Job_Failed"
 
 	// Config error codes
 	CodeConfigError              Code = "ConfigError"

@@ -3,6 +3,7 @@ package deploy
 import (
 	"context"
 	"gvw/gvw-deployment/internal/config"
+	"gvw/gvw-deployment/internal/utils/commandExecutor"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/log"
 	"time"
@@ -37,7 +38,16 @@ func (s *ServiceManager) StopService(serviceName string, timeoutDuration int) er
 
 	s.log.Printf("[SERVICE] Stopping service %s", serviceName)
 
+	_, err := commandExecutor.RunCommand(ctx, "", "systemctl", "stop", serviceName)
+	if err != nil {
+		if gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout) {
+			return gvwErrors.NewError(gvwErrors.CodeServiceManagerJobTimedout)
+		}
 
+		return gvwErrors.Wrap(gvwErrors.CodeServiceManagerJobFailed, err)
+	}
+
+	s.log.Printf("[SERVICE] Stopped service %s successfully", serviceName)
 
 	return nil
 }
@@ -59,5 +69,16 @@ func (s *ServiceManager) StartService(serviceName string, timeoutDuration int) e
 
 	s.log.Printf("[SERVICE] Starting service %s", serviceName)
 
+	_, err := commandExecutor.RunCommand(ctx, "", "systemctl", "start", serviceName)
+	if err != nil {
+		if gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout) {
+			return gvwErrors.NewError(gvwErrors.CodeServiceManagerJobTimedout)
+		}
 
+		return gvwErrors.Wrap(gvwErrors.CodeServiceManagerJobFailed, err)
+	}
+
+	s.log.Printf("[SERVICE] Started service %s successfully", serviceName)
+
+	return nil
 }
