@@ -47,7 +47,7 @@ func NewBuildManager(cfg *config.ConfigManager, javaClient client.JavaClient, fs
 	}
 }
 
-func (b *BuildManager) TriggerBuild(deploymentId, commit string) {
+func (b *BuildManager) TriggerBuild(deploymentId, commit string, returnError bool) error {
 	b.mutex.Lock()
 
 	previous := b.activeBuilds[deploymentId]
@@ -65,6 +65,8 @@ func (b *BuildManager) TriggerBuild(deploymentId, commit string) {
 	b.activeBuilds[deploymentId] = current
 
 	b.mutex.Unlock()
+
+	var err error = nil
 
 	// Start build pipeline asynchronously in a goroutine
 	go func() {
@@ -90,13 +92,19 @@ func (b *BuildManager) TriggerBuild(deploymentId, commit string) {
 			return
 		}
 
-		b.runPipeline(ctx, deploymentId, commit)
+		// Pipeline error only matters if flag is true
+		pipelineError := b.runPipeline(ctx, deploymentId, commit, !returnError)
+		if returnError {
+			err = pipelineError
+		}
 	}()
+
+	return err
 }
 
-func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit string) {
+func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit string, doUpdate bool) error {
 	if ctx.Err() != nil {
-		return
+		return ctx.Err()
 	}
 
 	b.logger.Printf("[BUILD] Starting build for deployment %s with commit %s", deploymentId, commit)
@@ -109,38 +117,46 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 	if err := b.cloneRepo(ctx, deploymentId, commit); err != nil {
 		if ctx.Err() != nil {
 			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
-			return
+			return err
 		}
 
 		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-		b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, BUILD_CodeCommitInvalid, ctx)
-		return
+		b.updateDeployment(deploymentId, client.StatusCancelled, BUILD_CodeCommitInvalid, ctx, doUpdate)
+		return err
 	}
 
 	if err := b.executeBuilds(ctx, deploymentId); err != nil {
 		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			b.logger.Printf(pipelineCancelledLogMessage, deploymentId, err)
-			return
+			return err
 		}
 
 		errorCode := MapBuildErrorsToCode(err)
 		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed: %v", deploymentId, commit, err)
 
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, errorCode, ctx); updateErr != nil {
-			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
-		}
-		return
+		b.updateDeployment(deploymentId, client.StatusCancelled, errorCode, ctx, doUpdate)
+		return err
 	}
 
 	if err := b.generateSchema(deploymentId); err != nil {
 		b.logger.Printf("[BUILD] Schema generation failed for deployment %s: %v", deploymentId, err)
-		if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, client.StatusCancelled, BUILD_CodeSchemaGenerationFailed, ctx); updateErr != nil {
-			b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
-		}
-		return
+		b.updateDeployment(deploymentId, client.StatusCancelled, BUILD_CodeSchemaGenerationFailed, ctx, doUpdate)
+		return err
 	}
 
 	b.logger.Printf("[BUILD] Build pipeline completed successfully for deployment %s", deploymentId)
+
+	return nil
+}
+
+func (b *BuildManager) updateDeployment(deploymentId string, status client.Status, errorCode uint32, ctx context.Context, doUpdate bool) {
+	if !doUpdate {
+		return
+	}
+
+	if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, status, errorCode, ctx); updateErr != nil {
+		b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
+	}
 }
 
 func (b *BuildManager) executeBuilds(ctx context.Context, deploymentId string) error {

@@ -19,6 +19,7 @@ var validConfig = Config{
 	DatabaseUsername:           "username",
 	DatabasePassword:           "password",
 	ShutdownTimeout: 15,
+	StartupTimeout: 45,
 }
 
 func TestValidateConfig_ValidConfig(t *testing.T) {
