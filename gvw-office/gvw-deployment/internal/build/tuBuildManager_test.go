@@ -10,17 +10,16 @@ import (
 )
 
 var validConfig = config.Config{
-    Port:          "8080",
-    InternalToken: "test-token",
-    JavaBaseURL:   "http://localhost:8080",
-    GithubRepoURL: "https://github.com/test/repo",
-    ModelDatabaseMap: map[string]string{
-        "model1": "db1",
-    },
-    DatabaseURL:      "http://127.0.0.1/",
-    DatabaseUsername: "username",
-    DatabasePassword: "password",
-	ShutdownTimeout: 15,
+	Port:               "8080",
+	InternalToken:      "test-token",
+	JavaBaseURL:        "http://localhost:8080",
+	GithubRepoURL:      "https://github.com/test/repo",
+	ModelDatabaseMap:   map[string]string{"model1": "db1"},
+	DatabaseURL:        "http://127.0.0.1/",
+	DatabaseUsername:   "username",
+	DatabasePassword:   "password",
+	ShutdownTimeout:    15,
+	MaintenanceFlagDir: "./",
 }
 
 func TestGenerateSchema_Success(t *testing.T) {

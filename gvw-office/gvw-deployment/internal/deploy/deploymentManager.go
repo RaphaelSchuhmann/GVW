@@ -1,12 +1,26 @@
 package deploy
 
 import (
+	"context"
 	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/build"
 	"gvw/gvw-deployment/internal/config"
 	"gvw/gvw-deployment/internal/migration"
+	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
+	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
 )
+
+type DeploymentManagerDeps struct {
+	Config           *config.ConfigManager
+	BuildManager     *build.BuildManager
+	MigrationManager *migration.MigrationManager
+	Logger           *log.Logger
+	JavaClient       client.JavaClient
+	ServiceManager   *ServiceManager
+	FsWrapper        filesystem.FileSystemWrapper
+	NginxController  *NginxMaintenanceController
+}
 
 type DeploymentManager struct {
 	cfg              *config.ConfigManager
@@ -15,19 +29,70 @@ type DeploymentManager struct {
 	logger           *log.Logger
 	javaClient       client.JavaClient
 	serviceManager   *ServiceManager
+	fsWrapper        filesystem.FileSystemWrapper
+	nginxController  *NginxMaintenanceController
 }
 
-func NewBuildManager(cfg *config.ConfigManager, build *build.BuildManager, migration *migration.MigrationManager, logger *log.Logger, client client.JavaClient, service *ServiceManager) *DeploymentManager {
+func NewDeploymentManager(deps DeploymentManagerDeps) *DeploymentManager {
 	return &DeploymentManager{
-		cfg:              cfg,
-		buildManager:     build,
-		migrationManager: migration,
-		logger:           logger,
-		javaClient:       client,
-		serviceManager:   service,
+		cfg:              deps.Config,
+		buildManager:     deps.BuildManager,
+		migrationManager: deps.MigrationManager,
+		logger:           deps.Logger,
+		javaClient:       deps.JavaClient,
+		serviceManager:   deps.ServiceManager,
+		fsWrapper:        deps.FsWrapper,
+		nginxController:  deps.NginxController,
 	}
 }
 
-func (d *DeploymentManager) StartDeploymentPipeline(deploymentId string, migrations []migration.Migration) {
+func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit string, migrations []migration.Migration) {
+	if deploymentId == "" {
+		d.updateDeployment(deploymentId, client.StatusCancelled, DEPLOY_CodeBadDeploymentId, context.Background())
+		return
+	}
 
+	// =====
+	// BUILD
+	// =====
+	buildDir, err := d.getBuildDir(deploymentId)
+
+	if err != nil || buildDir == "" {
+		d.logger.Printf("[DEPLOY] Build directory not found (%v). Triggering fallback build...", err)
+
+		if buildErr := d.buildManager.TriggerBuild(deploymentId, commit, true); buildErr != nil {
+			d.updateDeployment(deploymentId, client.StatusCancelled, build.MapBuildErrorsToCode(buildErr), context.Background())
+			return
+		}
+
+		buildDir, err = d.getBuildDir(deploymentId)
+		if err != nil || buildDir == "" {
+			d.updateDeployment(deploymentId, client.StatusCancelled, DEPLOY_CodeNoBuildFound, context.Background())
+			return
+		}
+	}
+
+	// Set maintenance flag
+	if err := d.nginxController.EnableFlag(); err != nil {
+		d.logger.Println("[DEPLOY] Error while setting maintenance flag")
+		return
+	}
+
+	// Stop Java Backend
+	
+}
+
+func (d *DeploymentManager) getBuildDir(deploymentId string) (string, error) {
+	buildDir := "./builds/" + deploymentId
+	if !d.fsWrapper.DirOrFileExists(buildDir) || !d.fsWrapper.DirOrFileExists(buildDir+"/schema.json") {
+		return "", gvwErrors.NewError(gvwErrors.CodeDeploymentManagerBuildDoesNotExist)
+	}
+
+	return buildDir, nil
+}
+
+func (d *DeploymentManager) updateDeployment(deploymentId string, status client.Status, errorCode uint32, ctx context.Context) {
+	if updateErr := d.javaClient.UpdateDeploymentState(deploymentId, status, errorCode, ctx); updateErr != nil {
+		d.logger.Printf("[DEPLOY] Failed to update dpeloyment state: %v", updateErr)
+	}
 }

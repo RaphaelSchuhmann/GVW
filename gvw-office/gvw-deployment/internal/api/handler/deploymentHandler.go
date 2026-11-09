@@ -17,13 +17,14 @@ func NewDeploymentHandler(deploymentManager *deploy.DeploymentManager) *Deployme
 }
 
 func (d *DeploymentHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /deploy/{deploymentId}", d.StartDeployment)
+	mux.HandleFunc("POST /deploy/{deploymentId}/{commit}", d.StartDeployment)
 }
 
 func (d *DeploymentHandler) StartDeployment(resp http.ResponseWriter, req *http.Request) {
 	deploymentId := req.PathValue("deploymentId")
+	commit := req.PathValue("commit")
 
-	if !deploymentIdPattern.MatchString(deploymentId) {
+	if !deploymentIdPattern.MatchString(deploymentId) || !commitHashPattern.MatchString(commit) {
 		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -36,7 +37,7 @@ func (d *DeploymentHandler) StartDeployment(resp http.ResponseWriter, req *http.
 		return
 	}
 
-	// TODO: Start deployment pipeline
+	d.deploymentManager.StartDeploymentPipeline(deploymentId, commit, body.Migrations)
 
 	resp.WriteHeader(http.StatusAccepted)
 }

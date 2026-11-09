@@ -53,6 +53,15 @@ const (
 	CodeServiceManagerJobTimedout    Code = "ServiceManagerError_Job_Timedout"
 	CodeServiceManagerJobFailed      Code = "ServiceManagerError_Job_Failed"
 
+	// Nginx maintenance mode controller
+	CodeNginxEmptyFlagPath       Code = "NginxMaintenanceModeError_Empty_Flag_Path"
+	CodeNginxNonAbsoluteFlagPath       Code = "NginxMaintenanceModeError_Non_Absolute_Flag_Path"
+	CodeNginxFailedToSetFlag   Code = "NginxMaintenanceModeError_Failed_To_Set_Flag"
+	CodeNginxFailedToUnsetFlag Code = "NginxMaintenanceModeError_Failed_To_Unset_Flag"
+
+	// Deployment manager codes
+	CodeDeploymentManagerBuildDoesNotExist Code = "DeploymentManager_Build_Does_Not_Exist"
+
 	// Config error codes
 	CodeConfigError              Code = "ConfigError"
 	CodeInvalidConfigNoStruct    Code = "InvalidConfig_No_Struct"

@@ -10,16 +10,17 @@ import (
 )
 
 type Config struct {
-	Port             string            `json:"port"`
-	InternalToken    string            `json:"internal_token"`
-	JavaBaseURL      string            `json:"java_base_url"`
-	GithubRepoURL    string            `json:"github_repo_url"`
-	ModelDatabaseMap map[string]string `json:"model_db_map"`
-	DatabaseURL      string            `json:"database_url"`
-	DatabaseUsername string            `json:"database_username"`
-	DatabasePassword string            `json:"database_password"`
-	ShutdownTimeout  int               `json:"shutdown_timeout_s"` // in seconds
-	StartupTimeout   int               `json:"startup_timeout_s"` // in seconds
+	Port               string            `json:"port"`
+	InternalToken      string            `json:"internal_token"`
+	JavaBaseURL        string            `json:"java_base_url"`
+	GithubRepoURL      string            `json:"github_repo_url"`
+	ModelDatabaseMap   map[string]string `json:"model_db_map"`
+	DatabaseURL        string            `json:"database_url"`
+	DatabaseUsername   string            `json:"database_username"`
+	DatabasePassword   string            `json:"database_password"`
+	ShutdownTimeout    int               `json:"shutdown_timeout_s"` // in seconds
+	StartupTimeout     int               `json:"startup_timeout_s"`  // in seconds
+	MaintenanceFlagDir string            `json:"maintenance_flag_dir"`
 }
 
 type ConfigManager struct {

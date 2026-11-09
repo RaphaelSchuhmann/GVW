@@ -10,16 +10,17 @@ import (
 )
 
 var validConfig = Config{
-	Port:                       "8080",
-	InternalToken:              "test-token",
-	JavaBaseURL:                "http://localhost:8080",
-	GithubRepoURL:              "https://github.com/test/repo",
-	ModelDatabaseMap:           map[string]string{"model1": "db1"},
-	DatabaseURL:                "http://127.0.0.1/",
-	DatabaseUsername:           "username",
-	DatabasePassword:           "password",
-	ShutdownTimeout: 15,
-	StartupTimeout: 45,
+	Port:               "8080",
+	InternalToken:      "test-token",
+	JavaBaseURL:        "http://localhost:8080",
+	GithubRepoURL:      "https://github.com/test/repo",
+	ModelDatabaseMap:   map[string]string{"model1": "db1"},
+	DatabaseURL:        "http://127.0.0.1/",
+	DatabaseUsername:   "username",
+	DatabasePassword:   "password",
+	ShutdownTimeout:    15,
+	StartupTimeout:     45,
+	MaintenanceFlagDir: "./",
 }
 
 func TestValidateConfig_ValidConfig(t *testing.T) {

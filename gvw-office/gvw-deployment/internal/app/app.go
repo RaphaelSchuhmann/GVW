@@ -36,7 +36,19 @@ func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager 
 
 	// Deployment System
 	serviceManager := deploy.NewServiceManager(logger, configManager)
-	deploymentManager := deploy.NewBuildManager(configManager, buildManager, migrationManager, logger, javaClient, serviceManager)
+	nginxMaintenanceController := deploy.NewNginxMaintenanceController(logger, configManager, fsWrapper)
+
+	deploymentManagerDeps := deploy.DeploymentManagerDeps{
+		Config: configManager,
+		BuildManager: buildManager,
+		MigrationManager: migrationManager,
+		Logger: logger,
+		JavaClient: javaClient,
+		ServiceManager: serviceManager,
+		FsWrapper: fsWrapper,
+		NginxController: nginxMaintenanceController,
+	}
+	deploymentManager := deploy.NewDeploymentManager(deploymentManagerDeps)
 
 	// Handlers
 	configHandler := handler.NewConfigHandler(configManager)
@@ -49,7 +61,7 @@ func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager 
 	buildHandler.RegisterRoutes(mux)
 	migrationHandler.RegisterRoutes(mux)
 	deploymentHandler.RegisterRoutes(mux)
-	
+
 	var handler http.Handler = mux
 	handler = middleware.LoggingMiddleware(logger, handler)
 	handler = middleware.LocalhostOnlyMiddleware(logger, handler)

@@ -21,8 +21,8 @@ type MockJavaClient struct {
 	state                       client.Status
 	reason                      uint32
 	ctx                         context.Context
-	database					string
-	documentId					string
+	database                    string
+	documentId                  string
 }
 
 func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client.Status, reason uint32, ctx context.Context) error {
@@ -75,6 +75,8 @@ type MockFileSystemWrapper struct {
 	getFileByPatternPattern string
 	getFileByPatternResult  string
 	getFileByPatternError   error
+	removeFileCalled        bool
+	removeFilePath          string
 }
 
 func NewMockFileSystemWrapper(logger *log.Logger) *MockFileSystemWrapper {
@@ -154,6 +156,12 @@ func (m *MockFileSystemWrapper) GetFileByPattern(dir, filePattern string) (strin
 		return "", m.getFileByPatternError
 	}
 	return m.getFileByPatternResult, nil
+}
+
+func (m *MockFileSystemWrapper) RemoveFile(path string) error {
+	m.removeFileCalled = true
+	m.removeFilePath = path
+	return nil
 }
 
 // MockDirEntry

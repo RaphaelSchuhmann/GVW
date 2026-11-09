@@ -362,3 +362,29 @@ func TestGetFileByPattern_InvalidPattern(t *testing.T) {
 		t.Error("Expected error for invalid pattern")
 	}
 }
+
+func TestRemoveFile_Success(t *testing.T) {
+	logger := log.NewLogger()
+	fsw := NewFileSystem(logger)
+
+	tmpDir, err := os.MkdirTemp("", "testdir-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+
+	// Create a file in the directory
+	testFile := filepath.Join(tmpDir, "test.txt")
+	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+	
+	err = fsw.RemoveFile(testFile)
+
+	if fsw.DirOrFileExists(testFile) || err != nil {
+		t.Error("Expected file to be removed (not exist)")
+	}
+
+	// Cleanup temporary dir
+	fsw.CleanDir(tmpDir)
+}

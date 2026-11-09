@@ -20,6 +20,7 @@ type FileSystemWrapper interface {
 	ListDir(path string) ([]os.DirEntry, error)
 	CopyDirContents(srcDir, dstDir string) error
 	GetFileByPattern(dir, filePattern string) (string, error)
+	RemoveFile(path string) error
 }
 
 type FileSystem struct {
@@ -160,4 +161,12 @@ func (f *FileSystem) GetFileByPattern(dir, filePattern string) (string, error) {
 	}
 
 	return matches[0], nil
+}
+
+func (f *FileSystem) RemoveFile(path string) error {
+	if err := os.Remove(path); err != nil {
+		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+	}
+
+	return nil
 }
