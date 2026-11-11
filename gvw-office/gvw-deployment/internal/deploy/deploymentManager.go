@@ -48,38 +48,54 @@ func NewDeploymentManager(deps DeploymentManagerDeps) *DeploymentManager {
 
 func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit string, migrations []migration.Migration) {
 	if deploymentId == "" {
-		d.updateDeployment(deploymentId, client.StatusCancelled, DEPLOY_CodeBadDeploymentId, context.Background())
+		d.updateDeployment(deploymentId, client.StatusCancelled, gvwErrors.DEPLOY_CodeBadDeploymentId)
 		return
 	}
 
-	// =====
-	// BUILD
-	// =====
+	// Get build
 	buildDir, err := d.getBuildDir(deploymentId)
 
 	if err != nil || buildDir == "" {
 		d.logger.Printf("[DEPLOY] Build directory not found (%v). Triggering fallback build...", err)
 
 		if buildErr := d.buildManager.TriggerBuild(deploymentId, commit, true); buildErr != nil {
-			d.updateDeployment(deploymentId, client.StatusCancelled, build.MapBuildErrorsToCode(buildErr), context.Background())
+			d.updateDeployment(deploymentId, client.StatusCancelled, gvwErrors.MapErrorsToCode(buildErr))
 			return
 		}
 
 		buildDir, err = d.getBuildDir(deploymentId)
 		if err != nil || buildDir == "" {
-			d.updateDeployment(deploymentId, client.StatusCancelled, DEPLOY_CodeNoBuildFound, context.Background())
+			d.updateDeployment(deploymentId, client.StatusCancelled, gvwErrors.DEPLOY_CodeNoBuildFound)
 			return
 		}
 	}
 
 	// Set maintenance flag
-	if err := d.nginxController.EnableFlag(); err != nil {
-		d.logger.Println("[DEPLOY] Error while setting maintenance flag")
+	if !d.enableNginxFlag() {
+		d.updateDeployment(deploymentId, client.StatusFailed, gvwErrors.DEPLOY_CodeNginxMaintenanceFailed)
 		return
 	}
 
 	// Stop Java Backend
-	
+	if err := d.serviceManager.StopService("gvw-backend.service", d.cfg.Config.ShutdownTimeout); err != nil {
+		d.logger.Printf("[DEPLOY] Error while shuting down java backend service: %v", err)
+
+		if !d.disableNginxFlag() {
+			d.updateDeployment(deploymentId, client.StatusFailed, gvwErrors.CombineErrors(gvwErrors.DEPLOY_CodeNginxMaintenanceFailed, gvwErrors.DEPLOY_CodeStopBackendFailed))
+			return
+		}
+
+		d.updateDeployment(deploymentId, client.StatusFailed, gvwErrors.DEPLOY_CodeStopBackendFailed)
+		return
+	}
+
+	// Create database backup
+
+	// Install new build artifacts
+
+	// Execute migrations
+
+	// 
 }
 
 func (d *DeploymentManager) getBuildDir(deploymentId string) (string, error) {
@@ -91,8 +107,29 @@ func (d *DeploymentManager) getBuildDir(deploymentId string) (string, error) {
 	return buildDir, nil
 }
 
-func (d *DeploymentManager) updateDeployment(deploymentId string, status client.Status, errorCode uint32, ctx context.Context) {
-	if updateErr := d.javaClient.UpdateDeploymentState(deploymentId, status, errorCode, ctx); updateErr != nil {
+func (d *DeploymentManager) updateDeployment(deploymentId string, status client.Status, errorCode gvwErrors.ErrorCode) {
+	if updateErr := d.javaClient.UpdateDeploymentState(deploymentId, status, errorCode, context.Background()); updateErr != nil {
 		d.logger.Printf("[DEPLOY] Failed to update dpeloyment state: %v", updateErr)
 	}
+}
+
+func (d *DeploymentManager) enableNginxFlag() bool {
+	if err := d.nginxController.EnableFlag(); err != nil {
+		d.logger.Println("[DEPLOY] Error while enabling maintenance flag")
+		return false
+	}
+
+	return true
+}
+
+func (d *DeploymentManager) disableNginxFlag() bool {
+	if err := d.nginxController.DisableFlag(); err != nil {
+		d.logger.Println("[DEPLOY] Error while disabling maintenance flag")
+
+		// TODO: Add notify call here
+
+		return false
+	}
+
+	return true
 }

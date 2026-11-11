@@ -124,7 +124,7 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 	if len(migrations) <= 0 || ctx.Err() != nil {
 		m.logger.Printf("[MIGRATION] No migrations found for deployment %s...", deploymentId)
 		if executionMode == DryRun {
-			m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
 		}
 		return nil
 	}
@@ -136,7 +136,7 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 		m.logger.Printf("[MIGRATION] Error while preparing migration run for deployment %s: %v", deploymentId, err)
 
 		if executionMode == DryRun {
-			m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeBadSchema, client.StatusCancelled, "", "")
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadSchema, client.StatusCancelled, "", "")
 		}
 
 		return err
@@ -153,7 +153,7 @@ func (m *MigrationManager) startMigrationPipeline(ctx context.Context, deploymen
 			return nil
 		}
 
-		m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
+		m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeSuccess, client.StatusSuccess, "", "")
 		m.logger.Printf("[MIGRATION] Migration dry run for deploymentId %s finished successfully", deploymentId)
 		return nil
 	} else {
@@ -189,14 +189,14 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 
 	if !m.validator.AllValuesPresent(modelToDbMap, affectedDatabases) {
 		m.logger.Printf("[MIGRATION] Found missing db in map for deployment: %s", deploymentId)
-		m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeMissingDbInMap, client.StatusCancelled, "", "")
+		m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeMissingDbInMap, client.StatusCancelled, "", "")
 		return false
 	}
 
 	dbToMigrationMap, err := m.engine.GenerateMigrationToDbMap(migrations, affectedDatabases)
 	if err != nil {
 		m.logger.Printf("[MIGRATION] Error while generating migration to db map for deployment: %s", deploymentId)
-		m.sendDryRunResponse(ctx, deploymentId, MIGRATION_CodeBadAffectedDbs, client.StatusCancelled, "", "")
+		m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadAffectedDbs, client.StatusCancelled, "", "")
 		return false
 	}
 
@@ -207,7 +207,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 		plan, err := m.engine.PlanDatabaseMigrations(database, dbMigrations, schema, modelToDbMap)
 		if err != nil {
 			m.logger.Printf("[MIGRATION] Bad migration found while planning deployment %s in db %s with err: %v", deploymentId, database, err)
-			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, database, "")
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusFailed, database, "")
 			return false
 		}
 		plans[database] = plan
@@ -227,7 +227,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 			}
 
 			m.logger.Printf("[MIGRATION] Bad migration found for deployment %s in db %s with err: %v", deploymentId, database, err)
-			m.sendDryRunResponse(ctx, deploymentId, MapMigrationErrorsToCode(err), client.StatusFailed, database, documentId)
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusFailed, database, documentId)
 			return false
 		}
 	}
@@ -295,7 +295,7 @@ func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema 
 	return nil
 }
 
-func (m *MigrationManager) sendDryRunResponse(ctx context.Context, deploymentId string, reason uint32, status client.Status, database string, documentId string) {
+func (m *MigrationManager) sendDryRunResponse(ctx context.Context, deploymentId string, reason gvwErrors.ErrorCode, status client.Status, database string, documentId string) {
 	if err := m.javaClient.UpdateMigrationDryRunState(deploymentId, status, database, documentId, reason, ctx); err != nil {
 		m.logger.Printf("[MIGRATION] Error updating migration dry run status for deployment %s with status %s: %v", deploymentId, string(status), err)
 	}

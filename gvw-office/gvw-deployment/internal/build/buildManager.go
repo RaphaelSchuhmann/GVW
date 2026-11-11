@@ -121,7 +121,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 		}
 
 		b.logger.Printf("[BUILD] Failed to clone repo for deployment %s with commit %s", deploymentId, commit)
-		b.updateDeployment(deploymentId, client.StatusCancelled, BUILD_CodeCommitInvalid, ctx, doUpdate)
+		b.updateDeployment(deploymentId, client.StatusCancelled, gvwErrors.BUILD_CodeCommitInvalid, ctx, doUpdate)
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 			return err
 		}
 
-		errorCode := MapBuildErrorsToCode(err)
+		errorCode := gvwErrors.MapErrorsToCode(err)
 		b.logger.Printf("[BUILD] Build for deployment %s with commit %s failed: %v", deploymentId, commit, err)
 
 		b.updateDeployment(deploymentId, client.StatusCancelled, errorCode, ctx, doUpdate)
@@ -140,7 +140,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 
 	if err := b.generateSchema(deploymentId); err != nil {
 		b.logger.Printf("[BUILD] Schema generation failed for deployment %s: %v", deploymentId, err)
-		b.updateDeployment(deploymentId, client.StatusCancelled, BUILD_CodeSchemaGenerationFailed, ctx, doUpdate)
+		b.updateDeployment(deploymentId, client.StatusCancelled, gvwErrors.BUILD_CodeSchemaGenerationFailed, ctx, doUpdate)
 		return err
 	}
 
@@ -149,7 +149,7 @@ func (b *BuildManager) runPipeline(ctx context.Context, deploymentId, commit str
 	return nil
 }
 
-func (b *BuildManager) updateDeployment(deploymentId string, status client.Status, errorCode uint32, ctx context.Context, doUpdate bool) {
+func (b *BuildManager) updateDeployment(deploymentId string, status client.Status, errorCode gvwErrors.ErrorCode, ctx context.Context, doUpdate bool) {
 	if !doUpdate {
 		return
 	}

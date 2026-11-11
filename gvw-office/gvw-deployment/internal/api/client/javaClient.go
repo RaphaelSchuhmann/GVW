@@ -23,21 +23,21 @@ const (
 )
 
 type StatusPayload struct {
-	Status Status `json:"status"`
-	Reason uint32 `json:"reason"`
+	Status Status              `json:"status"`
+	Reason gvwErrors.ErrorCode `json:"reason"`
 }
 
 type MigrationDryRunPayload struct {
-	DeploymentId string `json:"deployment"`
-	Status       Status `json:"status"`
-	Database     string `json:"database"`
-	DocumentId   string `json:"documentId"`
-	Reason       uint32 `json:"reason"`
+	DeploymentId string              `json:"deployment"`
+	Status       Status              `json:"status"`
+	Database     string              `json:"database"`
+	DocumentId   string              `json:"documentId"`
+	Reason       gvwErrors.ErrorCode `json:"reason"`
 }
 
 type JavaClient interface {
-	UpdateDeploymentState(deploymentId string, status Status, reason uint32, ctx context.Context) error
-	UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason uint32, ctx context.Context) error
+	UpdateDeploymentState(deploymentId string, status Status, reason gvwErrors.ErrorCode, ctx context.Context) error
+	UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason gvwErrors.ErrorCode, ctx context.Context) error
 }
 
 type HttpJavaClient struct {
@@ -54,7 +54,7 @@ func NewHttpJavaClient(cfg *config.ConfigManager) *HttpJavaClient {
 	}
 }
 
-func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Status, reason uint32, ctx context.Context) error {
+func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Status, reason gvwErrors.ErrorCode, ctx context.Context) error {
 	endpoint := c.cfg.Config.JavaBaseURL + "/internal/deployment/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := StatusPayload{
@@ -90,7 +90,7 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 	return nil
 }
 
-func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason uint32, ctx context.Context) error {
+func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason gvwErrors.ErrorCode, ctx context.Context) error {
 	endpoint := c.cfg.Config.JavaBaseURL + "/internal/migration/dry-run/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := MigrationDryRunPayload{
