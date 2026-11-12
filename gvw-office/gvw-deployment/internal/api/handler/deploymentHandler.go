@@ -3,8 +3,14 @@ package handler
 import (
 	"encoding/json"
 	"gvw/gvw-deployment/internal/deploy"
+	"gvw/gvw-deployment/internal/migration"
 	"net/http"
 )
+
+type deploymentRequestBody struct {
+	Migrations []migration.Migration `json:"migrations"`
+	AppVersion string                `json:"version"`
+}
 
 type DeploymentHandler struct {
 	deploymentManager *deploy.DeploymentManager
@@ -29,7 +35,7 @@ func (d *DeploymentHandler) StartDeployment(resp http.ResponseWriter, req *http.
 		return
 	}
 
-	var body migrationRequestBody
+	var body deploymentRequestBody
 	req.Body = http.MaxBytesReader(resp, req.Body, 2<<20) // max body size 2 MiB (2<<20 == 2 MiB)
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(&body); err != nil {
@@ -37,7 +43,7 @@ func (d *DeploymentHandler) StartDeployment(resp http.ResponseWriter, req *http.
 		return
 	}
 
-	d.deploymentManager.StartDeploymentPipeline(deploymentId, commit, body.Migrations)
+	d.deploymentManager.StartDeploymentPipeline(deploymentId, commit, body.AppVersion, body.Migrations)
 
 	resp.WriteHeader(http.StatusAccepted)
 }

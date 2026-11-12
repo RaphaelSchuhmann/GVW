@@ -46,7 +46,7 @@ func NewDeploymentManager(deps DeploymentManagerDeps) *DeploymentManager {
 	}
 }
 
-func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit string, migrations []migration.Migration) {
+func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVersion string, migrations []migration.Migration) {
 	if deploymentId == "" {
 		d.updateDeployment(deploymentId, client.StatusCancelled, gvwErrors.DEPLOY_CodeBadDeploymentId)
 		return
@@ -94,8 +94,6 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit string,
 	// Install new build artifacts
 
 	// Execute migrations
-
-	// 
 }
 
 func (d *DeploymentManager) getBuildDir(deploymentId string) (string, error) {
