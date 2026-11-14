@@ -72,6 +72,7 @@ const (
 	CodeInvalidConfigNoStruct    Code = "InvalidConfig_No_Struct"
 	CodeInvalidConfigEmptyField  Code = "InvalidConfig_Empty_Field"
 	CodeInvalidConfigBadModelMap Code = "InvalidConfig_Bad_Model_Map"
+	CodeOverlappingPaths         Code = "InvalidConfig_Overlapping_Paths"
 
 	// Command executor error codes
 	CodeCommandExecutionErrorCancelledOrTimedout Code = "CommandExecutionError_Cancelled_Or_Timedout"

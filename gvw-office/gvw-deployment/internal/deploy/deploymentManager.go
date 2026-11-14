@@ -357,7 +357,7 @@ func (d *DeploymentManager) ClearRecoveryRequired() error {
 }
 
 func (d *DeploymentManager) sendNotification(message string) {
-	if err := d.notify.SendNotification(message); err != nil  {
+	if err := d.notify.SendNotification(message); err != nil {
 		d.logger.Printf("[DEPLOY] Failed to send notification message: %v", err)
 	}
 }
@@ -590,7 +590,11 @@ func (d *DeploymentManager) switchBackend(jarPath string) (string, error) {
 func (d *DeploymentManager) isApplicationHealthy() (bool, string) {
 	response, err := d.javaClient.RunHealthCheck(context.Background())
 	if err != nil {
-		return false, "ERROR"
+		if response.HttpStatusCode > 0 {
+			return response.HttpStatusCode == 200, "UNKNOWN"
+		}
+
+		return false, "UNKNOWN"
 	}
 
 	return response.HttpStatusCode == 200, fmt.Sprintf("Application: %s, Database: %s", response.Status, response.Database)

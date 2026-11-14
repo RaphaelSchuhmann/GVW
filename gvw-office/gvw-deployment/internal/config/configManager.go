@@ -103,6 +103,11 @@ func ValidateConfig(config Config) error {
 		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigBadModelMap)
 	}
 
+	// Check overlaps in frontend / backend dirs
+	if config.FrontendBackupDir == config.FrontendDir || config.BackendDir == config.FrontendDir || config.BackendDir == config.FrontendBackupDir {
+		return gvwErrors.NewError(gvwErrors.CodeOverlappingPaths)
+	}
+
 	return nil
 }
 

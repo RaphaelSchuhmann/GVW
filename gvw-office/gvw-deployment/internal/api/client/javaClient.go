@@ -163,11 +163,11 @@ func (c *HttpJavaClient) RunHealthCheck(ctx context.Context) (HealthCheckRespons
 
 	var payload HealthCheckResponse
 
-	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
-		return HealthCheckResponse{}, err
-	}
-
 	payload.HttpStatusCode = resp.StatusCode
+
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return payload, err
+	}
 
 	return payload, nil
 }

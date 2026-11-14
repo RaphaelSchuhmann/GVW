@@ -172,16 +172,22 @@ func (f *FileSystem) RemoveFile(path string) error {
 	return nil
 }
 
-// TODO: Add test for this
 func (f *FileSystem) EmptyDir(path string) error {
-	if err := os.RemoveAll(path); err != nil {
-		f.logger.Printf("Failed to remove directory contents: %v", err)
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // If the directory doesn't exist, it's already effectively empty
+		}
+		f.logger.Printf("Failed to read directory for emptying: %v", err)
 		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
 	}
 
-	if err := f.CreateDir(path, 0755); err != nil {
-		f.logger.Printf("Failed to recreate directory: %v", err)
-		return err
+	for _, entry := range entries {
+		childPath := filepath.Join(path, entry.Name())
+		if err := os.RemoveAll(childPath); err != nil {
+			f.logger.Printf("Failed to remove child entry %s: %v", childPath, err)
+			return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+		}
 	}
 
 	return nil

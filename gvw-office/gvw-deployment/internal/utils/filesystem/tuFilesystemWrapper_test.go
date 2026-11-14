@@ -388,3 +388,84 @@ func TestRemoveFile_Success(t *testing.T) {
 	// Cleanup temporary dir
 	fsw.CleanDir(tmpDir)
 }
+
+func TestEmptyDir_Success(t *testing.T) {
+	logger := log.NewLogger()
+	fsw := NewFileSystem(logger)
+
+	tmpDir, err := os.MkdirTemp("", "testdir-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create files and a nested subdirectory
+	os.WriteFile(filepath.Join(tmpDir, "file1.txt"), []byte("content1"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "file2.txt"), []byte("content2"), 0644)
+	os.MkdirAll(filepath.Join(tmpDir, "subdir", "nested"), 0755)
+	os.WriteFile(filepath.Join(tmpDir, "subdir", "nested", "file3.txt"), []byte("content3"), 0644)
+
+	err = fsw.EmptyDir(tmpDir)
+	if err != nil {
+		t.Errorf("Expected no error emptying directory, got: %v", err)
+	}
+
+	// Directory itself should still exist
+	if !fsw.DirOrFileExists(tmpDir) {
+		t.Error("Expected directory to still exist after emptying")
+	}
+
+	// Directory should be empty
+	entries, err := fsw.ListDir(tmpDir)
+	if err != nil {
+		t.Fatalf("Failed to list directory after emptying: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("Expected directory to be empty, got %d entries", len(entries))
+	}
+}
+
+func TestEmptyDir_AlreadyEmpty(t *testing.T) {
+	logger := log.NewLogger()
+	fsw := NewFileSystem(logger)
+
+	tmpDir, err := os.MkdirTemp("", "testdir-")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	err = fsw.EmptyDir(tmpDir)
+	if err != nil {
+		t.Errorf("Expected no error emptying already empty directory, got: %v", err)
+	}
+}
+
+func TestEmptyDir_NonExistent(t *testing.T) {
+	logger := log.NewLogger()
+	fsw := NewFileSystem(logger)
+
+	err := fsw.EmptyDir("/nonexistent/path/dir")
+	if err != nil {
+		t.Errorf("Expected no error for non-existent directory, got: %v", err)
+	}
+}
+
+func TestEmptyDir_PathIsFile(t *testing.T) {
+	logger := log.NewLogger()
+	fsw := NewFileSystem(logger)
+
+	tmpFile, err := os.CreateTemp("", "test-*.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	tmpFile.Close()
+
+	err = fsw.EmptyDir(tmpFile.Name())
+	if err == nil {
+		t.Error("Expected error when path is a file, not a directory")
+	}
+}
+
+
