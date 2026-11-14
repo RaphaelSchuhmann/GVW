@@ -26,25 +26,18 @@ func (s *ServiceManager) StopService(serviceName string, timeoutDuration int) er
 		return gvwErrors.NewError(gvwErrors.CodeServiceManagerBadServiceName)
 	}
 
+	s.log.Printf("[SERVICE] Stopping service %s", serviceName)
+
 	var duration time.Duration
+
 	if timeoutDuration <= 0 {
 		duration = time.Duration(s.cfg.Config.ShutdownTimeout)
 	} else {
 		duration = time.Duration(timeoutDuration)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), duration*time.Second)
-	defer cancel()
-
-	s.log.Printf("[SERVICE] Stopping service %s", serviceName)
-
-	_, err := commandExecutor.RunCommand(ctx, "", "systemctl", "stop", serviceName)
-	if err != nil {
-		if gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout) {
-			return gvwErrors.NewError(gvwErrors.CodeServiceManagerJobTimedout)
-		}
-
-		return gvwErrors.Wrap(gvwErrors.CodeServiceManagerJobFailed, err)
+	if err := s.executeServiceCommand(duration, serviceName, "stop"); err != nil {
+		return err
 	}
 
 	s.log.Printf("[SERVICE] Stopped service %s successfully", serviceName)
@@ -57,19 +50,30 @@ func (s *ServiceManager) StartService(serviceName string, timeoutDuration int) e
 		return gvwErrors.NewError(gvwErrors.CodeServiceManagerBadServiceName)
 	}
 
+	s.log.Printf("[SERVICE] Starting service %s", serviceName)
+
 	var duration time.Duration
+
 	if timeoutDuration <= 0 {
 		duration = time.Duration(s.cfg.Config.StartupTimeout)
 	} else {
 		duration = time.Duration(timeoutDuration)
 	}
 
+	if err := s.executeServiceCommand(duration, serviceName, "start"); err != nil {
+		return err
+	}
+
+	s.log.Printf("[SERVICE] Started service %s successfully", serviceName)
+
+	return nil
+}
+
+func (s *ServiceManager) executeServiceCommand(duration time.Duration, serviceName, action string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), duration*time.Second)
 	defer cancel()
 
-	s.log.Printf("[SERVICE] Starting service %s", serviceName)
-
-	_, err := commandExecutor.RunCommand(ctx, "", "systemctl", "start", serviceName)
+	_, err := commandExecutor.RunCommand(ctx, "", "systemctl", action, serviceName)
 	if err != nil {
 		if gvwErrors.HasCode(err, gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout) {
 			return gvwErrors.NewError(gvwErrors.CodeServiceManagerJobTimedout)
@@ -77,8 +81,6 @@ func (s *ServiceManager) StartService(serviceName string, timeoutDuration int) e
 
 		return gvwErrors.Wrap(gvwErrors.CodeServiceManagerJobFailed, err)
 	}
-
-	s.log.Printf("[SERVICE] Started service %s successfully", serviceName)
 
 	return nil
 }
