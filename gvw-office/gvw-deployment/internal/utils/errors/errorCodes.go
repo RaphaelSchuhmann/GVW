@@ -149,7 +149,7 @@ func CombineErrors(errs ...ErrorCode) ErrorCode {
 	return combined
 }
 
-func HasErrorFlag(combined ErrorCode, flag ErrorCode) bool {
+func HasErrorFlag(combined, flag ErrorCode) bool {
 	return (combined & flag) != 0
 }
 
