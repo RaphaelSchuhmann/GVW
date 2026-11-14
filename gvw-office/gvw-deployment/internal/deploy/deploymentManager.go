@@ -497,7 +497,7 @@ func (d *DeploymentManager) installArtifacts(deploymentId, appVersion string) er
 	if err := d.fsWrapper.CreateDir(backendWorkingDir, 0755); err != nil {
 		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
 	}
-	if err := d.fsWrapper.CopyFile(filepath.Join(binDir, backendJarName), backendWorkingDir); err != nil {
+	if err := d.fsWrapper.CopyFile(filepath.Join(binDir, backendJarName), filepath.Join(backendWorkingDir, backendJarName)); err != nil {
 		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
 	}
 

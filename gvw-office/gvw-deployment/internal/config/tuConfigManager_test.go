@@ -254,7 +254,7 @@ func TestLoadConfig_FileNotFoundAndReverts(t *testing.T) {
 func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 	// Create a config file with missing required fields
 	configData := map[string]interface{}{
-		"port": 8080,
+		"port": "8080",
 		// Missing other required fields
 	}
 
@@ -281,7 +281,7 @@ func TestLoadConfig_InvalidConfigValues(t *testing.T) {
 func TestLoadConfig_InvalidConfigValuesAndReverts(t *testing.T) {
 	// Create a config file with missing required fields
 	configData := map[string]interface{}{
-		"port": 8080,
+		"port": "8080",
 		// Missing other required fields
 	}
 
