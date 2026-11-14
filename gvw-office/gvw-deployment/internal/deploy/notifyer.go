@@ -40,14 +40,22 @@ func (n *Notifyer) SendNotification(message string) error {
 	return nil
 }
 
-// connectAndAuthenticate handles dialing, deadlines, STARTTLS, and SMTP authentication.
+// connectAndAuthenticate handles TLS dialing, deadlines, and SMTP authentication securely from byte one.
 func (n *Notifyer) connectAndAuthenticate() (*smtp.Client, error) {
 	addr := fmt.Sprintf("%s:%s", n.cfg.Config.SmtpHost, n.cfg.Config.SmtpPort)
 
-	dialer := net.Dialer{Timeout: 10 * time.Second}
-	conn, err := dialer.Dial("tcp", addr)
+	// Use tls.Dialer to ensure the connection is encrypted immediately (Implicit TLS / SMTPS)
+	netDialer := &net.Dialer{Timeout: 10 * time.Second}
+	tlsDialer := &tls.Dialer{
+		NetDialer: netDialer,
+		Config: &tls.Config{
+			ServerName: n.cfg.Config.SmtpHost,
+		},
+	}
+
+	conn, err := tlsDialer.Dial("tcp", addr)
 	if err != nil {
-		n.log.Printf("[NOTIFY] Failed to connect to SMTP server: %v", err)
+		n.log.Printf("[NOTIFY] Failed to connect securely to SMTP server: %v", err)
 		return nil, gvwErrors.Wrap(gvwErrors.CodeNotifyErrorSendingEmail, err)
 	}
 
@@ -61,14 +69,6 @@ func (n *Notifyer) connectAndAuthenticate() (*smtp.Client, error) {
 	if err != nil {
 		_ = conn.Close()
 		n.log.Printf("[NOTIFY] Failed to create SMTP client: %v", err)
-		return nil, gvwErrors.Wrap(gvwErrors.CodeNotifyErrorSendingEmail, err)
-	}
-
-	// Upgrade with STARTTLS to satisfy SonarQube (go:S5332)
-	tlsConfig := &tls.Config{ServerName: n.cfg.Config.SmtpHost}
-	if err = client.StartTLS(tlsConfig); err != nil {
-		_ = client.Quit()
-		n.log.Printf("[NOTIFY] Failed to upgrade connection with STARTTLS: %v", err)
 		return nil, gvwErrors.Wrap(gvwErrors.CodeNotifyErrorSendingEmail, err)
 	}
 
