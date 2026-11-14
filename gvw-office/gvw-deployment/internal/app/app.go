@@ -37,6 +37,7 @@ func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager 
 	// Deployment System
 	serviceManager := deploy.NewServiceManager(logger, configManager)
 	nginxMaintenanceController := deploy.NewNginxMaintenanceController(logger, configManager, fsWrapper)
+	notifyer := deploy.NewNotifyer(logger, configManager)
 
 	deploymentManagerDeps := deploy.DeploymentManagerDeps{
 		Config: configManager,
@@ -47,6 +48,7 @@ func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager 
 		ServiceManager: serviceManager,
 		FsWrapper: fsWrapper,
 		NginxController: nginxMaintenanceController,
+		Notify: notifyer,
 	}
 	deploymentManager := deploy.NewDeploymentManager(deploymentManagerDeps)
 

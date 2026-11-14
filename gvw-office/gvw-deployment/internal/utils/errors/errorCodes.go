@@ -64,6 +64,9 @@ const (
 	CodeDeploymentManagerBuildDoesNotExist Code = "DeploymentManager_Build_Does_Not_Exist"
 	CodeDeploymentManagerFatalError        Code = "DeploymentManager_Fatal"
 
+	// Notify codes
+	CodeNotifyErrorSendingEmail Code = "Notify_Error_Sending_Email"
+
 	// Config error codes
 	CodeConfigError              Code = "ConfigError"
 	CodeInvalidConfigNoStruct    Code = "InvalidConfig_No_Struct"

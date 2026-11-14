@@ -84,6 +84,7 @@ type DeploymentManagerDeps struct {
 	ServiceManager   *ServiceManager
 	FsWrapper        filesystem.FileSystemWrapper
 	NginxController  *NginxMaintenanceController
+	Notify           *Notifyer
 }
 
 type DeploymentManager struct {
@@ -95,6 +96,7 @@ type DeploymentManager struct {
 	serviceManager   *ServiceManager
 	fsWrapper        filesystem.FileSystemWrapper
 	nginxController  *NginxMaintenanceController
+	notify           *Notifyer
 
 	// runMu allows only one pipeline at a time. activeId (a string) is only used to avoid
 	// reporting a duplicate request for the running deployment as cancelled.
@@ -112,6 +114,7 @@ func NewDeploymentManager(deps DeploymentManagerDeps) *DeploymentManager {
 		serviceManager:   deps.ServiceManager,
 		fsWrapper:        deps.FsWrapper,
 		nginxController:  deps.NginxController,
+		notify:           deps.Notify,
 	}
 }
 
@@ -188,7 +191,7 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVer
 
 		if gvwErrors.HasCode(err, gvwErrors.CodeDeploymentManagerFatalError) {
 			rs.markRecoveryRequired("frontend could not be restored after failed artifact installation")
-			// TODO: Notify
+			d.sendNotification(fmt.Sprintf("Deployment %s: Fatal error while installing artifacts", deploymentId))
 			return
 		}
 
@@ -205,7 +208,7 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVer
 		if gvwErrors.HasCode(err, gvwErrors.CodeMigrationEngineDbRestoreFailed) {
 			d.logger.Println("[DEPLOY] Fatal: Failed to restore databases after failed migration execution")
 			rs.markRecoveryRequired("database restore failed after failed migration")
-			// TODO: Notify
+			d.sendNotification(fmt.Sprintf("Deployment %s: Database restore failed during migrations", deploymentId))
 			return
 		}
 
@@ -224,7 +227,7 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVer
 		// Any errors here are potentially fatal and handled as such
 		d.logger.Printf("[DEPLOY] Fatal: Failed to switch to new backend: %v", err)
 		rs.markRecoveryRequired("failed to switch backend in env file")
-		// TODO: Notify
+		d.sendNotification(fmt.Sprintf("Deployment %s: Failed to switch backend in env file", deploymentId))
 		return
 	}
 	rs.prevJarPath = prevJarPath
@@ -250,7 +253,7 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVer
 	// Leave maintenance mode, only then is the deployment successful
 	if !d.disableNginxFlag() {
 		rs.markRecoveryRequired("maintenance mode could not be disabled after successful deployment")
-		// TODO: Notify -> stuck in maintenance mode
+		d.sendNotification(fmt.Sprintf("Deployment %s: System is stuck in maintenance mode after successful deployment", deploymentId))
 		d.updateDeployment(deploymentId, client.StatusFailed, gvwErrors.DEPLOY_CodeNginxMaintenanceFailed)
 		return
 	}
@@ -265,7 +268,7 @@ func (d *DeploymentManager) rollbackAndAbort(deploymentId string, code gvwErrors
 	if !d.rollback(rs) {
 		d.logger.Println("[DEPLOY] Fatal: rollback failed, keeping maintenance mode enabled")
 		rs.markRecoveryRequired(fmt.Sprintf("rollback failed after deployment error %v", code))
-		// TODO: Notify
+		d.sendNotification(fmt.Sprintf("Deployment %s: Rollback failed after deployment error", deploymentId))
 		return
 	}
 
@@ -282,14 +285,14 @@ func (d *DeploymentManager) rollbackAndAbort(deploymentId string, code gvwErrors
 func (d *DeploymentManager) rollback(rs *runState) bool {
 	if rs.reached >= stageBackendSwitched && rs.prevJarPath == "" {
 		d.logger.Println("[DEPLOY] Unable to rollback to previous backend, previous path is empty")
-		// TODO: Notify
+		d.sendNotification("Deployment: Unable to rollback, no previous backend path found")
 		return false
 	}
 
 	if rs.reached >= stageBackendSwitched {
 		if err := d.serviceManager.StopService(backendService, d.cfg.Config.ShutdownTimeout); err != nil {
 			d.logger.Printf("[DEPLOY] Error while shutting down java backend service: %v", err)
-			// TODO: Notify
+			d.sendNotification("Deployment: Error while shutting down java backend service")
 			return false
 		}
 	}
@@ -297,7 +300,7 @@ func (d *DeploymentManager) rollback(rs *runState) bool {
 	if rs.reached >= stageMigrated && rs.restoreDBs != nil {
 		if err := rs.restoreDBs(); err != nil {
 			d.logger.Printf("[DEPLOY] Fatal error while restoring dbs from backup: %v", err)
-			// TODO: Notify
+			d.sendNotification("Deployment: Fatal error while restoring dbs")
 			return false
 		}
 	}
@@ -305,7 +308,7 @@ func (d *DeploymentManager) rollback(rs *runState) bool {
 	if rs.reached >= stageArtifactsInstalled {
 		if err := d.restoreFrontend(); err != nil {
 			d.logger.Printf("[DEPLOY] Fatal: Failed to restore previous frontend: %v", err)
-			// TODO: Notify
+			d.sendNotification("Deployment: Fatal error while restoring previous frontend")
 			return false
 		}
 	}
@@ -313,7 +316,7 @@ func (d *DeploymentManager) rollback(rs *runState) bool {
 	if rs.reached >= stageBackendSwitched {
 		if _, err := d.switchBackend(rs.prevJarPath); err != nil {
 			d.logger.Printf("[DEPLOY] Fatal: Failed to switch to previous backend: %v", err)
-			// TODO: Notify
+			d.sendNotification("Deployment: Failed to switch to previous backend")
 			return false
 		}
 	}
@@ -321,7 +324,7 @@ func (d *DeploymentManager) rollback(rs *runState) bool {
 	if rs.reached >= stageBackendStopped {
 		if err := d.serviceManager.StartService(backendService, d.cfg.Config.StartupTimeout); err != nil {
 			d.logger.Printf("[DEPLOY] Switch to previous backend was unsuccessful: %v", err)
-			// TODO: Notify
+			d.sendNotification("Deployment: Switch to previous backend was unsuccessful, backend not starting")
 			return false
 		}
 	}
@@ -351,6 +354,12 @@ func (d *DeploymentManager) ClearRecoveryRequired() error {
 	defer d.runMu.Unlock()
 
 	return d.clearState()
+}
+
+func (d *DeploymentManager) sendNotification(message string) {
+	if err := d.notify.SendNotification(message); err != nil  {
+		d.logger.Printf("[DEPLOY] Failed to send notification message: %v", err)
+	}
 }
 
 // finalizeState runs when the pipeline ends. A clean end removes the state file, a fatal end
@@ -470,7 +479,7 @@ func (d *DeploymentManager) disableNginxFlag() bool {
 	if err := d.nginxController.DisableFlag(); err != nil {
 		d.logger.Printf("[DEPLOY] Error while disabling maintenance flag: %v", err)
 
-		// TODO: Notify
+		d.sendNotification("Deployment: Error while disabling maintenance flag")
 
 		return false
 	}
