@@ -207,7 +207,7 @@
             addToast({
                 title: "Bearbeiten nicht erlaubt",
                 subTitle: "Das Bearbeiten eines laufenden Deployments ist nicht erlaubt.",
-                type: "warning",
+                type: "warning"
             });
 
             return;
@@ -529,19 +529,20 @@
 
                     <div class="flex w-full flex-col items-start justify-start gap-4 overflow-y-auto">
                         {#each deploymentData.migrations as migration, index (migration.id)}
-                            <Migration migrationData={migration} deleteMigration={deleteMigrationAndRefresh} />
+                            <Migration migrationData={migration} deleteMigration={deleteMigrationAndRefresh}
+                                       canDelete={deploymentData.type !== "RUNNING"} />
                             <div class="w-full h-0.5 bg-gv-border"></div>
                         {/each}
                     </div>
 
                     <div class="flex items-center gap-4 w-full">
                         <Button type="primary" onclick={addMigrationModal?.showModal}
-                                disabled={isRunningMigrationTests}>
+                                disabled={isRunningMigrationTests || deploymentData.type === "RUNNING"}>
                             <span class="material-symbols-rounded mr-2">add</span>
                             Migration erstellen
                         </Button>
                         <Button type="primary" onclick={() => {}}
-                                disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests}>
+                                disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests || deploymentData.type === "RUNNING"}>
                             {#if isRunningMigrationTests}
                                 <Spinner light={true} />
                                 <p>Testen...</p>

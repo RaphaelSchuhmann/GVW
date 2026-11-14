@@ -178,7 +178,7 @@ class DbServiceTest {
     Map<String, Object> expectedMap = Map.of("_id", "doc-1", "test", "value");
     when(restTemplate.getForObject(eq(BASE_URL + "/test_db/doc-1"), eq(String.class)))
         .thenReturn(json);
-    when(objectMapper.readValue(eq(json), eq(Map.class))).thenReturn(expectedMap);
+    doReturn(expectedMap).when(objectMapper).readValue(eq(json), eq(Map.class));
 
     Map<String, Object> result = dbService.findById("test_db", "doc-1", Map.class);
 
@@ -201,8 +201,9 @@ class DbServiceTest {
     String json = "invalid json";
     when(restTemplate.getForObject(eq(BASE_URL + "/test_db/doc-1"), eq(String.class)))
         .thenReturn(json);
-    when(objectMapper.readValue(eq(json), eq(Map.class)))
-        .thenThrow(new RuntimeException("JSON parsing error"));
+    doThrow(new RuntimeException("JSON parsing error"))
+        .when(objectMapper)
+        .readValue(eq(json), eq(Map.class));
 
     assertThrows(
         DatabaseMappingException.class, () -> dbService.findById("test_db", "doc-1", Map.class));
@@ -217,9 +218,10 @@ class DbServiceTest {
     Map<String, Object> docMap = Map.of("_id", "doc-1", "test", "value1");
     when(restTemplate.postForObject(eq(BASE_URL + "/test_db/_find"), eq(query), eq(String.class)))
         .thenReturn(json);
-    when(objectMapper.readValue(eq(json), any(tools.jackson.core.type.TypeReference.class)))
-        .thenReturn(responseMap);
-    when(objectMapper.convertValue(eq(docMap), eq(Map.class))).thenReturn(docMap);
+    doReturn(responseMap)
+        .when(objectMapper)
+        .readValue(eq(json), any(tools.jackson.core.type.TypeReference.class));
+    doReturn(docMap).when(objectMapper).convertValue(eq(docMap), eq(Map.class));
 
     List<Map> result = dbService.findByQuery("test_db", query, Map.class);
 

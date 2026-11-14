@@ -10,6 +10,7 @@ import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
+import com.gvw.gvwbackend.util.HttpUtil;
 import com.gvw.gvwbackend.util.MigrationValidator;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -34,6 +35,7 @@ public class DeploymentService {
   private final MigrationValidator migrationValidator;
   private final HashUtil hashUtil;
   private final Clock clock;
+  private final HttpUtil httpUtil;
   private static final Logger log = LoggerFactory.getLogger(DeploymentService.class);
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -42,14 +44,16 @@ public class DeploymentService {
       SseService sseService,
       DeploymentValidator deploymentValidator,
       MigrationValidator migrationValidator,
-      HashUtil hashUtil) {
+      HashUtil hashUtil,
+      HttpUtil httpUtil) {
     this(
         dbService,
         sseService,
         deploymentValidator,
         migrationValidator,
         hashUtil,
-        Clock.systemUTC());
+        Clock.systemUTC(),
+        httpUtil);
   }
 
   public DeploymentService(
@@ -58,13 +62,15 @@ public class DeploymentService {
       DeploymentValidator deploymentValidator,
       MigrationValidator migrationValidator,
       HashUtil hashUtil,
-      Clock clock) {
+      Clock clock,
+      HttpUtil httpUtil) {
     this.dbService = dbService;
     this.sseService = sseService;
     this.deploymentValidator = deploymentValidator;
     this.migrationValidator = migrationValidator;
     this.hashUtil = hashUtil;
     this.clock = clock;
+    this.httpUtil = httpUtil;
   }
 
   /**
@@ -349,6 +355,12 @@ public class DeploymentService {
     }
 
     Deployment deployment = findDeploymentById(deploymentId);
+
+    if (deployment.getStatus() != DeploymentStatus.SCHEDULED) {
+      throw new BadRequestException(
+          String.valueOf(
+              ErrorDomain.DEPLOYMENT.createCode(ErrorAction.DELETE, 400, ErrorResource.MIGRATION)));
+    }
 
     List<Migration> mutableMigrations = new ArrayList<>(deployment.getMigrations());
     mutableMigrations.removeIf(m -> m.getId().equals(migrationId));

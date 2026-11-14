@@ -31,7 +31,7 @@ const DOMAINS = {
     "16": { default: "Datei" },
     "17": {
         default: "Deployment",
-        "006": "Migration",
+        "005": "Migration",
     }
 };
 

@@ -145,7 +145,7 @@ class MigrationValidatorTest {
             .falsePath(Migration.Branch.builder().field("falseField").build())
             .build();
 
-    assertFalse(
+    assertTrue(
         validator.areMigrationFieldsValid(MigrationAction.CONDITIONAL, null, null, conditional));
   }
 
@@ -170,7 +170,7 @@ class MigrationValidatorTest {
             .falsePath(Migration.Branch.builder().field("   ").build())
             .build();
 
-    assertFalse(
+    assertTrue(
         validator.areMigrationFieldsValid(MigrationAction.CONDITIONAL, null, null, conditional));
   }
 

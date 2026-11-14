@@ -15,6 +15,7 @@ import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.model.MigrationAction;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
+import com.gvw.gvwbackend.util.HttpUtil;
 import com.gvw.gvwbackend.util.MigrationValidator;
 import java.time.Clock;
 import java.time.Instant;
@@ -41,6 +42,8 @@ class DeploymentServiceTest {
 
   @Mock private HashUtil hashUtil;
 
+  @Mock private HttpUtil httpUtil;
+
   private DeploymentService deploymentService;
   private Clock fixedClock;
 
@@ -49,7 +52,13 @@ class DeploymentServiceTest {
     fixedClock = Clock.fixed(Instant.parse("2024-01-15T12:00:00Z"), ZoneOffset.UTC);
     deploymentService =
         new DeploymentService(
-            dbService, sseService, deploymentValidator, migrationValidator, hashUtil, fixedClock);
+            dbService,
+            sseService,
+            deploymentValidator,
+            migrationValidator,
+            hashUtil,
+            fixedClock,
+            httpUtil);
   }
 
   @Test
