@@ -3,6 +3,7 @@ package build
 import (
 	"context"
 	"gvw/gvw-deployment/internal/api/client"
+	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/log"
 	"os"
 	"path/filepath"
@@ -19,13 +20,15 @@ type MockJavaClient struct {
 	updateDeploymentStateCalled bool
 	deploymentId                string
 	state                       client.Status
-	reason                      uint32
+	reason                      gvwErrors.ErrorCode
 	ctx                         context.Context
-	database					string
-	documentId					string
+	database                    string
+	documentId                  string
+	appStatus                   client.HealthStatus
+	databaseStatus              client.HealthStatus
 }
 
-func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client.Status, reason uint32, ctx context.Context) error {
+func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client.Status, reason gvwErrors.ErrorCode, ctx context.Context) error {
 	m.updateDeploymentStateCalled = true
 	m.deploymentId = deploymentId
 	m.state = state
@@ -34,7 +37,7 @@ func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client
 	return nil
 }
 
-func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status client.Status, database string, documentId string, reason uint32, ctx context.Context) error {
+func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status client.Status, database string, documentId string, reason gvwErrors.ErrorCode, ctx context.Context) error {
 	m.deploymentId = deploymentId
 	m.state = status
 	m.database = database
@@ -42,6 +45,12 @@ func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status 
 	m.reason = reason
 	m.ctx = ctx
 	return nil
+}
+
+func (m *MockJavaClient) RunHealthCheck(ctx context.Context) (client.HealthCheckResponse, error) {
+	m.appStatus = client.Healthy
+	m.databaseStatus = client.Healthy
+	return client.HealthCheckResponse{Status: client.Healthy, Database: client.Healthy}, nil
 }
 
 // MockFileSystemWrapper
@@ -75,6 +84,10 @@ type MockFileSystemWrapper struct {
 	getFileByPatternPattern string
 	getFileByPatternResult  string
 	getFileByPatternError   error
+	removeFileCalled        bool
+	removeFilePath          string
+	emptyDirPath            string
+	emptyDirCalled          bool
 }
 
 func NewMockFileSystemWrapper(logger *log.Logger) *MockFileSystemWrapper {
@@ -154,6 +167,18 @@ func (m *MockFileSystemWrapper) GetFileByPattern(dir, filePattern string) (strin
 		return "", m.getFileByPatternError
 	}
 	return m.getFileByPatternResult, nil
+}
+
+func (m *MockFileSystemWrapper) RemoveFile(path string) error {
+	m.removeFileCalled = true
+	m.removeFilePath = path
+	return nil
+}
+
+func (m *MockFileSystemWrapper) EmptyDir(path string) error {
+	m.emptyDirCalled = true
+	m.emptyDirPath = path
+	return nil
 }
 
 // MockDirEntry

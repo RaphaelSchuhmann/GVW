@@ -10,16 +10,26 @@ import (
 )
 
 var validConfig = Config{
-    Port:          "8080",
-    InternalToken: "test-token",
-    JavaBaseURL:   "http://localhost:8080",
-    GithubRepoURL: "https://github.com/test/repo",
-    ModelDatabaseMap: map[string]string{
-        "model1": "db1",
-    },
-    DatabaseURL:      "http://127.0.0.1/",
-    DatabaseUsername: "username",
-    DatabasePassword: "password",
+	Port:                  "8080",
+	InternalToken:         "test-token",
+	JavaBaseURL:           "http://localhost:8080",
+	GithubRepoURL:         "https://github.com/test/repo",
+	ModelDatabaseMap:      map[string]string{"model1": "db1"},
+	DatabaseURL:           "http://127.0.0.1/",
+	DatabaseUsername:      "username",
+	DatabasePassword:      "password",
+	ShutdownTimeout:       15,
+	StartupTimeout:        45,
+	MaintenanceFlagDir:    "./nginx",
+	BackendDir:            "./backend",
+	BackendEnv:            "./backend_env",
+	FrontendDir:           "./frontend",
+	FrontendBackupDir:     "./frontend_backup",
+	SmtpHost:              "smtp.example.com",
+	SmtpPort:              "587",
+	SenderEmail:           "deploy@example.com",
+	SenderPassword:        "your-smtp-password",
+	NotificationRecipient: "test@example.com",
 }
 
 func TestValidateConfig_ValidConfig(t *testing.T) {
@@ -29,15 +39,8 @@ func TestValidateConfig_ValidConfig(t *testing.T) {
 }
 
 func TestValidateConfig_EmptyPort(t *testing.T) {
-	config := Config{
-		Port:          "",
-		InternalToken: "test-token",
-		JavaBaseURL:   "http://localhost:8080",
-		GithubRepoURL: "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{
-			"model1": "db1",
-		},
-	}
+	config := validConfig
+	config.Port = ""
 
 	err := ValidateConfig(config)
 	if err == nil {
@@ -46,13 +49,8 @@ func TestValidateConfig_EmptyPort(t *testing.T) {
 }
 
 func TestValidateConfig_EmptyModelDatabaseMap(t *testing.T) {
-	config := Config{
-		Port:             "8080",
-		InternalToken:    "test-token",
-		JavaBaseURL:      "http://localhost:8080",
-		GithubRepoURL:    "https://github.com/test/repo",
-		ModelDatabaseMap: map[string]string{},
-	}
+	config := validConfig
+	config.ModelDatabaseMap = map[string]string{}
 
 	err := ValidateConfig(config)
 	if err == nil {
@@ -61,17 +59,45 @@ func TestValidateConfig_EmptyModelDatabaseMap(t *testing.T) {
 }
 
 func TestValidateConfig_NilModelDatabaseMap(t *testing.T) {
-	config := Config{
-		Port:             "8080",
-		InternalToken:    "test-token",
-		JavaBaseURL:      "http://localhost:8080",
-		GithubRepoURL:    "https://github.com/test/repo",
-		ModelDatabaseMap: nil,
-	}
+	config := validConfig
+	config.ModelDatabaseMap = nil
 
 	err := ValidateConfig(config)
 	if err == nil {
 		t.Error("Expected error for nil model database map")
+	}
+}
+
+func TestValidateConfig_OverlappingFrontendAndBackendDirs(t *testing.T) {
+	config := validConfig
+	config.FrontendDir = "./"
+	config.BackendDir = "./"
+
+	err := ValidateConfig(config)
+	if err == nil {
+		t.Error("Expected error for overlapping frontend and backend dirs")
+	}
+}
+
+func TestValidateConfig_OverlappingFrontendBackupAndBackendDirs(t *testing.T) {
+	config := validConfig
+	config.FrontendBackupDir = "./"
+	config.BackendDir = "./"
+
+	err := ValidateConfig(config)
+	if err == nil {
+		t.Error("Expected error for overlapping frontend backup and backend dirs")
+	}
+}
+
+func TestValidateConfig_OverlappingFrontendAndFrontendBackupDirs(t *testing.T) {
+	config := validConfig
+	config.FrontendDir = "./"
+	config.FrontendBackupDir = "./"
+
+	err := ValidateConfig(config)
+	if err == nil {
+		t.Error("Expected error for overlapping frontend and frontend backup dirs")
 	}
 }
 

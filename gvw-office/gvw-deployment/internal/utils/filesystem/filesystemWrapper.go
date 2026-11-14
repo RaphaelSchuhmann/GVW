@@ -20,6 +20,8 @@ type FileSystemWrapper interface {
 	ListDir(path string) ([]os.DirEntry, error)
 	CopyDirContents(srcDir, dstDir string) error
 	GetFileByPattern(dir, filePattern string) (string, error)
+	RemoveFile(path string) error
+	EmptyDir(path string) error
 }
 
 type FileSystem struct {
@@ -160,4 +162,33 @@ func (f *FileSystem) GetFileByPattern(dir, filePattern string) (string, error) {
 	}
 
 	return matches[0], nil
+}
+
+func (f *FileSystem) RemoveFile(path string) error {
+	if err := os.Remove(path); err != nil {
+		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+	}
+
+	return nil
+}
+
+func (f *FileSystem) EmptyDir(path string) error {
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // If the directory doesn't exist, it's already effectively empty
+		}
+		f.logger.Printf("Failed to read directory for emptying: %v", err)
+		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+	}
+
+	for _, entry := range entries {
+		childPath := filepath.Join(path, entry.Name())
+		if err := os.RemoveAll(childPath); err != nil {
+			f.logger.Printf("Failed to remove child entry %s: %v", childPath, err)
+			return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+		}
+	}
+
+	return nil
 }

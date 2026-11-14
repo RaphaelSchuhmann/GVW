@@ -34,7 +34,7 @@ func (b *BuildHandler) StartBuild(resp http.ResponseWriter, req *http.Request) {
  		return
  	}
 
-	b.buildManager.TriggerBuild(deploymentId, commitHash)
+	b.buildManager.TriggerBuild(deploymentId, commitHash, false)
 
 	resp.WriteHeader(http.StatusAccepted)
 }

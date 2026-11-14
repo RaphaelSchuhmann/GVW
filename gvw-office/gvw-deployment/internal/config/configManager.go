@@ -10,14 +10,26 @@ import (
 )
 
 type Config struct {
-	Port             string            `json:"port"`
-	InternalToken    string            `json:"internal_token"`
-	JavaBaseURL      string            `json:"java_base_url"`
-	GithubRepoURL    string            `json:"github_repo_url"`
-	ModelDatabaseMap map[string]string `json:"model_db_map"`
-	DatabaseURL      string            `json:"database_url"`
-	DatabaseUsername string            `json:"database_username"`
-	DatabasePassword string            `json:"database_password"`
+	Port                  string            `json:"port"`
+	InternalToken         string            `json:"internal_token"`
+	JavaBaseURL           string            `json:"java_base_url"`
+	GithubRepoURL         string            `json:"github_repo_url"`
+	ModelDatabaseMap      map[string]string `json:"model_db_map"`
+	DatabaseURL           string            `json:"database_url"`
+	DatabaseUsername      string            `json:"database_username"`
+	DatabasePassword      string            `json:"database_password"`
+	ShutdownTimeout       int               `json:"shutdown_timeout_s"` // in seconds
+	StartupTimeout        int               `json:"startup_timeout_s"`  // in seconds
+	MaintenanceFlagDir    string            `json:"maintenance_flag_dir"`
+	BackendDir            string            `json:"backend_dir"`
+	BackendEnv            string            `json:"backend_env"`
+	FrontendDir           string            `json:"frontend_dir"`
+	FrontendBackupDir     string            `json:"frontend_backup_dir"`
+	SmtpHost              string            `json:"smtpHost"`
+	SmtpPort              string            `json:"smtpPort"`
+	SenderEmail           string            `json:"senderEmail"`
+	SenderPassword        string            `json:"senderPassword"`
+	NotificationRecipient string            `json:"notificationRecipient"`
 }
 
 type ConfigManager struct {
@@ -89,6 +101,11 @@ func ValidateConfig(config Config) error {
 	// Ensure that model to db map always has at least one value
 	if !isModelToDbMapValid(config.ModelDatabaseMap) {
 		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigBadModelMap)
+	}
+
+	// Check overlaps in frontend / backend dirs
+	if config.FrontendBackupDir == config.FrontendDir || config.BackendDir == config.FrontendDir || config.BackendDir == config.FrontendBackupDir {
+		return gvwErrors.NewError(gvwErrors.CodeOverlappingPaths)
 	}
 
 	return nil
