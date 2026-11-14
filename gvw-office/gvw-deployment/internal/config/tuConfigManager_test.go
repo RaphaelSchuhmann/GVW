@@ -21,6 +21,10 @@ var validConfig = Config{
 	ShutdownTimeout:    15,
 	StartupTimeout:     45,
 	MaintenanceFlagDir: "./",
+	BackendDir:         "./",
+	BackendEnv:         "./",
+	FrontendDir:        "./",
+	FrontendBackupDir:  "./",
 }
 
 func TestValidateConfig_ValidConfig(t *testing.T) {

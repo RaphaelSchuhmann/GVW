@@ -24,6 +24,7 @@ func NewDeploymentHandler(deploymentManager *deploy.DeploymentManager) *Deployme
 
 func (d *DeploymentHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /deploy/{deploymentId}/{commit}", d.StartDeployment)
+	mux.HandleFunc("GET /deploy/clear/recovery", d.DoClearRecoveryRequired)
 }
 
 func (d *DeploymentHandler) StartDeployment(resp http.ResponseWriter, req *http.Request) {
@@ -46,4 +47,13 @@ func (d *DeploymentHandler) StartDeployment(resp http.ResponseWriter, req *http.
 	d.deploymentManager.StartDeploymentPipeline(deploymentId, commit, body.AppVersion, body.Migrations)
 
 	resp.WriteHeader(http.StatusAccepted)
+}
+
+func (d *DeploymentHandler) DoClearRecoveryRequired(resp http.ResponseWriter, req *http.Request) {
+	if err := d.deploymentManager.ClearRecoveryRequired(); err != nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	resp.WriteHeader(http.StatusOK)
 }

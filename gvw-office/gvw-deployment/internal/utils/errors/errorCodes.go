@@ -43,6 +43,7 @@ const (
 	CodeMigrationEngineEmbeddedModelNotUsed             Code = "CodeMigrationEngine_Embedded_Model_Not_Used"
 	CodeMigrationEngineConditionalScopeMismatch         Code = "CodeMigrationEngine_Conditional_Scope_Mismatch"
 	CodeMigrationEngineFieldNotInSchema                 Code = "CodeMigrationEngine_Field_Not_In_Schema"
+	CodeMigrationEngineDbRestoreFailed                  Code = "CodeMigrationEngine_Db_Restore_Failed"
 
 	// Migration manager codes
 	CodeMigrationManagerInvalidDeploymentId Code = "MigrationManagerError_Invalid_Deployment_Id"
@@ -61,6 +62,7 @@ const (
 
 	// Deployment manager codes
 	CodeDeploymentManagerBuildDoesNotExist Code = "DeploymentManager_Build_Does_Not_Exist"
+	CodeDeploymentManagerFatalError        Code = "DeploymentManager_Fatal"
 
 	// Config error codes
 	CodeConfigError              Code = "ConfigError"
@@ -127,6 +129,12 @@ const (
 	DEPLOY_CodeNoBuildFound           ErrorCode = 1 << 13
 	DEPLOY_CodeNginxMaintenanceFailed ErrorCode = 1 << 14
 	DEPLOY_CodeStopBackendFailed      ErrorCode = 1 << 15
+	DEPLOY_CodeStartBackendFailed     ErrorCode = 1 << 16
+	DEPLOY_CodeArtifcatInstallFailed  ErrorCode = 1 << 17
+	DEPLOY_CodeMigrationsFailed       ErrorCode = 1 << 18
+	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 19
+	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 20
+	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 21
 )
 
 func CombineErrors(errs ...ErrorCode) ErrorCode {

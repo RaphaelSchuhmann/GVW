@@ -20,6 +20,10 @@ var validConfig = config.Config{
 	DatabasePassword:   "password",
 	ShutdownTimeout:    15,
 	MaintenanceFlagDir: "./",
+	BackendDir:         "./",
+	BackendEnv:         "./",
+	FrontendDir:        "./",
+	FrontendBackupDir:  "./",
 }
 
 func TestGenerateSchema_Success(t *testing.T) {

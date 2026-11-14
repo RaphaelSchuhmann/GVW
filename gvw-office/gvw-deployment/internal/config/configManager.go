@@ -21,6 +21,10 @@ type Config struct {
 	ShutdownTimeout    int               `json:"shutdown_timeout_s"` // in seconds
 	StartupTimeout     int               `json:"startup_timeout_s"`  // in seconds
 	MaintenanceFlagDir string            `json:"maintenance_flag_dir"`
+	BackendDir         string            `json:"backend_dir"`
+	BackendEnv         string            `json:"backend_env"`
+	FrontendDir        string            `json:"frontend_dir"`
+	FrontendBackupDir  string            `json:"frontend_backup_dir"`
 }
 
 type ConfigManager struct {

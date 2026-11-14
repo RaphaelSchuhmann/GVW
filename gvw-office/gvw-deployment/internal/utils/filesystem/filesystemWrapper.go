@@ -21,6 +21,7 @@ type FileSystemWrapper interface {
 	CopyDirContents(srcDir, dstDir string) error
 	GetFileByPattern(dir, filePattern string) (string, error)
 	RemoveFile(path string) error
+	EmptyDir(path string) error
 }
 
 type FileSystem struct {
@@ -166,6 +167,21 @@ func (f *FileSystem) GetFileByPattern(dir, filePattern string) (string, error) {
 func (f *FileSystem) RemoveFile(path string) error {
 	if err := os.Remove(path); err != nil {
 		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+	}
+
+	return nil
+}
+
+// TODO: Add test for this
+func (f *FileSystem) EmptyDir(path string) error {
+	if err := os.RemoveAll(path); err != nil {
+		f.logger.Printf("Failed to remove directory contents: %v", err)
+		return gvwErrors.Wrap(gvwErrors.CodeFileSystemError, err)
+	}
+
+	if err := f.CreateDir(path, 0755); err != nil {
+		f.logger.Printf("Failed to recreate directory: %v", err)
+		return err
 	}
 
 	return nil
