@@ -49,8 +49,7 @@ public class DeploymentController {
 
   @PostMapping("/add/deployment")
   @PreAuthorize("hasAnyRole('ADMIN')")
-  @ResponseStatus(HttpStatus.OK)
-  public void addDeployment(@RequestBody @Valid AddDeploymentRequestDTO request) {
+  @ResponseStatus(HttpStatus.OK) public void addDeployment(@RequestBody @Valid AddDeploymentRequestDTO request) {
     deploymentService.addDeployment(request);
   }
 
@@ -83,6 +82,15 @@ public class DeploymentController {
     deploymentService.updateDeploymentInformation(request);
   }
 
-  // TODO: Implement migration dry-run test endpoint when external migration handler is implemented
-  // TODO: Implement deploy endpoint when external deployment handler is implemented
+  @PostMapping("/dryRun/{deploymentId}")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  @ResponseStatus(HttpStatus.OK)
+  public void triggerMigrationDryRun(@PathVariable String deploymentId) {
+    deploymentService.startMigrationDryRun(deploymentId);
+  }
+
+  @PostMapping("/deploy/{deploymentId}")
+  @PreAuthorize("hasAnyRole('ADMIN')")
+  @ResponseStatus(HttpStatus.OK)
+  public void startDeployment(@PathVariable String deploymentId) {}
 }

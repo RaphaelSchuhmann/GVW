@@ -62,6 +62,10 @@ const STATUS_TEMPLATES = {
     "403": {
         title: "Aktion nicht erlaubt",
         subTitle: "{domain} - Diese Aktion ist gerade nicht erlaubt."
+    },
+    "502": {
+        title: "Dienst vorübergehend nicht verfügbar",
+        subTitle: "{domain} - Ein benötigter Dienst konnte die Anfrage nicht erfolgreich verarbeiten."
     }
 };
 

@@ -126,8 +126,14 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(ForbiddenException.class)
   @ResponseStatus(HttpStatus.FORBIDDEN)
-  public ResponseEntity<ErrorResponseDTO> handleForbidden(ConflictException ex) {
+  public ResponseEntity<ErrorResponseDTO> handleForbidden(ForbiddenException ex) {
     return generateResponse(ex.getMessage(), null, HttpStatus.FORBIDDEN);
+  }
+
+  @ExceptionHandler(BadGatewayException.class)
+  @ResponseStatus(HttpStatus.BAD_GATEWAY)
+  public ResponseEntity<ErrorResponseDTO> handleBadGateway(BadGatewayException ex) {
+    return generateResponse(ex.getMessage(), null, HttpStatus.BAD_GATEWAY);
   }
 
   /**

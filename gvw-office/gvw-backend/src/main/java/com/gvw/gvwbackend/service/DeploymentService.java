@@ -1,5 +1,6 @@
 package com.gvw.gvwbackend.service;
 
+import com.gvw.gvwbackend.dto.deploymentService.request.TriggerMigrationDryRunRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddDeploymentRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
@@ -8,6 +9,7 @@ import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
+import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
 import com.gvw.gvwbackend.util.HttpUtil;
@@ -317,13 +319,22 @@ public class DeploymentService {
 
     if (request.commit() != null && !request.commit().isBlank()) {
       if (!deploymentValidator.isCommitHashValid(request.commit())) {
+        log.debug("Invalid commit hash found {}", request.commit());
         throw new BadRequestException(
             String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
       }
-      // TODO: trigger build the deployment from the commit
 
-      deployment.setCommit(request.commit());
+      GVWHttpResponse resp =
+          httpUtil.sendPostRequestWithoutBody(
+              "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(), String.class);
+      if (resp.isError()) {
+        // Not a problem as the deployment pipeline would run the build pipeline if no build was
+        // found
+        log.debug("Build request responded with error code {} instead of accepted", resp.status());
+      }
     }
+
+    deployment.setCommit(request.commit());
 
     dbService.update("deployments", deployment.getId(), deployment);
   }
@@ -367,6 +378,35 @@ public class DeploymentService {
     deployment.setMigrations(mutableMigrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
+  }
+
+  public void startMigrationDryRun(String deploymentId) {
+    if (deploymentId == null || deploymentId.isBlank()) {
+      throw new BadRequestException(
+          String.valueOf(
+              ErrorDomain.DEPLOYMENT.createCode(
+                  ErrorAction.UTILITY, 400, ErrorResource.MIGRATION)));
+    }
+
+    Deployment deployment = findDeploymentById(deploymentId);
+
+    List<Migration> migrations = deployment.getMigrations();
+
+    if (migrations == null || migrations.isEmpty()) {
+      // No migrations found, don't trigger a dry run
+      return;
+    }
+
+    GVWHttpResponse resp =
+        httpUtil.sendPostRequestWithBody(
+            "http://localhost:3501/migration/test/" + deploymentId,
+            new TriggerMigrationDryRunRequestDTO(deployment.getMigrations()),
+            null);
+
+    if (resp.isError()) {
+      log.debug("Failed to trigger migration dry run. Responded with {}", resp.status());
+      throw new BadGatewayException(String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 502, ErrorResource.MIGRATION)));
+    }
   }
 
   /** Executes a deployment process. (Placeholder implementation) -> TODO */

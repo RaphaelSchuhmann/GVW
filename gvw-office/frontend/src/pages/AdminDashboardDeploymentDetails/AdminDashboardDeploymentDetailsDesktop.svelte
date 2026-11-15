@@ -6,7 +6,7 @@
         updateDeployment,
         migrationActions,
         addMigration,
-        deleteMigration
+        deleteMigration, triggerMigrationDryRun
     } from "../../services/deploymentService.svelte.js";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
 
@@ -315,6 +315,15 @@
         deploymentData = await getFullDeployment(deploymentData.id);
     }
 
+    async function startMigrationDryRun() {
+        isRunningMigrationTests = true;
+        try {
+            await triggerMigrationDryRun(deploymentData.id);
+        } finally {
+            isRunningMigrationTests = false;
+        }
+    }
+
     // Update deployment info
     function updateDate(val) { informationDraft.date = val; }
 
@@ -541,7 +550,7 @@
                             <span class="material-symbols-rounded mr-2">add</span>
                             Migration erstellen
                         </Button>
-                        <Button type="primary" onclick={() => {}}
+                        <Button type="primary" onclick={startMigrationDryRun}
                                 disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests || deploymentData.type === "RUNNING"}>
                             {#if isRunningMigrationTests}
                                 <Spinner light={true} />

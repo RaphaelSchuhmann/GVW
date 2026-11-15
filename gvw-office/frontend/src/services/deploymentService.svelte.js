@@ -2,7 +2,7 @@ import {
     apiAddDeployment, apiAddMigration,
     apiCheckDeployment,
     apiDeleteDeployment, apiDeleteMigration,
-    apiGetDeployment, apiGetDeploymentsToday, apiUpdateDeploymentInformation
+    apiGetDeployment, apiGetDeploymentsToday, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
@@ -45,7 +45,8 @@ const isFetching = {
     updateDeployment: false,
     deploy: false,
     testMigrations: false,
-    today: false
+    today: false,
+    migrationDryRun: false,
 }
 
 const pendingChecks = new Map();
@@ -275,5 +276,26 @@ export async function getTodayDeployments() {
         return Array.isArray(body?.times) ? body.times : [];
     } finally {
         isFetching.today = false;
+    }
+}
+
+export async function triggerMigrationDryRun(deploymentId) {
+    if (isFetching.migrationDryRun || !deploymentId) return;
+
+    isFetching.migrationDryRun = true;
+
+    try {
+        const { resp } = await apiTriggerMigrationDryRun(deploymentId);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return;
+
+        addToast({
+            title: "Migration Test gestartet",
+            subTitle: "Migration Test wurde erfolgreich gestartet.",
+            type: "success"
+        });
+    } finally {
+        isFetching.migrationDryRun = false;
     }
 }

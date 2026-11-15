@@ -151,3 +151,10 @@ export async function apiUpdateDeploymentInformation(deploymentInformation) {
     const body = await parseBodySafe(resp);
     return { resp, body };
 }
+
+export async function apiTriggerMigrationDryRun(deploymentId) {
+    const resp = await httpPost(`${apiUrl}/deployment/dryRun/${deploymentId}`, {});
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}

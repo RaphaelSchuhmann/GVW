@@ -141,12 +141,11 @@ public class HttpUtil {
    * @param url the target URL to send the POST request to
    * @param responseType the class type to deserialize the response body to, or null to keep as raw
    *     string
-   * @param <T> the type of the request body
-   * @param <U> the type of the deserialized response body
+   * @param <T> the type of the deserialized response body
    * @return a GVWHttpResponse containing the status code, parsed body, content type, and error
    *     state
    */
-  public <T, U> GVWHttpResponse sendPostRequestWithoutBody(String url, Class<U> responseType) {
+  public <T> GVWHttpResponse sendPostRequestWithoutBody(String url, Class<T> responseType) {
     if (url == null || url.isBlank()) {
       return new GVWHttpResponse(400, null, null, true);
     }
@@ -158,7 +157,7 @@ public class HttpUtil {
               .header("User-Agent", "Java-GVW-Http")
               .header("Content-Type", "application/json")
               .header("Accept", "application/json")
-              .POST(null)
+              .POST(HttpRequest.BodyPublishers.noBody())
               .build();
 
       HttpResponse<String> response =
@@ -199,10 +198,30 @@ public class HttpUtil {
     boolean isError = status < 200 || status >= 300;
     String rawBody = response.body();
 
+    log.debug(
+        "HTTP response received - status: {}, isError: {}, contentType: {}, responseType: {}, body: {}",
+        status,
+        isError,
+        response.headers().firstValue("Content-Type").orElse(null),
+        responseType,
+        rawBody);
+
     Object parsedBody;
     if (!isError && rawBody != null && !rawBody.isBlank() && responseType != null) {
-      parsedBody = objectMapper.readValue(rawBody, responseType);
+      try {
+        parsedBody = objectMapper.readValue(rawBody, responseType);
+        log.debug("Successfully deserialized response body to {}", responseType.getName());
+      } catch (Exception e) {
+        log.debug(
+            "Failed to deserialize response body to {}: {}", responseType.getName(), e.getMessage());
+        parsedBody = rawBody;
+      }
     } else {
+      log.debug(
+          "Skipping deserialization - isError: {}, bodyBlank: {}, responseType: {}",
+          isError,
+          rawBody == null || rawBody.isBlank(),
+          responseType);
       parsedBody = rawBody;
     }
 
