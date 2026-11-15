@@ -44,7 +44,7 @@ type MigrationDryRunPayload struct {
 
 type HealthCheckResponse struct {
 	HttpStatusCode int          `json:"-"`
-	Status         HealthStatus `json:"status"`
+	Application    HealthStatus `json:"app"`
 	Database       HealthStatus `json:"database"`
 }
 

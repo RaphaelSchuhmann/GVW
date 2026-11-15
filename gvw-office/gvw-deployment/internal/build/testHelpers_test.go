@@ -50,7 +50,7 @@ func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status 
 func (m *MockJavaClient) RunHealthCheck(ctx context.Context) (client.HealthCheckResponse, error) {
 	m.appStatus = client.Healthy
 	m.databaseStatus = client.Healthy
-	return client.HealthCheckResponse{Status: client.Healthy, Database: client.Healthy}, nil
+	return client.HealthCheckResponse{Application: client.Healthy, Database: client.Healthy}, nil
 }
 
 // MockFileSystemWrapper

@@ -597,5 +597,5 @@ func (d *DeploymentManager) isApplicationHealthy() (bool, string) {
 		return false, "UNKNOWN"
 	}
 
-	return response.HttpStatusCode == 200, fmt.Sprintf("Application: %s, Database: %s", response.Status, response.Database)
+	return response.HttpStatusCode == 200, fmt.Sprintf("Application: %s, Database: %s", response.Application, response.Database)
 }

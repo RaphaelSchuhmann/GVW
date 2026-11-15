@@ -1,14 +1,17 @@
 package com.gvw.gvwbackend.service;
 
 import com.gvw.gvwbackend.dto.deploymentService.request.TriggerMigrationDryRunRequestDTO;
+import com.gvw.gvwbackend.dto.deploymentService.response.HealthResponseDTO;
 import com.gvw.gvwbackend.dto.request.AddDeploymentRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
 import com.gvw.gvwbackend.exception.*;
+import com.gvw.gvwbackend.model.AppSettings;
 import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
+import com.gvw.gvwbackend.model.deploymentSystem.HealthStatus;
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
@@ -38,6 +41,7 @@ public class DeploymentService {
   private final HashUtil hashUtil;
   private final Clock clock;
   private final HttpUtil httpUtil;
+  private final AppSettingsService appSettingsService;
   private static final Logger log = LoggerFactory.getLogger(DeploymentService.class);
 
   @org.springframework.beans.factory.annotation.Autowired
@@ -47,7 +51,8 @@ public class DeploymentService {
       DeploymentValidator deploymentValidator,
       MigrationValidator migrationValidator,
       HashUtil hashUtil,
-      HttpUtil httpUtil) {
+      HttpUtil httpUtil,
+      AppSettingsService appSettingsService) {
     this(
         dbService,
         sseService,
@@ -55,7 +60,8 @@ public class DeploymentService {
         migrationValidator,
         hashUtil,
         Clock.systemUTC(),
-        httpUtil);
+        httpUtil,
+            appSettingsService);
   }
 
   public DeploymentService(
@@ -65,7 +71,8 @@ public class DeploymentService {
       MigrationValidator migrationValidator,
       HashUtil hashUtil,
       Clock clock,
-      HttpUtil httpUtil) {
+      HttpUtil httpUtil,
+      AppSettingsService appSettingsService) {
     this.dbService = dbService;
     this.sseService = sseService;
     this.deploymentValidator = deploymentValidator;
@@ -73,6 +80,7 @@ public class DeploymentService {
     this.hashUtil = hashUtil;
     this.clock = clock;
     this.httpUtil = httpUtil;
+    this.appSettingsService = appSettingsService;
   }
 
   /**
@@ -411,6 +419,17 @@ public class DeploymentService {
 
   /** Executes a deployment process. (Placeholder implementation) -> TODO */
   public void runDeployment() {}
+
+  public HealthResponseDTO healthCheck() {
+    try {
+      AppSettings appSettings = appSettingsService.appSettings(ErrorAction.UTILITY, ErrorResource.NONE);
+    } catch (Exception e) {
+      // Any exception means that the database action was unsuccessful so database is unhealthy
+      return new HealthResponseDTO(HealthStatus.HEALTHY, HealthStatus.UNHEALTHY);
+    }
+
+    return new HealthResponseDTO(HealthStatus.HEALTHY, HealthStatus.HEALTHY);
+  }
 
   /**
    * Helper method to find a deployment by its ID or throw appropriate exceptions if invalid or not

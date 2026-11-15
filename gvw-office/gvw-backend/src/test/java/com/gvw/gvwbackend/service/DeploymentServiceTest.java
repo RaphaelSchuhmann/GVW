@@ -45,6 +45,8 @@ class DeploymentServiceTest {
 
   @Mock private HttpUtil httpUtil;
 
+  @Mock private AppSettingsService appSettingsService;
+
   private DeploymentService deploymentService;
   private Clock fixedClock;
 
@@ -59,7 +61,8 @@ class DeploymentServiceTest {
             migrationValidator,
             hashUtil,
             fixedClock,
-            httpUtil);
+            httpUtil,
+                appSettingsService);
   }
 
   @Test
