@@ -102,7 +102,8 @@ export async function getFullDeployment(id) {
             "endTime",
             "commit",
             "migrations",
-            "version"
+            "version",
+            "updates"
         ];
 
         if (!(body !== null && typeof body === "object" && requiredFields.every(field => field in body))) return null;

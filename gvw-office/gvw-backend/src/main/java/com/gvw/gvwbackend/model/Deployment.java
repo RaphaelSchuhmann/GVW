@@ -30,7 +30,7 @@ public class Deployment {
   private String commit;
   private String hash;
   private DeploymentStatus status;
-  private Integer error; // Optional error if the deployment gets canceled or fails
+  private List<Update> updates;
 
   @Builder.Default private List<Migration> migrations = new ArrayList<>();
 
@@ -39,6 +39,17 @@ public class Deployment {
       this.migrations = new ArrayList<>();
     }
     return this.migrations;
+  }
+
+  @Data
+  @Builder
+  @NoArgsConstructor
+  @AllArgsConstructor
+  public static class Update {
+    private String id;
+    private DeploymentUpdateType type;
+    private String title;
+    private String subTitle;
   }
 
   @Builder.Default private final String type = "deployment";

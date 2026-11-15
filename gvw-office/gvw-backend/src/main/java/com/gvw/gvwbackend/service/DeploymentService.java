@@ -139,7 +139,7 @@ public class DeploymentService {
                     m.getHash(),
                     m.getMigrations(),
                     m.getAppVersion(),
-                    m.getError()))
+                    m.getUpdates()))
         .toList();
   }
 
@@ -165,7 +165,7 @@ public class DeploymentService {
         deployment.getHash(),
         deployment.getMigrations(),
         deployment.getAppVersion(),
-        deployment.getError());
+        deployment.getUpdates());
   }
 
   /**

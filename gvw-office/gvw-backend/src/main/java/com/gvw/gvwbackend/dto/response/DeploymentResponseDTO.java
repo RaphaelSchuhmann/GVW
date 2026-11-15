@@ -1,7 +1,9 @@
 package com.gvw.gvwbackend.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.model.DeploymentStatus;
+import com.gvw.gvwbackend.model.DeploymentUpdateType;
 import com.gvw.gvwbackend.model.Migration;
 import java.time.LocalTime;
 import java.util.List;
@@ -18,4 +20,4 @@ public record DeploymentResponseDTO(
     String hash,
     List<Migration> migrations,
     String version,
-    Integer error) {}
+    List<Deployment.Update> updates) {}

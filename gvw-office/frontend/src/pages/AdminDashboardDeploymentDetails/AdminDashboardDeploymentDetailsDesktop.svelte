@@ -25,6 +25,8 @@
     import Checkbox from "../../components/Checkbox.svelte";
     import Migration from "../../components/Migration.svelte";
     import { addToast } from "../../stores/toasts.svelte.js";
+    import Notification from "../../components/Notification.svelte";
+    import EmptyState from "../../components/EmptyState.svelte";
 
     let {
         deploymentData,
@@ -463,106 +465,129 @@
             {/if}
         </PageHeader>
 
-        <div class="flex-1 min-h-0 overflow-y-auto w-full">
-            <!-- Deployment Information -->
-            <div class="flex flex-col items-center gap-5 min-[1500px]:w-1/2 min-[1200px]:w-2/3 w-full mt-5 p-0.5">
-                <div class="w-full flex items-center justify-start">
-                    <p class="text-dt-3 text-gv-dark-text font-medium">Deployment Informationen</p>
+        <div class="flex w-full gap-6">
+            <div class="flex-1 min-h-0 overflow-y-auto w-full">
+                <!-- Deployment Information -->
+                <div class="flex flex-col items-center gap-5 w-full mt-5 p-0.5">
+                    <div class="w-full flex items-center justify-start">
+                        <p class="text-dt-3 text-gv-dark-text font-medium">Deployment Informationen</p>
+                    </div>
+                    {#if !isEditing}
+                        <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
+                            <Input value={deploymentData.title} title="Titel" />
+                            <Input value={deploymentData.version} title="Version" />
+                        </div>
+
+                        <Input value={formatISODateString(deploymentData.date)} title="Datum" readonly={true} />
+
+                        <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
+                            <Input value={deploymentData.startTime} title="Start" readonly={true} />
+                            <Input value={deploymentData.endTime} title="Ende" readonly={true} />
+                        </div>
+
+                        <Input value={deploymentData.commit} title="Commit" placeholder="Commit hash" readonly={true} />
+                    {:else}
+                        <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
+                            <Input bind:value={informationDraft.title} title="Titel" readonly={true} />
+                            <Input bind:value={informationDraft.version} title="Version" readonly={true} />
+                        </div>
+
+                        <DefaultDatepicker title="Datum" onChange={updateDate}
+                                           selected={formatISODateString(informationDraft.date)} />
+
+                        <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
+                            <TimePicker title="Start" onChange={updateStartTime}
+                                        selected={informationDraft.startTime} />
+                            <TimePicker title="End" onChange={updateEndTime} selected={informationDraft.endTime} />
+                        </div>
+
+                        <Input bind:value={informationDraft.commit} title="Commit" placeholder="Commit hash" />
+                    {/if}
+
+                    {#if !isEditing && deploymentData.type !== "RUNNING"}
+                        <div class="flex items-center gap-4 w-full">
+                            <Button type="delete" onclick={startDeletingDeployment} disabled={isRunningMigrationTests}>
+                                <span class="material-symbols-rounded mr-2">delete</span>
+                                Löschen
+                            </Button>
+                            <Button type="primary" onclick={startEditing} disabled={isRunningMigrationTests}>
+                                <span class="material-symbols-rounded mr-2">person_edit</span>
+                                Bearbeiten
+                            </Button>
+                        </div>
+                    {/if}
+
+                    {#if viewport.width > 900 && isEditing}
+                        <div class="flex items-center w-full gap-2">
+                            <Button type="secondary" onclick={cancelEditing} isCancel={true}>Abbrechen</Button>
+                            <Button type="primary" disabled={!hasChanges || isSubmittingInformationChanges}
+                                    onclick={async () => await updateDeploymentInformation()}>
+                                {#if isSubmittingInformationChanges}
+                                    <Spinner light={true} />
+                                    <p>Speichern...</p>
+                                {:else}
+                                    Speichern
+                                {/if}
+                            </Button>
+                        </div>
+                    {/if}
                 </div>
+
                 {#if !isEditing}
-                    <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <Input value={deploymentData.title} title="Titel" />
-                        <Input value={deploymentData.version} title="Version" />
-                    </div>
+                    <!-- Migrations -->
+                    <div class="flex flex-col items-center gap-5 w-full mt-5 p-0.5">
+                        <div class="w-full flex items-center justify-start">
+                            <p class="text-dt-3 text-gv-dark-text font-medium">Migrations</p>
+                        </div>
 
-                    <Input value={formatISODateString(deploymentData.date)} title="Datum" readonly={true} />
+                        <div class="flex w-full flex-col items-start justify-start gap-4 overflow-y-auto">
+                            {#each deploymentData.migrations as migration, index (migration.id)}
+                                <Migration migrationData={migration} deleteMigration={deleteMigrationAndRefresh}
+                                           canDelete={deploymentData.type !== "RUNNING"} />
+                                <div class="w-full h-0.5 bg-gv-border"></div>
+                            {/each}
+                        </div>
 
-                    <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <Input value={deploymentData.startTime} title="Start" readonly={true} />
-                        <Input value={deploymentData.endTime} title="Ende" readonly={true} />
-                    </div>
-
-                    <Input value={deploymentData.commit} title="Commit" placeholder="Commit hash" readonly={true} />
-                {:else}
-                    <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <Input bind:value={informationDraft.title} title="Titel" readonly={true} />
-                        <Input bind:value={informationDraft.version} title="Version" readonly={true} />
-                    </div>
-
-                    <DefaultDatepicker title="Datum" onChange={updateDate}
-                                       selected={formatISODateString(informationDraft.date)} />
-
-                    <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                        <TimePicker title="Start" onChange={updateStartTime} selected={informationDraft.startTime} />
-                        <TimePicker title="End" onChange={updateEndTime} selected={informationDraft.endTime} />
-                    </div>
-
-                    <Input bind:value={informationDraft.commit} title="Commit" placeholder="Commit hash" />
-                {/if}
-
-                {#if !isEditing && deploymentData.type !== "RUNNING"}
-                    <div class="flex items-center gap-4 w-full">
-                        <Button type="delete" onclick={startDeletingDeployment} disabled={isRunningMigrationTests}>
-                            <span class="material-symbols-rounded mr-2">delete</span>
-                            Löschen
-                        </Button>
-                        <Button type="primary" onclick={startEditing} disabled={isRunningMigrationTests}>
-                            <span class="material-symbols-rounded mr-2">person_edit</span>
-                            Bearbeiten
-                        </Button>
-                    </div>
-                {/if}
-
-                {#if viewport.width > 900 && isEditing}
-                    <div class="flex items-center w-full gap-2">
-                        <Button type="secondary" onclick={cancelEditing} isCancel={true}>Abbrechen</Button>
-                        <Button type="primary" disabled={!hasChanges || isSubmittingInformationChanges}
-                                onclick={async () => await updateDeploymentInformation()}>
-                            {#if isSubmittingInformationChanges}
-                                <Spinner light={true} />
-                                <p>Speichern...</p>
-                            {:else}
-                                Speichern
-                            {/if}
-                        </Button>
+                        <div class="flex items-center gap-4 w-full">
+                            <Button type="primary" onclick={addMigrationModal?.showModal}
+                                    disabled={isRunningMigrationTests || deploymentData.type === "RUNNING"}>
+                                <span class="material-symbols-rounded mr-2">add</span>
+                                Migration erstellen
+                            </Button>
+                            <Button type="primary" onclick={startMigrationDryRun}
+                                    disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests || deploymentData.type === "RUNNING"}>
+                                {#if isRunningMigrationTests}
+                                    <Spinner light={true} />
+                                    <p>Testen...</p>
+                                {:else}
+                                    <span class="material-symbols-rounded mr-2">experiment</span>
+                                    Test Migrations
+                                {/if}
+                            </Button>
+                        </div>
                     </div>
                 {/if}
             </div>
 
-            {#if !isEditing}
-                <!-- Migrations -->
-                <div class="flex flex-col items-center gap-5 min-[1500px]:w-1/2 min-[1200px]:w-2/3 w-full mt-5 p-0.5">
-                    <div class="w-full flex items-center justify-start">
-                        <p class="text-dt-3 text-gv-dark-text font-medium">Migrations</p>
+            <!--Updates-->
+            <div
+                class="min-[1300px]:w-1/3 min-[1200px]:w-1/4 max-[1200px]:hidden ml-auto pt-5 p-4 flex flex-col gap-4">
+                {#if !isEditing}
+                    <div class="flex items-center justify-start w-full">
+                        <p class="text-dt-4 font-medium">Updates</p>
                     </div>
-
-                    <div class="flex w-full flex-col items-start justify-start gap-4 overflow-y-auto">
-                        {#each deploymentData.migrations as migration, index (migration.id)}
-                            <Migration migrationData={migration} deleteMigration={deleteMigrationAndRefresh}
-                                       canDelete={deploymentData.type !== "RUNNING"} />
-                            <div class="w-full h-0.5 bg-gv-border"></div>
-                        {/each}
-                    </div>
-
-                    <div class="flex items-center gap-4 w-full">
-                        <Button type="primary" onclick={addMigrationModal?.showModal}
-                                disabled={isRunningMigrationTests || deploymentData.type === "RUNNING"}>
-                            <span class="material-symbols-rounded mr-2">add</span>
-                            Migration erstellen
-                        </Button>
-                        <Button type="primary" onclick={startMigrationDryRun}
-                                disabled={!deploymentData.migrations || deploymentData.migrations.length === 0 || isRunningMigrationTests || deploymentData.type === "RUNNING"}>
-                            {#if isRunningMigrationTests}
-                                <Spinner light={true} />
-                                <p>Testen...</p>
-                            {:else}
-                                <span class="material-symbols-rounded mr-2">experiment</span>
-                                Test Migrations
-                            {/if}
-                        </Button>
-                    </div>
-                </div>
-            {/if}
+                    {#if deploymentData.updates > 0}
+                        <div
+                            class="flex flex-col items-center justify-center gap-2 w-full min-h-0 overflow-y-auto bg-red-600">
+                            {#each deploymentData.updates as update (update.id)}
+                                <Notification id={update.id} title={update.title} subTitle={update.subTitle} />
+                            {/each}
+                        </div>
+                    {:else}
+                        <EmptyState message="Keine Updates gefunden" icon="notifications_paused" fillHeight={false} />
+                    {/if}
+                {/if}
+            </div>
         </div>
     </div>
 </main>

@@ -13,6 +13,7 @@ import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.model.MigrationAction;
+import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
 import com.gvw.gvwbackend.util.DeploymentValidator;
 import com.gvw.gvwbackend.util.HashUtil;
 import com.gvw.gvwbackend.util.HttpUtil;
@@ -496,6 +497,8 @@ class DeploymentServiceTest {
             anyList(), anyString(), any(LocalTime.class), any(LocalTime.class)))
         .thenReturn(false);
     when(deploymentValidator.isCommitHashValid(anyString())).thenReturn(true);
+    when(httpUtil.sendPostRequestWithoutBody(anyString(), eq(String.class)))
+        .thenReturn(new GVWHttpResponse(200, null, null));
 
     deploymentService.updateDeploymentInformation(request);
 
