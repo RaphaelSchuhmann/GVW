@@ -213,7 +213,9 @@ public class HttpUtil {
         log.debug("Successfully deserialized response body to {}", responseType.getName());
       } catch (Exception e) {
         log.debug(
-            "Failed to deserialize response body to {}: {}", responseType.getName(), e.getMessage());
+            "Failed to deserialize response body to {}: {}",
+            responseType.getName(),
+            e.getMessage());
         parsedBody = rawBody;
       }
     } else {

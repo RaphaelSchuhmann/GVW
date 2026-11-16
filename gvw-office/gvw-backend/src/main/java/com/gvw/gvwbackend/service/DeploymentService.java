@@ -1,11 +1,12 @@
 package com.gvw.gvwbackend.service;
 
 import com.gvw.gvwbackend.dto.deploymentService.request.TriggerMigrationDryRunRequestDTO;
-import com.gvw.gvwbackend.dto.deploymentService.response.HealthResponseDTO;
 import com.gvw.gvwbackend.dto.request.AddDeploymentRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
+import com.gvw.gvwbackend.dto.request.UpdateDeploymentStatusRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
+import com.gvw.gvwbackend.dto.response.HealthResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.AppSettings;
 import com.gvw.gvwbackend.model.Deployment;
@@ -61,7 +62,7 @@ public class DeploymentService {
         hashUtil,
         Clock.systemUTC(),
         httpUtil,
-            appSettingsService);
+        appSettingsService);
   }
 
   public DeploymentService(
@@ -334,7 +335,8 @@ public class DeploymentService {
 
       GVWHttpResponse resp =
           httpUtil.sendPostRequestWithoutBody(
-              "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(), String.class);
+              "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(),
+              String.class);
       if (resp.isError()) {
         // Not a problem as the deployment pipeline would run the build pipeline if no build was
         // found
@@ -413,7 +415,10 @@ public class DeploymentService {
 
     if (resp.isError()) {
       log.debug("Failed to trigger migration dry run. Responded with {}", resp.status());
-      throw new BadGatewayException(String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 502, ErrorResource.MIGRATION)));
+      throw new BadGatewayException(
+          String.valueOf(
+              ErrorDomain.DEPLOYMENT.createCode(
+                  ErrorAction.UTILITY, 502, ErrorResource.MIGRATION)));
     }
   }
 
@@ -422,7 +427,8 @@ public class DeploymentService {
 
   public HealthResponseDTO healthCheck() {
     try {
-      AppSettings appSettings = appSettingsService.appSettings(ErrorAction.UTILITY, ErrorResource.NONE);
+      AppSettings appSettings =
+          appSettingsService.appSettings(ErrorAction.UTILITY, ErrorResource.NONE);
     } catch (Exception e) {
       // Any exception means that the database action was unsuccessful so database is unhealthy
       return new HealthResponseDTO(HealthStatus.HEALTHY, HealthStatus.UNHEALTHY);
@@ -430,6 +436,9 @@ public class DeploymentService {
 
     return new HealthResponseDTO(HealthStatus.HEALTHY, HealthStatus.HEALTHY);
   }
+
+  public void updateDeploymentStatus(
+      String deploymentId, UpdateDeploymentStatusRequestDTO request) {}
 
   /**
    * Helper method to find a deployment by its ID or throw appropriate exceptions if invalid or not

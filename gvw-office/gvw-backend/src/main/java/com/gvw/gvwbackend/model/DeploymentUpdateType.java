@@ -2,9 +2,7 @@ package com.gvw.gvwbackend.model;
 
 import java.util.Arrays;
 
-/**
- * Represents the action type of a deployment update
- */
+/** Represents the action type of a deployment update */
 public enum DeploymentUpdateType {
   SUCCESS("success"),
   INFO("info"),
@@ -18,8 +16,8 @@ public enum DeploymentUpdateType {
   }
 
   /**
-   * Parses a string value case-insensitively into a corresponding {@link DeploymentUpdateType}. Throws
-   * an {@link IllegalArgumentException} if the string is null or does not match any action.
+   * Parses a string value case-insensitively into a corresponding {@link DeploymentUpdateType}.
+   * Throws an {@link IllegalArgumentException} if the string is null or does not match any action.
    *
    * @param s The string value to parse.
    * @return The matching update type.

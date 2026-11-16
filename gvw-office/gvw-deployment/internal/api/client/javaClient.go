@@ -17,7 +17,7 @@ var _ JavaClient = (*HttpJavaClient)(nil)
 type Status string
 
 const (
-	StatusSuccess   Status = "SUCCESS"
+	StatusSuccess   Status = "SUCCESSFUL"
 	StatusFailed    Status = "FAILED"
 	StatusCancelled Status = "CANCELLED"
 )

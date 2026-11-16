@@ -1,4 +1,4 @@
-package com.gvw.gvwbackend.dto.deploymentService.response;
+package com.gvw.gvwbackend.dto.response;
 
 import com.gvw.gvwbackend.model.deploymentSystem.HealthStatus;
 

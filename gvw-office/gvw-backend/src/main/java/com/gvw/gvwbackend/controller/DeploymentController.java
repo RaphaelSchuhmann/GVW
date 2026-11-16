@@ -49,7 +49,8 @@ public class DeploymentController {
 
   @PostMapping("/add/deployment")
   @PreAuthorize("hasAnyRole('ADMIN')")
-  @ResponseStatus(HttpStatus.OK) public void addDeployment(@RequestBody @Valid AddDeploymentRequestDTO request) {
+  @ResponseStatus(HttpStatus.OK)
+  public void addDeployment(@RequestBody @Valid AddDeploymentRequestDTO request) {
     deploymentService.addDeployment(request);
   }
 

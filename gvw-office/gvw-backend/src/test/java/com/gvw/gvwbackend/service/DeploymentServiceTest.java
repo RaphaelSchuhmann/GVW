@@ -62,7 +62,7 @@ class DeploymentServiceTest {
             hashUtil,
             fixedClock,
             httpUtil,
-                appSettingsService);
+            appSettingsService);
   }
 
   @Test

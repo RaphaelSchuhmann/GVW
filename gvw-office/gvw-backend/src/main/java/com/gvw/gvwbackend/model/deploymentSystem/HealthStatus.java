@@ -22,8 +22,8 @@ public enum HealthStatus {
   public static HealthStatus fromString(String s) {
     if (s == null) return UNHEALTHY;
     return Arrays.stream(values())
-            .filter(r -> r.value.equalsIgnoreCase(s))
-            .findFirst()
-            .orElse(UNHEALTHY);
+        .filter(r -> r.value.equalsIgnoreCase(s))
+        .findFirst()
+        .orElse(UNHEALTHY);
   }
 }

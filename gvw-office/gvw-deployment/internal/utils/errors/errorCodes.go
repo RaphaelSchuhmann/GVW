@@ -149,10 +149,6 @@ func CombineErrors(errs ...ErrorCode) ErrorCode {
 	return combined
 }
 
-func HasErrorFlag(combined, flag ErrorCode) bool {
-	return (combined & flag) != 0
-}
-
 func MapErrorsToCode(err error) ErrorCode {
 	switch {
 	case HasCode(err, CodeBuildErrorBuildFailed):

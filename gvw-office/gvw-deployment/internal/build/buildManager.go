@@ -230,7 +230,9 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		return err
 	}
 
-	if err := run("git", "fetch", "--depth", "1", "origin", commit); err != nil {
+    testBranch := "feature/deployment-system/link-systems"
+
+	if err := run("git", "fetch", "--depth", "1", "origin", testBranch); err != nil {
 		return err
 	}
 
@@ -246,9 +248,17 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 
 	b.fsWrapper.CleanDir(workingDir + "/dist")
 
+	// Install dependencies
+	b.logger.Printf("[BUILD] Installing frontend dependencies for deployment %s", deploymentId)
+	_, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "install")
+	if err != nil {
+		b.logger.Printf("[BUILD] Failed to install dependencies for frontend in deployment %s", deploymentId)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
+	}
+
 	// Build
 	b.logger.Printf("[BUILD] Building frontend for deployment %s", deploymentId)
-	_, err := commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
+	_, err = commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
 	if err != nil {
 		b.logger.Printf("[BUILD] Frontend build failed for deployment %s with error %v", deploymentId, err)
 		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
