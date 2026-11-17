@@ -30,6 +30,7 @@
 
     let {
         deploymentData,
+        deploymentUpdates,
         isEditing = $bindable(false),
         isDeleting = $bindable(false),
         onChangeIsEditing = () => {},
@@ -576,11 +577,10 @@
                     <div class="flex items-center justify-start w-full">
                         <p class="text-dt-4 font-medium">Updates</p>
                     </div>
-                    {#if deploymentData.updates > 0}
+                    {#if deploymentUpdates > 0}
                         <div
                             class="flex flex-col items-center justify-center gap-2 w-full min-h-0 overflow-y-auto">
-                            <!-- TODO: Make this use an IntersectionObserver to avoid rendering everything at once -->
-                            {#each deploymentData.updates as update (update.id)}
+                            {#each deploymentUpdates as update (update.id)}
                                 <Notification id={update.id} title={update.title} subTitle={update.subTitle} />
                             {/each}
                         </div>

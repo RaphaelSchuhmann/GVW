@@ -2,7 +2,8 @@ import {
     apiAddDeployment, apiAddMigration,
     apiCheckDeployment,
     apiDeleteDeployment, apiDeleteMigration,
-    apiGetDeployment, apiGetDeploymentsToday, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
+    apiGetDeployment, apiGetDeploymentsToday,
+    apiGetDeploymentUpdates, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
@@ -47,6 +48,7 @@ const isFetching = {
     testMigrations: false,
     today: false,
     migrationDryRun: false,
+    deploymentUpdates: false,
 }
 
 const pendingChecks = new Map();
@@ -111,6 +113,30 @@ export async function getFullDeployment(id) {
         return body;
     } finally {
         isFetching.getDeployment = false;
+    }
+}
+
+/**
+ * Fetches all updates for a deployment by its ID, validating that all required fields are present.
+ * @param {string} id - The unique ID of the deployment.
+ * @returns {Promise<Array<Object>>} The array of updates for a deployment, or an empty array if validation or fetching fails.
+ */
+export async function getDeploymentUpdates(id) {
+    if (isFetching.deploymentUpdates || !id) return [];
+
+    isFetching.deploymentUpdates = true;
+
+    try {
+        const { resp, body } = await apiGetDeploymentUpdates(id);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return [];
+
+        if (!(body !== null && typeof body === "object" && "updates" in body)) return [];
+
+        return body.updates;
+    } finally {
+        isFetching.deploymentUpdates = false;
     }
 }
 
