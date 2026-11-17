@@ -95,7 +95,7 @@ class DeploymentServiceTest {
     List<String> result = deploymentService.getTodayDeployments();
 
     assertEquals(1, result.size());
-    assertTrue(result.get(0).contains(" - "));
+    assertTrue(result.getFirst().contains(" - "));
   }
 
   @Test
@@ -164,6 +164,7 @@ class DeploymentServiceTest {
             .commit("abc123")
             .hash("hash123")
             .appVersion("1.0.0")
+            .updates(List.of())
             .build();
 
     when(dbService.findAll(anyString(), eq(Deployment.class))).thenReturn(List.of(deployment));
@@ -171,8 +172,8 @@ class DeploymentServiceTest {
     List<DeploymentResponseDTO> result = deploymentService.getAllDeployments();
 
     assertEquals(1, result.size());
-    assertEquals("test-id", result.get(0).id());
-    assertEquals("Test Deployment", result.get(0).title());
+    assertEquals("test-id", result.getFirst().id());
+    assertEquals("Test Deployment", result.getFirst().title());
   }
 
   @Test
@@ -189,6 +190,7 @@ class DeploymentServiceTest {
             .commit("abc123")
             .hash("hash123")
             .appVersion("1.0.0")
+            .updates(List.of())
             .build();
 
     when(dbService.findById(anyString(), eq("test-id"), eq(Deployment.class)))
