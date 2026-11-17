@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.gvw.gvwbackend.model.helper.ErrorMessageType;
 import com.gvw.gvwbackend.model.helper.StatusMessage;
+
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +64,7 @@ public class Deployment {
   @AllArgsConstructor
   public static class Update {
     @Builder.Default private String id = UUID.randomUUID().toString();
+    @Builder.Default private LocalDateTime timestamp = LocalDateTime.now();
 
     private ErrorMessageType type;
     private String title;

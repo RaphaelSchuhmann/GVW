@@ -524,7 +524,7 @@
                             <Button type="primary" disabled={!hasChanges || isSubmittingInformationChanges}
                                     onclick={async () => await updateDeploymentInformation()}>
                                 {#if isSubmittingInformationChanges}
-                                    <Spinner light={true} />
+                                    <Spinner light={true} width="2/5" />
                                     <p>Speichern...</p>
                                 {:else}
                                     Speichern
@@ -577,11 +577,11 @@
                     <div class="flex items-center justify-start w-full">
                         <p class="text-dt-4 font-medium">Updates</p>
                     </div>
-                    {#if deploymentUpdates > 0}
+                    {#if deploymentUpdates.length > 0}
                         <div
                             class="flex flex-col items-center justify-center gap-2 w-full min-h-0 overflow-y-auto">
                             {#each deploymentUpdates as update (update.id)}
-                                <Notification id={update.id} title={update.title} subTitle={update.subTitle} />
+                                <Notification id={update.id} type={update.type.toLocaleLowerCase()} title={update.title} subTitle={update.subTitle} timestamp={update.timestamp} />
                             {/each}
                         </div>
                     {:else}

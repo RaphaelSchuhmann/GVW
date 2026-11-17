@@ -1,9 +1,12 @@
 <script>
+    import { getTimeFromISODateString, ISOToGermanDate, isToday } from "../services/dateTimeUtils.js";
+
     let {
         id,
         type = "info",
         title = "Title",
         subTitle = "SubTitle",
+        timestamp,
         isMobile = false,
         ...restProps
     } = $props();
@@ -21,6 +24,20 @@
     };
 
     const styles = $derived(NOTIFICATION_STYLE_MAP[type] || NOTIFICATION_STYLE_MAP.info);
+
+    function isTimestampToday() {
+        console.log(timestamp);
+
+        if (!timestamp) return false;
+
+        const date = new Date(timestamp);
+
+        const day = date.getDay();
+        const month = date.getMonth();
+        const year = date.getFullYear();
+
+        return isToday(day, month, year);
+    }
 </script>
 
 {#if title}
@@ -28,14 +45,19 @@
         class={`flex bg-white ${subTitle ? "items-start" : "items-center"} justify-start gap-2 w-full rounded-2 border border-gv-border p-2`}
         {...restProps}
     >
-        <span class={`material-symbols-rounded ${!isMobile ? "text-icon-dt-4" : "text-icon-dt-3"} ${styles.iconColor}`}>
+        <span class={`material-symbols-rounded ${!isMobile ? "text-icon-dt-5" : "text-icon-dt-4"} ${styles.iconColor}`}>
             {styles.icon}
         </span>
 
-        <div class={`flex flex-col ${subTitle ? "items-start" : "items-center"} justify-around`}>
-            <p class={`${!isMobile ? "text-dt-5" : "text-dt-6"} font-semibold`}>{title}</p>
+        <div class={`flex flex-col ${subTitle ? "items-start" : "items-center"} justify-around pr-2 gap-1`}>
+            <div class="flex items-center w-full">
+                <p class={`${!isMobile ? "text-dt-5" : "text-dt-6"} font-semibold w-3/5 text-nowrap truncate`}>{title}</p>
+                <p class="text-gv-light-text font-medium ml-auto text-dt-7">{isTimestampToday() ? getTimeFromISODateString(timestamp) : `${ISOToGermanDate(timestamp)} - ${getTimeFromISODateString(timestamp)}`}</p>
+            </div>
             {#if subTitle}
-                <p class={`${!isMobile ? "text-dt-6 line-clamp-5" : "text-dt-7 line-clamp-3"}`}>{subTitle}</p>
+                <div class="flex items-start w-full">
+                    <p class={`${!isMobile ? "text-dt-6 line-clamp-5" : "text-dt-7 line-clamp-3"}`}>{subTitle}</p>
+                </div>
             {/if}
         </div>
     </div>

@@ -93,6 +93,35 @@ export function germanDateToISO(germanDate) {
 }
 
 /**
+ * Converts a valid ISO 8601 date string into a German-formatted date string (DD.MM.YYYY).
+ *
+ * Responsibilities:
+ * - Validates the input as a proper ISO 8601 string via isISOString()
+ * - Extracts the UTC day, month and year components
+ * - Returns the date in German format with zero-padded day and month
+ *
+ * Behavior:
+ * - Returns null if input is falsy or not a valid ISO string
+ * - Uses UTC getters, so the result is independent of the local timezone
+ *
+ * @function ISOToGermanDate
+ * @param {string} isoString - ISO 8601 date string (e.g. "2026-04-09T00:00:00.000Z")
+ * @returns {string|null} German-formatted date string (e.g. "09.04.2026") or null if invalid
+ */
+export function ISOToGermanDate(isoString) {
+    if (!isoString || !isISOString(isoString)) return null;
+
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return null;
+
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const year = date.getUTCFullYear();
+
+    return `${day}.${month}.${year}`;
+}
+
+/**
  * Gets the last day of the current month.
  * * Logic: The Date constructor treats day '0' as the last day of the previous month.
  * By targeting (Current Month + 1) and Day 0, JavaScript rolls back one day
@@ -128,8 +157,7 @@ export function getLastDayOfCurrentMonth() {
 export function isISOString(str) {
     if (typeof str !== "string") return false;
 
-    const isIsoFormat = str.includes('T') && str.endsWith('Z');
-    if (!isIsoFormat) return false;
+    if (!str.includes('T')) return false;
 
     const d = new Date(str);
     return !Number.isNaN(d.getTime());
@@ -220,4 +248,30 @@ export function getRoundedTime(date = new Date()) {
         hours: rounded.getHours(),
         minutes: rounded.getMinutes()
     };
+}
+
+/**
+ * Extracts the local time (HH:MM) from a valid ISO 8601 date string.
+ *
+ * Responsibilities:
+ * - Validates the input as a proper ISO 8601 string via isISOString()
+ * - Formats the hours and minutes in the local timezone with zero-padding
+ *
+ * Behavior:
+ * - Returns "Unbekannt" if input is falsy or not a valid ISO string
+ * - Uses local time getters, so the result depends on the runtime timezone
+ *
+ * @function getTimeFromISODateString
+ * @param {string} dateStr - ISO 8601 date string (e.g. "2026-04-09T14:30:00.000Z")
+ * @returns {string} Time string in "HH:MM" format or "Unbekannt" if invalid
+ */
+export function getTimeFromISODateString(dateStr) {
+    if (!dateStr || !isISOString(dateStr)) return "Unbekannt";
+
+    const date = new Date(dateStr);
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
 }

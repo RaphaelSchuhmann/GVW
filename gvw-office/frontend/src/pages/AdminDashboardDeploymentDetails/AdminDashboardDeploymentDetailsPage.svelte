@@ -85,7 +85,7 @@
     $effect(() => {
         const _triggerDeploymentUpdates = lastRefresh.DEPLOYMENT_UPDATES;
 
-        if (!ready || isDeleting) return;
+        if (!ready) return;
 
         async function getUpdates() {
             if (!deploymentId) {
@@ -101,6 +101,8 @@
                 deploymentUpdates = updates;
             }
         }
+
+        getUpdates();
     });
 
     function updateIsEditing(val) { isEditing = val; }
