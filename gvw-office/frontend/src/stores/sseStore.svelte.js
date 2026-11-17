@@ -10,4 +10,5 @@ export const lastRefresh = $state({
     REPORTS: Date.now(),
     HELP_CENTER: Date.now(),
     DEPLOYMENTS: Date.now(),
+    DEPLOYMENT_UPDATES: Date.now(),
 });

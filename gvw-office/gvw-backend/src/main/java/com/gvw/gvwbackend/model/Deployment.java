@@ -2,9 +2,12 @@ package com.gvw.gvwbackend.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.gvw.gvwbackend.model.helper.ErrorMessageType;
+import com.gvw.gvwbackend.model.helper.StatusMessage;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -41,13 +44,26 @@ public class Deployment {
     return this.migrations;
   }
 
+  public void addUpdate(List<StatusMessage> messages) {
+    for (StatusMessage msg : messages) {
+      Update update =
+          Update.builder().title(msg.title()).type(msg.type()).subTitle(msg.subTitle()).build();
+      updates.add(update);
+    }
+  }
+
+  public List<Update> getUpdates() {
+    return updates.reversed();
+  }
+
   @Data
   @Builder
   @NoArgsConstructor
   @AllArgsConstructor
   public static class Update {
-    private String id;
-    private DeploymentUpdateType type;
+    @Builder.Default private String id = UUID.randomUUID().toString();
+
+    private ErrorMessageType type;
     private String title;
     private String subTitle;
   }

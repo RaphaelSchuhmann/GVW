@@ -1,7 +1,7 @@
 package com.gvw.gvwbackend.util;
 
-import com.gvw.gvwbackend.model.helper.ErrorMessage;
 import com.gvw.gvwbackend.model.helper.ErrorMessageType;
+import com.gvw.gvwbackend.model.helper.StatusMessage;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -10,19 +10,19 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ErrorCodeMapper {
-  private static final Map<Integer, ErrorMessage> ERROR_MESSAGES = new LinkedHashMap<>();
+  private static final Map<Integer, StatusMessage> ERROR_MESSAGES = new LinkedHashMap<>();
 
   static {
     // No Error & General
     ERROR_MESSAGES.put(
         0,
-        new ErrorMessage(
+        new StatusMessage(
             "Aktion erfolgreich",
             "Die zuletzt gestartete Aktion wurde erfolgreich ausgeführt.",
             ErrorMessageType.SUCCESS));
     ERROR_MESSAGES.put(
         1,
-        new ErrorMessage(
+        new StatusMessage(
             "Unbekannter Fehler",
             "Ein unbekannter fehler ist aufgetreten.",
             ErrorMessageType.ERROR));
@@ -30,31 +30,31 @@ public class ErrorCodeMapper {
     // BUILD Codes
     ERROR_MESSAGES.put(
         1 << 1,
-        new ErrorMessage(
+        new StatusMessage(
             "Build fehlgeschlagen",
             "Der build für dieses Deployment ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 2,
-        new ErrorMessage(
+        new StatusMessage(
             "Ungültiger Commit",
             "Der übergebene Commit ist nicht gültig oder existiert nicht.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 3,
-        new ErrorMessage(
+        new StatusMessage(
             "Tests fehlgeschlagen",
             "Die Tests von Frontend und oder Backend sind fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 4,
-        new ErrorMessage(
+        new StatusMessage(
             "Build fehlgeschlagen",
             "Fehler beim extrahieren der Build-Artifacts.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 5,
-        new ErrorMessage(
+        new StatusMessage(
             "Build fehlgeschlagen",
             "Schema konnte nicht generiert werden.",
             ErrorMessageType.ERROR));
@@ -62,37 +62,37 @@ public class ErrorCodeMapper {
     // Migration Codes
     ERROR_MESSAGES.put(
         1 << 6,
-        new ErrorMessage(
+        new StatusMessage(
             "Migration Dry-Run erfolgreich",
             "Der Migration Dry-Run konnte erfolgreich ausgeführt werden.",
             ErrorMessageType.SUCCESS));
     ERROR_MESSAGES.put(
         1 << 7,
-        new ErrorMessage(
+        new StatusMessage(
             "Migration Dry-Run fehlgeschlagen",
             "Das Schema war nicht vorhanden oder fehlerhaft.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 8,
-        new ErrorMessage(
+        new StatusMessage(
             "Datenbank nicht gefunden",
             "Die angegebene Datenbank wurde nicht in der Konfiguration gefunden.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 9,
-        new ErrorMessage(
+        new StatusMessage(
             "Ungültige betroffene Datenbanken",
             "Die Liste der betroffenen Datenbanken ist ungültig.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 10,
-        new ErrorMessage(
+        new StatusMessage(
             "Dry Run fehlgeschlagen",
             "Der Testlauf der Migrations ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 11,
-        new ErrorMessage(
+        new StatusMessage(
             "Ungültige Migration gefunden",
             "Eine ungültige Migration wurde im Deployment gefunden.",
             ErrorMessageType.ERROR));
@@ -100,61 +100,61 @@ public class ErrorCodeMapper {
     // Deploy Codes
     ERROR_MESSAGES.put(
         1 << 12,
-        new ErrorMessage(
+        new StatusMessage(
             "Ungültige Deployment-ID",
             "Die angegebene Deployment-ID ist ungültig oder existiert nicht.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 13,
-        new ErrorMessage(
+        new StatusMessage(
             "Kein Build gefunden",
             "Für dieses Deployment wurde kein Build gefunden und ein neuer Build ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 14,
-        new ErrorMessage(
+        new StatusMessage(
             "Nginx Wartungsmodus fehlgeschlagen",
             "Der Wechsel in den Nginx Wartungsmodus ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 15,
-        new ErrorMessage(
+        new StatusMessage(
             "Backend-Stopp fehlgeschlagen",
             "Das Backend konnte nicht gestoppt werden.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 16,
-        new ErrorMessage(
+        new StatusMessage(
             "Backend-Start fehlgeschlagen",
             "Das Backend konnte nicht gestartet werden.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 17,
-        new ErrorMessage(
+        new StatusMessage(
             "Artefakt-Installation fehlgeschlagen",
             "Die Installation der Build-Artefakte ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 18,
-        new ErrorMessage(
+        new StatusMessage(
             "Migrationen fehlgeschlagen",
             "Die Datenbankmigrationen während des Deployments sind fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 19,
-        new ErrorMessage(
+        new StatusMessage(
             "Anwendung healthy",
             "Die Anwendung ist nach dem Deployment nicht healthy.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 20,
-        new ErrorMessage(
+        new StatusMessage(
             "Wiederherstellung erforderlich",
             "Das Deployment erfordert eine manuelle Wiederherstellung.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
         1 << 21,
-        new ErrorMessage(
+        new StatusMessage(
             "Deployment läuft bereits",
             "Deployment konnte nicht gestartet werden da bereits ein anderes Deployment läuft.",
             ErrorMessageType.WARNING)); // -> technically not possible
@@ -165,13 +165,13 @@ public class ErrorCodeMapper {
    * table. 2. If not found, decomposes the bitmask into individual active flags. 3. Falls back to a
    * default message if no bits match.
    */
-  public static List<ErrorMessage> getMessages(int code) {
+  public static List<StatusMessage> getMessages(int code) {
     if (ERROR_MESSAGES.containsKey(code)) {
       return List.of(ERROR_MESSAGES.get(code));
     }
 
-    List<ErrorMessage> matchedMessages = new ArrayList<>();
-    for (Map.Entry<Integer, ErrorMessage> entry : ERROR_MESSAGES.entrySet()) {
+    List<StatusMessage> matchedMessages = new ArrayList<>();
+    for (Map.Entry<Integer, StatusMessage> entry : ERROR_MESSAGES.entrySet()) {
       int flag = entry.getKey();
 
       // Skip 0 when checking flags
@@ -185,7 +185,7 @@ public class ErrorCodeMapper {
     }
 
     return List.of(
-        new ErrorMessage(
+        new StatusMessage(
             "Unbekannter Fehler",
             "Ein unbekannter fehler ist aufgetreten mit code: " + code,
             ErrorMessageType.ERROR));

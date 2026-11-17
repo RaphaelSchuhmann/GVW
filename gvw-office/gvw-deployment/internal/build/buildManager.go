@@ -230,6 +230,7 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		return err
 	}
 
+	// TODO: REMOVE THIS BEFORE MERGE
     testBranch := "feature/deployment-system/link-systems"
 
 	if err := run("git", "fetch", "--depth", "1", "origin", testBranch); err != nil {

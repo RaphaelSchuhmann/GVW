@@ -14,10 +14,7 @@ import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.model.deploymentSystem.HealthStatus;
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
-import com.gvw.gvwbackend.util.DeploymentValidator;
-import com.gvw.gvwbackend.util.HashUtil;
-import com.gvw.gvwbackend.util.HttpUtil;
-import com.gvw.gvwbackend.util.MigrationValidator;
+import com.gvw.gvwbackend.util.*;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -438,7 +435,43 @@ public class DeploymentService {
   }
 
   public void updateDeploymentStatus(
-      String deploymentId, UpdateDeploymentStatusRequestDTO request) {}
+      String deploymentId, UpdateDeploymentStatusRequestDTO request) {
+    if (deploymentId == null || deploymentId.isBlank()) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+    }
+
+    Deployment deployment = findDeploymentById(deploymentId);
+
+    // Only valid status values are SUCCESSFUL, CANCELLED, FAILED
+    DeploymentStatus deploymentStatus = DeploymentStatus.fromString(request.status());
+    if (deploymentStatus != DeploymentStatus.SUCCESSFUL
+        && deploymentStatus != DeploymentStatus.CANCELLED
+        && deploymentStatus != DeploymentStatus.FAILED) {
+      log.warn(
+          "Received deployment status update request with passed status {} which is not a valid status for this endpoint",
+          request.status());
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+    }
+
+    deployment.setStatus(deploymentStatus);
+    deployment.addUpdate(ErrorCodeMapper.getMessages(request.reason()));
+
+    dbService.update("deployments", deployment.getId(), deployment);
+    sseService.sendRefresh("DEPLOYMENT_UPDATES");
+  }
+
+  public List<Deployment.Update> getDeploymentUpdates(String deploymentId) {
+    if (deploymentId == null || deploymentId.isBlank()) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.READ_ONE, 400)));
+    }
+
+    Deployment deployment = findDeploymentById(deploymentId);
+
+    return deployment.getUpdates();
+  }
 
   /**
    * Helper method to find a deployment by its ID or throw appropriate exceptions if invalid or not
