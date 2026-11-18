@@ -22,8 +22,6 @@ type MockJavaClient struct {
 	state                       client.Status
 	reason                      gvwErrors.ErrorCode
 	ctx                         context.Context
-	database                    string
-	documentId                  string
 	appStatus                   client.HealthStatus
 	databaseStatus              client.HealthStatus
 }
@@ -37,11 +35,9 @@ func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client
 	return nil
 }
 
-func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status client.Status, database string, documentId string, reason gvwErrors.ErrorCode, ctx context.Context) error {
+func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status client.Status, reason gvwErrors.ErrorCode, ctx context.Context) error {
 	m.deploymentId = deploymentId
 	m.state = status
-	m.database = database
-	m.documentId = documentId
 	m.reason = reason
 	m.ctx = ctx
 	return nil

@@ -50,7 +50,7 @@ type HealthCheckResponse struct {
 
 type JavaClient interface {
 	UpdateDeploymentState(deploymentId string, status Status, reason gvwErrors.ErrorCode, ctx context.Context) error
-	UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason gvwErrors.ErrorCode, ctx context.Context) error
+	UpdateMigrationDryRunState(deploymentId string, status Status, reason gvwErrors.ErrorCode, ctx context.Context) error
 	RunHealthCheck(ctx context.Context) (HealthCheckResponse, error)
 }
 
@@ -106,14 +106,12 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 	return nil
 }
 
-func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status Status, database string, documentId string, reason gvwErrors.ErrorCode, ctx context.Context) error {
+func (c *HttpJavaClient) UpdateMigrationDryRunState(deploymentId string, status Status, reason gvwErrors.ErrorCode, ctx context.Context) error {
 	endpoint := c.cfg.Config.JavaBaseURL + "/internal/migration/dry-run/" + url.PathEscape(deploymentId) + "/status"
 
 	payload := MigrationDryRunPayload{
 		DeploymentId: deploymentId,
 		Status:       status,
-		Database:     database,
-		DocumentId:   documentId,
 		Reason:       reason,
 	}
 

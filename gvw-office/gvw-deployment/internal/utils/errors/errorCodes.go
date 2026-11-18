@@ -125,20 +125,19 @@ const (
 	MIGRATION_CodeBadSchema         ErrorCode = 1 << 7
 	MIGRATION_CodeMissingDbInMap    ErrorCode = 1 << 8
 	MIGRATION_CodeBadAffectedDbs    ErrorCode = 1 << 9
-	MIGRATION_CodeDryRunFailed      ErrorCode = 1 << 10
-	MIGRATION_CodeBadMigrationFound ErrorCode = 1 << 11
+	MIGRATION_CodeBadMigrationFound ErrorCode = 1 << 10
 
 	// Deploy Codes
-	DEPLOY_CodeBadDeploymentId        ErrorCode = 1 << 12
-	DEPLOY_CodeNoBuildFound           ErrorCode = 1 << 13
-	DEPLOY_CodeNginxMaintenanceFailed ErrorCode = 1 << 14
-	DEPLOY_CodeStopBackendFailed      ErrorCode = 1 << 15
-	DEPLOY_CodeStartBackendFailed     ErrorCode = 1 << 16
-	DEPLOY_CodeArtifcatInstallFailed  ErrorCode = 1 << 17
-	DEPLOY_CodeMigrationsFailed       ErrorCode = 1 << 18
-	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 19
-	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 20
-	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 21
+	DEPLOY_CodeBadDeploymentId        ErrorCode = 1 << 11
+	DEPLOY_CodeNoBuildFound           ErrorCode = 1 << 12
+	DEPLOY_CodeNginxMaintenanceFailed ErrorCode = 1 << 13
+	DEPLOY_CodeStopBackendFailed      ErrorCode = 1 << 14
+	DEPLOY_CodeStartBackendFailed     ErrorCode = 1 << 15
+	DEPLOY_CodeArtifcatInstallFailed  ErrorCode = 1 << 16
+	DEPLOY_CodeMigrationsFailed       ErrorCode = 1 << 17
+	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 18
+	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 19
+	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 20
 )
 
 func CombineErrors(errs ...ErrorCode) ErrorCode {
