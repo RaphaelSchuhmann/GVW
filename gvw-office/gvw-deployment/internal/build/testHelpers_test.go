@@ -35,14 +35,6 @@ func (m *MockJavaClient) UpdateDeploymentState(deploymentId string, state client
 	return nil
 }
 
-func (m *MockJavaClient) UpdateMigrationDryRunState(deploymentId string, status client.Status, reason gvwErrors.ErrorCode, ctx context.Context) error {
-	m.deploymentId = deploymentId
-	m.state = status
-	m.reason = reason
-	m.ctx = ctx
-	return nil
-}
-
 func (m *MockJavaClient) RunHealthCheck(ctx context.Context) (client.HealthCheckResponse, error) {
 	m.appStatus = client.Healthy
 	m.databaseStatus = client.Healthy

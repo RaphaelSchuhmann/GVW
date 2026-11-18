@@ -29,31 +29,37 @@ public class ErrorCodeMapper {
 
     // BUILD Codes
     ERROR_MESSAGES.put(
-        1 << 1,
+            1 << 1,
+            new StatusMessage(
+                    "Build erfolgreich",
+                    "Der build für dieses Deployment wurde erfolgreich abgeschlossen.",
+                    ErrorMessageType.SUCCESS));
+    ERROR_MESSAGES.put(
+        1 << 2,
         new StatusMessage(
             "Build fehlgeschlagen",
             "Der build für dieses Deployment ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 2,
+        1 << 3,
         new StatusMessage(
             "Ungültiger Commit",
             "Der übergebene Commit ist nicht gültig oder existiert nicht.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 3,
+        1 << 4,
         new StatusMessage(
             "Tests fehlgeschlagen",
             "Die Tests von Frontend und oder Backend sind fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 4,
+        1 << 5,
         new StatusMessage(
             "Build fehlgeschlagen",
             "Fehler beim extrahieren der Build-Artifacts.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 5,
+        1 << 6,
         new StatusMessage(
             "Build fehlgeschlagen",
             "Schema konnte nicht generiert werden.",
@@ -61,31 +67,31 @@ public class ErrorCodeMapper {
 
     // Migration Codes
     ERROR_MESSAGES.put(
-        1 << 6,
+        1 << 7,
         new StatusMessage(
             "Migration Dry-Run erfolgreich",
             "Der Migration Dry-Run konnte erfolgreich ausgeführt werden.",
             ErrorMessageType.SUCCESS));
     ERROR_MESSAGES.put(
-        1 << 7,
+        1 << 8,
         new StatusMessage(
             "Migration Dry-Run fehlgeschlagen",
             "Das Schema war nicht vorhanden oder fehlerhaft.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 8,
+        1 << 9,
         new StatusMessage(
             "Datenbank nicht gefunden",
             "Die angegebene Datenbank wurde nicht in der Konfiguration gefunden.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 9,
+        1 << 10,
         new StatusMessage(
             "Ungültige betroffene Datenbanken",
             "Die Liste der betroffenen Datenbanken ist ungültig.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 10,
+        1 << 11,
         new StatusMessage(
             "Ungültige Migration gefunden",
             "Eine ungültige Migration wurde im Deployment gefunden.",
@@ -93,61 +99,61 @@ public class ErrorCodeMapper {
 
     // Deploy Codes
     ERROR_MESSAGES.put(
-        1 << 11,
+        1 << 12,
         new StatusMessage(
             "Ungültige Deployment-ID",
             "Die angegebene Deployment-ID ist ungültig oder existiert nicht.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 12,
+        1 << 13,
         new StatusMessage(
             "Kein Build gefunden",
             "Für dieses Deployment wurde kein Build gefunden und ein neuer Build ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 13,
+        1 << 14,
         new StatusMessage(
             "Nginx Wartungsmodus fehlgeschlagen",
             "Der Wechsel in den Nginx Wartungsmodus ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 14,
+        1 << 15,
         new StatusMessage(
             "Backend-Stopp fehlgeschlagen",
             "Das Backend konnte nicht gestoppt werden.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 15,
+        1 << 16,
         new StatusMessage(
             "Backend-Start fehlgeschlagen",
             "Das Backend konnte nicht gestartet werden.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 16,
+        1 << 17,
         new StatusMessage(
             "Artefakt-Installation fehlgeschlagen",
             "Die Installation der Build-Artefakte ist fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 17,
+        1 << 18,
         new StatusMessage(
             "Migrationen fehlgeschlagen",
             "Die Datenbankmigrationen während des Deployments sind fehlgeschlagen.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 18,
+        1 << 19,
         new StatusMessage(
             "Anwendung healthy",
             "Die Anwendung ist nach dem Deployment nicht healthy.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 19,
+        1 << 20,
         new StatusMessage(
             "Wiederherstellung erforderlich",
             "Das Deployment erfordert eine manuelle Wiederherstellung.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
-        1 << 20,
+        1 << 21,
         new StatusMessage(
             "Deployment läuft bereits",
             "Deployment konnte nicht gestartet werden da bereits ein anderes Deployment läuft.",

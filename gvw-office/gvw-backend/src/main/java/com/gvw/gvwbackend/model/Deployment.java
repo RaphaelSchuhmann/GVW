@@ -7,8 +7,11 @@ import com.gvw.gvwbackend.model.helper.StatusMessage;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -54,7 +57,9 @@ public class Deployment {
   }
 
   public List<Update> getUpdates() {
-    return updates.reversed();
+    return updates.stream()
+            .sorted(Comparator.comparing(Update::getTimestamp).reversed())
+            .collect(Collectors.toList());
   }
 
   @Data

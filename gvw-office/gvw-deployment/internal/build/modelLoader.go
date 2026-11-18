@@ -4,6 +4,7 @@ import (
 	"gvw/gvw-deployment/internal/utils/errors"
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
+	"path/filepath"
 	"strings"
 )
 
@@ -39,6 +40,60 @@ func (m *ModelLoader) LoadModel(path string) (map[string]any, error) {
 	var modelLines []string = strings.Split(modelString, "\n")
 
 	return m.parseLines(modelLines), nil
+}
+
+func (m *ModelLoader) LoadModelsFromDir(dir string) (map[string]any, error) {
+	if dir == "" || !m.fsWrapper.DirOrFileExists(dir) {
+		return nil, gvwErrors.NewError(gvwErrors.CodeModelLoaderInvalidPath)
+	}
+
+	result := make(map[string]any)
+	if err := m.collectModels(dir, true, result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (m *ModelLoader) collectModels(dir string, isRoot bool, result map[string]any) error {
+	entries, err := m.fsWrapper.ListDir(dir)
+	if err != nil {
+		return gvwErrors.Wrap(gvwErrors.CodeModelLoaderFailedReadingFile, err)
+	}
+
+	for _, entry := range entries {
+		path := filepath.Join(dir, entry.Name())
+
+		if entry.IsDir() {
+			if err := m.collectModels(path, false, result); err != nil {
+				return err
+			}
+			continue
+		}
+
+		modelMap, err := m.LoadModel(path)
+		if err != nil {
+			return err
+		}
+
+		for name, val := range modelMap {
+			if !isRoot && !isEnumEntry(val) {
+				continue
+			}
+			result[name] = val
+		}
+	}
+
+	return nil
+}
+
+func isEnumEntry(val any) bool {
+	classMap, ok := val.(map[string]any)
+	if !ok {
+		return false
+	}
+	objType, _ := classMap["objType"].(string)
+	return objType == "enum"
 }
 
 func (m *ModelLoader) parseLines(lines []string) map[string]any {

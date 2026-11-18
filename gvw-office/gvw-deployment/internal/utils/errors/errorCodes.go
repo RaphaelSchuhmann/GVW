@@ -114,30 +114,31 @@ const (
 	UNKOWN ErrorCode = 1 << 0
 
 	// BUILD Codes
-	BUILD_CodeBuildFailed            ErrorCode = 1 << 1
-	BUILD_CodeCommitInvalid          ErrorCode = 1 << 2
-	BUILD_CodeTestExecutionFailed    ErrorCode = 1 << 3
-	BUILD_CodeBinaryExtractionFailed ErrorCode = 1 << 4
-	BUILD_CodeSchemaGenerationFailed ErrorCode = 1 << 5
+	BUILD_CodeBuildSuccess           ErrorCode = 1 << 1
+	BUILD_CodeBuildFailed            ErrorCode = 1 << 2
+	BUILD_CodeCommitInvalid          ErrorCode = 1 << 3
+	BUILD_CodeTestExecutionFailed    ErrorCode = 1 << 4
+	BUILD_CodeBinaryExtractionFailed ErrorCode = 1 << 5
+	BUILD_CodeSchemaGenerationFailed ErrorCode = 1 << 6
 
 	// Migration Codes
-	MIGRATION_CodeSuccess           ErrorCode = 1 << 6
-	MIGRATION_CodeBadSchema         ErrorCode = 1 << 7
-	MIGRATION_CodeMissingDbInMap    ErrorCode = 1 << 8
-	MIGRATION_CodeBadAffectedDbs    ErrorCode = 1 << 9
-	MIGRATION_CodeBadMigrationFound ErrorCode = 1 << 10
+	MIGRATION_CodeSuccess           ErrorCode = 1 << 7
+	MIGRATION_CodeBadSchema         ErrorCode = 1 << 8
+	MIGRATION_CodeMissingDbInMap    ErrorCode = 1 << 9
+	MIGRATION_CodeBadAffectedDbs    ErrorCode = 1 << 10
+	MIGRATION_CodeBadMigrationFound ErrorCode = 1 << 11
 
 	// Deploy Codes
-	DEPLOY_CodeBadDeploymentId        ErrorCode = 1 << 11
-	DEPLOY_CodeNoBuildFound           ErrorCode = 1 << 12
-	DEPLOY_CodeNginxMaintenanceFailed ErrorCode = 1 << 13
-	DEPLOY_CodeStopBackendFailed      ErrorCode = 1 << 14
-	DEPLOY_CodeStartBackendFailed     ErrorCode = 1 << 15
-	DEPLOY_CodeArtifcatInstallFailed  ErrorCode = 1 << 16
-	DEPLOY_CodeMigrationsFailed       ErrorCode = 1 << 17
-	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 18
-	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 19
-	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 20
+	DEPLOY_CodeBadDeploymentId        ErrorCode = 1 << 12
+	DEPLOY_CodeNoBuildFound           ErrorCode = 1 << 13
+	DEPLOY_CodeNginxMaintenanceFailed ErrorCode = 1 << 14
+	DEPLOY_CodeStopBackendFailed      ErrorCode = 1 << 15
+	DEPLOY_CodeStartBackendFailed     ErrorCode = 1 << 16
+	DEPLOY_CodeArtifcatInstallFailed  ErrorCode = 1 << 17
+	DEPLOY_CodeMigrationsFailed       ErrorCode = 1 << 18
+	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 19
+	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 20
+	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 21
 )
 
 func CombineErrors(errs ...ErrorCode) ErrorCode {

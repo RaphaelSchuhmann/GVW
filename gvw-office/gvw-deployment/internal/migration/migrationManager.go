@@ -2,7 +2,6 @@ package migration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/config"
@@ -287,7 +286,7 @@ func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema 
 }
 
 func (m *MigrationManager) sendDryRunResponse(ctx context.Context, deploymentId string, reason gvwErrors.ErrorCode, status client.Status) {
-	if err := m.javaClient.UpdateMigrationDryRunState(deploymentId, status, reason, ctx); err != nil {
+	if err := m.javaClient.UpdateDeploymentState(deploymentId, status, reason, ctx); err != nil {
 		m.logger.Printf("[MIGRATION] Error updating migration dry run status for deployment %s with status %s: %v", deploymentId, string(status), err)
 	}
 }

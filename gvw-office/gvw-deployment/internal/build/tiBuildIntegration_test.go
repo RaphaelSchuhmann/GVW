@@ -5,7 +5,6 @@ import (
     "gvw/gvw-deployment/internal/utils/log"
     "gvw/gvw-deployment/internal/utils/filesystem"
     "os"
-    "path/filepath"
     "testing"   
 )
 
@@ -23,27 +22,9 @@ func loadRealNormalizedSchema(t *testing.T) map[string]any {
     fsWrapper := filesystem.NewFileSystem(logger)
     modelLoader := NewModelLoader(logger, fsWrapper)
 
-    entries, err := fsWrapper.ListDir(modelDir)
+    rawSchema, err := modelLoader.LoadModelsFromDir(modelDir)
     if err != nil {
-        t.Fatalf("Failed to list model directory: %v", err)
-    }
-
-    rawSchema := make(map[string]any)
-    for _, entry := range entries {
-        if entry.IsDir() {
-            continue
-        }
-
-        modelPath := filepath.Join(modelDir, entry.Name())
-        modelMap, err := modelLoader.LoadModel(modelPath)
-        if err != nil {
-            t.Logf("Warning: Failed to load model %s: %v", entry.Name(), err)
-            continue
-        }
-
-        for k, v := range modelMap {
-            rawSchema[k] = v
-        }
+        t.Fatalf("Failed to load model directory: %v", err)
     }
 
     normalizedSchema, err := modelLoader.NormalizeAndValidateSchema(rawSchema)
