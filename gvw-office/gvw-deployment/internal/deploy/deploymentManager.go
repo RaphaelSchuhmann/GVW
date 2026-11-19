@@ -258,7 +258,7 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVer
 		return
 	}
 
-	d.updateDeployment(deploymentId, client.StatusSuccess, gvwErrors.CodeNone)
+	d.updateDeployment(deploymentId, client.StatusSuccess, gvwErrors.DEPLOY_CodeDeploymentSuccesful)
 }
 
 // rollbackAndAbort undoes everything up to rs.reached, then leaves maintenance mode

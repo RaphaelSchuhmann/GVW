@@ -103,7 +103,7 @@ export async function apiAddMigration(migration) {
         field: migration.field,
         action: migration.action,
         conditional: migration.conditional,
-        value: migration.value,
+        value: migration.value
     });
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);
@@ -157,7 +157,7 @@ export async function apiUpdateDeploymentInformation(deploymentInformation) {
         date: deploymentInformation.date,
         startTime: deploymentInformation.startTime,
         endTime: deploymentInformation.endTime,
-        commit: deploymentInformation.commit,
+        commit: deploymentInformation.commit
     });
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);
@@ -166,6 +166,13 @@ export async function apiUpdateDeploymentInformation(deploymentInformation) {
 
 export async function apiTriggerMigrationDryRun(deploymentId) {
     const resp = await httpPost(`${apiUrl}/deployment/dryRun/${deploymentId}`, {});
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}
+
+export async function apiTriggerDeployment(deploymentId) {
+    const resp = await httpPost(`${apiUrl}/deployment/deploy/${deploymentId}`, {});
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);
     return { resp, body };

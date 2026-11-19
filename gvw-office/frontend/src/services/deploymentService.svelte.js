@@ -3,7 +3,7 @@ import {
     apiCheckDeployment,
     apiDeleteDeployment, apiDeleteMigration,
     apiGetDeployment, apiGetDeploymentsToday,
-    apiGetDeploymentUpdates, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
+    apiGetDeploymentUpdates, apiTriggerDeployment, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
@@ -17,9 +17,9 @@ import { viewport } from "../stores/viewport.svelte.js";
 export const migrationActions = new Set(["ADD", "DELETE", "RENAME", "CONDITIONAL"]);
 
 /**
-* Mapping dictionary for translating deployment type filter labels between UI strings and API values.
-* @type {Object<string, string>}
-*/
+ * Mapping dictionary for translating deployment type filter labels between UI strings and API values.
+ * @type {Object<string, string>}
+ */
 export const deploymentTypeFilterMap = {
     "": "all",
     "Alle Typen": "all",
@@ -48,8 +48,8 @@ const isFetching = {
     testMigrations: false,
     today: false,
     migrationDryRun: false,
-    deploymentUpdates: false,
-}
+    deploymentUpdates: false
+};
 
 const pendingChecks = new Map();
 
@@ -73,7 +73,7 @@ export async function addDeployment(data) {
             title: "Deployment hinzugefügt",
             subTitle: viewport.isMobile ? "" : "Das neue Deployment wurde erfolgreich hinzugefügt.",
             type: "success"
-        })
+        });
     } finally {
         isFetching.addDeployment = false;
     }
@@ -279,7 +279,7 @@ export async function deleteMigration(deploymentId, migrationId) {
             title: "Migration gelöscht",
             subTitle: viewport.isMobile ? "" : "Die Migration wurde erfolgreich aus dem Deployment entfernt.",
             type: "success"
-        })
+        });
     } finally {
         isFetching.removeMigration = false;
     }
@@ -324,5 +324,26 @@ export async function triggerMigrationDryRun(deploymentId) {
         });
     } finally {
         isFetching.migrationDryRun = false;
+    }
+}
+
+export async function triggerDeployment(deploymentId) {
+    if (isFetching.deploy || !deploymentId) return;
+
+    isFetching.deploy = true;
+
+    try {
+        const { resp } = await apiTriggerDeployment(deploymentId);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return;
+
+        addToast({
+            title: "Deployment gestartet",
+            subTitle: "Deployment wurde erfolgreich gestartet.",
+            type: "success"
+        });
+    } finally {
+        isFetching.deploy = false;
     }
 }

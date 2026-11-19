@@ -136,6 +136,12 @@ public class GlobalExceptionHandler {
     return generateResponse(ex.getMessage(), null, HttpStatus.BAD_GATEWAY);
   }
 
+  @ExceptionHandler(ServiceUnavailableException.class)
+  @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+  public ResponseEntity<ErrorResponseDTO> handleServiceUnavailable(ServiceUnavailableException ex) {
+    return generateResponse(ex.getMessage(), null, HttpStatus.SERVICE_UNAVAILABLE);
+  }
+
   /**
    * Handles unexpected exceptions that are not explicitly mapped.
    *

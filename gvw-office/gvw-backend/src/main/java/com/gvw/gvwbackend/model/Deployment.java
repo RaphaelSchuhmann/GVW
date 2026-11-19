@@ -11,7 +11,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -58,8 +57,8 @@ public class Deployment {
 
   public List<Update> getUpdates() {
     return updates.stream()
-            .sorted(Comparator.comparing(Update::getTimestamp).reversed())
-            .collect(Collectors.toList());
+        .sorted(Comparator.comparing(Update::getTimestamp).reversed())
+        .collect(Collectors.toList());
   }
 
   @Data

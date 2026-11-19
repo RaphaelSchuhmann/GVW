@@ -29,11 +29,11 @@ public class ErrorCodeMapper {
 
     // BUILD Codes
     ERROR_MESSAGES.put(
-            1 << 1,
-            new StatusMessage(
-                    "Build erfolgreich",
-                    "Der build für dieses Deployment wurde erfolgreich abgeschlossen.",
-                    ErrorMessageType.SUCCESS));
+        1 << 1,
+        new StatusMessage(
+            "Build erfolgreich",
+            "Der build für dieses Deployment wurde erfolgreich abgeschlossen.",
+            ErrorMessageType.SUCCESS));
     ERROR_MESSAGES.put(
         1 << 2,
         new StatusMessage(
@@ -143,7 +143,7 @@ public class ErrorCodeMapper {
     ERROR_MESSAGES.put(
         1 << 19,
         new StatusMessage(
-            "Anwendung healthy",
+            "Anwendung unhealthy",
             "Die Anwendung ist nach dem Deployment nicht healthy.",
             ErrorMessageType.ERROR));
     ERROR_MESSAGES.put(
@@ -158,6 +158,12 @@ public class ErrorCodeMapper {
             "Deployment läuft bereits",
             "Deployment konnte nicht gestartet werden da bereits ein anderes Deployment läuft.",
             ErrorMessageType.WARNING)); // -> technically not possible
+    ERROR_MESSAGES.put(
+        1 << 22,
+        new StatusMessage(
+            "Deployment erfolgreich",
+            "Das Deployment wurde erfolgreich durch geführt.",
+            ErrorMessageType.SUCCESS)); // -> technically not possible
   }
 
   /**

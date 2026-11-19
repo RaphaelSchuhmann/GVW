@@ -94,7 +94,9 @@ public class DeploymentController {
   @PostMapping("/deploy/{deploymentId}")
   @PreAuthorize("hasAnyRole('ADMIN')")
   @ResponseStatus(HttpStatus.OK)
-  public void startDeployment(@PathVariable String deploymentId) {}
+  public void startDeployment(@PathVariable String deploymentId) {
+    deploymentService.startDeployment(deploymentId);
+  }
 
   @GetMapping("/updates/{deploymentId}")
   @PreAuthorize("hasAnyRole('ADMIN')")

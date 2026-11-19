@@ -139,6 +139,7 @@ const (
 	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 19
 	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 20
 	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 21
+	DEPLOY_CodeDeploymentSuccesful    ErrorCode = 1 << 22
 )
 
 func CombineErrors(errs ...ErrorCode) ErrorCode {

@@ -1,5 +1,6 @@
 package com.gvw.gvwbackend.service;
 
+import com.gvw.gvwbackend.dto.deploymentService.request.TriggerDeploymentRequestDTO;
 import com.gvw.gvwbackend.dto.deploymentService.request.TriggerMigrationDryRunRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddDeploymentRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
@@ -8,12 +9,13 @@ import com.gvw.gvwbackend.dto.request.UpdateDeploymentStatusRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
 import com.gvw.gvwbackend.dto.response.HealthResponseDTO;
 import com.gvw.gvwbackend.exception.*;
-import com.gvw.gvwbackend.model.AppSettings;
 import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.model.deploymentSystem.HealthStatus;
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
+import com.gvw.gvwbackend.model.helper.StatusMessage;
+import com.gvw.gvwbackend.state.MaintenanceState;
 import com.gvw.gvwbackend.util.*;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -40,8 +42,23 @@ public class DeploymentService {
   private final Clock clock;
   private final HttpUtil httpUtil;
   private final AppSettingsService appSettingsService;
+  private final MaintenanceState maintenanceState;
   private static final Logger log = LoggerFactory.getLogger(DeploymentService.class);
 
+  private static final int DEPLOYMENT_SUCCESSFUL_CODE = 1 << 22;
+
+  /**
+   * Creates the deployment service using the system UTC clock.
+   *
+   * @param dbService service for database persistence
+   * @param sseService service for SSE client notifications
+   * @param deploymentValidator validator for deployment time constraints
+   * @param migrationValidator validator for migration rules
+   * @param hashUtil utility for generating deployment hashes
+   * @param httpUtil utility for calling the deployment pipeline
+   * @param appSettingsService service for application settings access
+   * @param maintenanceState shared maintenance mode state
+   */
   @org.springframework.beans.factory.annotation.Autowired
   public DeploymentService(
       DbService dbService,
@@ -50,7 +67,8 @@ public class DeploymentService {
       MigrationValidator migrationValidator,
       HashUtil hashUtil,
       HttpUtil httpUtil,
-      AppSettingsService appSettingsService) {
+      AppSettingsService appSettingsService,
+      MaintenanceState maintenanceState) {
     this(
         dbService,
         sseService,
@@ -59,9 +77,23 @@ public class DeploymentService {
         hashUtil,
         Clock.systemUTC(),
         httpUtil,
-        appSettingsService);
+        appSettingsService,
+        maintenanceState);
   }
 
+  /**
+   * Creates the deployment service with an injectable clock, primarily for testing.
+   *
+   * @param dbService service for database persistence
+   * @param sseService service for SSE client notifications
+   * @param deploymentValidator validator for deployment time constraints
+   * @param migrationValidator validator for migration rules
+   * @param hashUtil utility for generating deployment hashes
+   * @param clock clock used for time-based deployment queries
+   * @param httpUtil utility for calling the deployment pipeline
+   * @param appSettingsService service for application settings access
+   * @param maintenanceState shared maintenance mode state
+   */
   public DeploymentService(
       DbService dbService,
       SseService sseService,
@@ -70,7 +102,8 @@ public class DeploymentService {
       HashUtil hashUtil,
       Clock clock,
       HttpUtil httpUtil,
-      AppSettingsService appSettingsService) {
+      AppSettingsService appSettingsService,
+      MaintenanceState maintenanceState) {
     this.dbService = dbService;
     this.sseService = sseService;
     this.deploymentValidator = deploymentValidator;
@@ -79,6 +112,7 @@ public class DeploymentService {
     this.clock = clock;
     this.httpUtil = httpUtil;
     this.appSettingsService = appSettingsService;
+    this.maintenanceState = maintenanceState;
   }
 
   /**
@@ -323,7 +357,10 @@ public class DeploymentService {
     deployment.setStartTime(request.startTime());
     deployment.setEndTime(request.endTime());
 
-    if (request.commit() != null && !request.commit().isBlank()) {
+    // Only do build when saved commit and new commit differ!
+    if (request.commit() != null
+        && !request.commit().isBlank()
+        && !deployment.getCommit().equals(request.commit())) {
       if (!deploymentValidator.isCommitHashValid(request.commit())) {
         log.debug("Invalid commit hash found {}", request.commit());
         throw new BadRequestException(
@@ -387,6 +424,17 @@ public class DeploymentService {
     dbService.update("deployments", deployment.getId(), deployment);
   }
 
+  /**
+   * Triggers a migration dry-run on the deployment pipeline for the given deployment.
+   *
+   * <p>Does nothing if the deployment has no migrations. Throws {@link BadGatewayException} if the
+   * pipeline request fails.
+   *
+   * @param deploymentId The unique identifier of the deployment.
+   * @throws BadRequestException if the deployment ID is null or blank.
+   * @throws NotFoundException if the deployment does not exist.
+   * @throws BadGatewayException if the pipeline rejects the dry-run request.
+   */
   public void startMigrationDryRun(String deploymentId) {
     if (deploymentId == null || deploymentId.isBlank()) {
       throw new BadRequestException(
@@ -419,13 +467,56 @@ public class DeploymentService {
     }
   }
 
-  /** Executes a deployment process. (Placeholder implementation) -> TODO */
-  public void runDeployment() {}
+  /**
+   * Starts a deployment by activating maintenance mode, notifying connected clients via a kill
+   * signal, and triggering the deployment pipeline.
+   *
+   * <p>Maintenance mode is deactivated again if the pipeline request fails.
+   *
+   * @param deploymentId The unique identifier of the deployment to start.
+   * @throws BadRequestException if the deployment ID is null or blank.
+   * @throws NotFoundException if the deployment does not exist.
+   * @throws BadGatewayException if the pipeline rejects the deployment request.
+   */
+  public void startDeployment(String deploymentId) {
+    if (deploymentId == null || deploymentId.isBlank()) {
+      throw new BadRequestException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
+    }
 
+    Deployment deployment = findDeploymentById(deploymentId);
+
+    // Send kill signal for shutdown
+    maintenanceState.setActive(true);
+    sseService.sendKillSignal();
+
+    TriggerDeploymentRequestDTO body =
+        new TriggerDeploymentRequestDTO(deployment.getMigrations(), deployment.getAppVersion());
+    GVWHttpResponse resp =
+        httpUtil.sendPostRequestWithBody(
+            "http://localhost:3501/deploy/" + deploymentId + "/" + deployment.getCommit(),
+            body,
+            null);
+
+    if (resp.isError()) {
+      log.debug(
+          "Failed to start deployment for deploymentId {}. Responded with {}",
+          deployment,
+          resp.status());
+      maintenanceState.setActive(false);
+      throw new BadGatewayException(
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 502)));
+    }
+  }
+
+  /**
+   * Performs a health check of the application and its database dependency.
+   *
+   * @return A {@link HealthResponseDTO} indicating the health status of the app and database.
+   */
   public HealthResponseDTO healthCheck() {
     try {
-      AppSettings appSettings =
-          appSettingsService.appSettings(ErrorAction.UTILITY, ErrorResource.NONE);
+      appSettingsService.appSettings(ErrorAction.UTILITY, ErrorResource.NONE);
     } catch (Exception e) {
       // Any exception means that the database action was unsuccessful so database is unhealthy
       return new HealthResponseDTO(HealthStatus.HEALTHY, HealthStatus.UNHEALTHY);
@@ -434,6 +525,20 @@ public class DeploymentService {
     return new HealthResponseDTO(HealthStatus.HEALTHY, HealthStatus.HEALTHY);
   }
 
+  /**
+   * Updates the status of a deployment based on a pipeline status callback and appends the
+   * corresponding status messages as deployment updates.
+   *
+   * <p>Only {@code SUCCESSFUL}, {@code CANCELLED}, and {@code FAILED} are accepted as target
+   * statuses. The deployment status is only changed for {@code CANCELLED}, {@code FAILED}, or when
+   * the reason code signals a successful deployment. Maintenance mode is always deactivated after a
+   * status update.
+   *
+   * @param deploymentId The unique identifier of the deployment.
+   * @param request The status update request containing the new status and reason code.
+   * @throws BadRequestException if the deployment ID is invalid or the status is not allowed.
+   * @throws NotFoundException if the deployment does not exist.
+   */
   public void updateDeploymentStatus(
       String deploymentId, UpdateDeploymentStatusRequestDTO request) {
     if (deploymentId == null || deploymentId.isBlank()) {
@@ -455,13 +560,32 @@ public class DeploymentService {
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
     }
 
-    deployment.setStatus(deploymentStatus);
-    deployment.addUpdate(ErrorCodeMapper.getMessages(request.reason()));
+    List<StatusMessage> statusMessage = ErrorCodeMapper.getMessages(request.reason());
+    if (deploymentStatus == DeploymentStatus.CANCELLED
+        || deploymentStatus == DeploymentStatus.FAILED
+        || request.reason() == DEPLOYMENT_SUCCESSFUL_CODE) {
+      deployment.setStatus(deploymentStatus);
+    }
+
+    // If the maintenance state is set it should always be reset after a deployment update
+    if (maintenanceState.getActive()) {
+      maintenanceState.setActive(false);
+    }
+
+    deployment.addUpdate(statusMessage);
 
     dbService.update("deployments", deployment.getId(), deployment);
     sseService.sendRefresh("DEPLOYMENT_UPDATES");
   }
 
+  /**
+   * Retrieves all recorded status updates for a deployment, sorted by timestamp descending.
+   *
+   * @param deploymentId The unique identifier of the deployment.
+   * @return A list of deployment updates.
+   * @throws BadRequestException if the deployment ID is null or blank.
+   * @throws NotFoundException if the deployment does not exist.
+   */
   public List<Deployment.Update> getDeploymentUpdates(String deploymentId) {
     if (deploymentId == null || deploymentId.isBlank()) {
       throw new BadRequestException(

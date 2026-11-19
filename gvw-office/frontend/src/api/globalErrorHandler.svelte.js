@@ -66,7 +66,7 @@ const STATUS_TEMPLATES = {
     "502": {
         title: "Dienst vorübergehend nicht verfügbar",
         subTitle: "{domain} - Ein benötigter Dienst konnte die Anfrage nicht erfolgreich verarbeiten."
-    }
+    },
 };
 
 const INFRA_ERRORS = {
@@ -84,6 +84,11 @@ const INFRA_ERRORS = {
         typeId: "5",
         title: "Eingabe ungültig",
         subTitle: "Die übermittelten Daten sind fehlerhaft oder unvollständig."
+    },
+    "SYSTEM_MAINTENANCE": {
+        typeId: "6",
+        title: "Anwendung nicht verfügbar",
+        subTitle: "Die Anwendung wird gerade gewartet. Bitte versuche es in wenigen Minuten erneut."
     }
 };
 
@@ -190,6 +195,10 @@ export function handleGenericErrors(result) {
 
     if (codeStr === "0000400") {
         return dispatchInfraToast(INFRA_ERRORS.BAD_INPUT);
+    }
+
+    if (codeStr === "0000503") {
+        return dispatchInfraToast(INFRA_ERRORS.SYSTEM_MAINTENANCE);
     }
 
     return false;

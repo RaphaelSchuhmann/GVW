@@ -6,7 +6,7 @@
         updateDeployment,
         migrationActions,
         addMigration,
-        deleteMigration, triggerMigrationDryRun
+        deleteMigration, triggerMigrationDryRun, triggerDeployment
     } from "../../services/deploymentService.svelte.js";
     import { fetchAndSetRaw } from "../../services/filterService.svelte";
 
@@ -96,8 +96,11 @@
     const REQUIRED_DEPLOYMENT_FIELDS = ["title", "version", "date", "startTime", "endTime"];
     const ALL_DEPLOYMENT_FIELDS = [...REQUIRED_DEPLOYMENT_FIELDS, "commit"];
 
+    let triggeredDeployment = $state(false);
+
     const isDeployable = $derived.by(() => {
         if (isEditing) return true;
+        if (triggeredDeployment) return false;
 
         const allFieldsFilled = ALL_DEPLOYMENT_FIELDS.every(field => {
             const value = deploymentData[field];
@@ -244,8 +247,8 @@
     }
 
     async function deploy() {
-        // Deployment logic here
-        console.log("deploying deployment with id: ", deploymentData.id);
+        triggeredDeployment = true;
+        await triggerDeployment(deploymentData.id);
 
         await routeToDeployments();
     }
