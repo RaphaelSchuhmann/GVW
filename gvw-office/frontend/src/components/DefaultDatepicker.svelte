@@ -20,8 +20,14 @@
         title = "",
     } = $props();
 
+    // Popup placement settings
+    const POPUP_GAP = 4;
+    const FALLBACK_POPUP_HEIGHT = 350;
+    const PREFER_ABOVE = true;
+
     let open = $state(false);
     let datepickerRef = $state(null);
+    let popupRef = $state(null);
     let popupStyle = $state("");
 
     let usedMonth = $state(currentMonth);
@@ -69,7 +75,7 @@
                 datepickerRef &&
                 !datepickerRef.contains(event.target) &&
                 !event.target.closest('.datepicker-portal-popup') &&
-                !event.target.closest('.dropdown-portal-popup') // <-- Add this line
+                !event.target.closest('.dropdown-portal-popup')
             ) {
                 open = false;
             }
@@ -83,6 +89,25 @@
         if (selectedDay > maxDays) {
             selectedDay = maxDays;
         }
+    });
+
+    $effect(() => {
+        if (!open || !popupRef) return;
+
+        updatePopupPosition();
+
+        const handler = () => updatePopupPosition();
+        window.addEventListener("resize", handler);
+        window.addEventListener("scroll", handler, true);
+
+        const resizeObserver = new ResizeObserver(handler);
+        resizeObserver.observe(popupRef);
+
+        return () => {
+            window.removeEventListener("resize", handler);
+            window.removeEventListener("scroll", handler, true);
+            resizeObserver.disconnect();
+        };
     });
 
     function buildCalendar(year, month) {
@@ -106,24 +131,42 @@
         return calendarGrid;
     }
 
-    function calculatePortalPosition() {
+    function updatePopupPosition() {
         if (!datepickerRef) return;
+
         const rect = datepickerRef.getBoundingClientRect();
+        const popupHeight = popupRef?.offsetHeight || FALLBACK_POPUP_HEIGHT;
 
-        const popupHeight = 350;
+        const spaceAbove = rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const fitsAbove = spaceAbove >= popupHeight + POPUP_GAP;
+        const fitsBelow = spaceBelow >= popupHeight + POPUP_GAP;
+
+        let showAbove;
+        if (PREFER_ABOVE) {
+            showAbove = fitsAbove || (!fitsBelow && spaceAbove > spaceBelow);
+        } else {
+            showAbove = !fitsBelow && (fitsAbove || spaceAbove > spaceBelow);
+        }
+
+        let top = showAbove
+            ? rect.top + window.scrollY - popupHeight - POPUP_GAP
+            : rect.bottom + window.scrollY + POPUP_GAP;
+
+        // never position the popup above the top of the page
+        top = Math.max(top, POPUP_GAP);
+
         const left = rect.left + window.scrollX;
-        const width = rect.width;
 
-        let top = rect.top + window.scrollY - popupHeight - 4;
-
-        popupStyle = `position: absolute; top: ${top}px; left: ${left}px; width: ${width}px; z-index: 99999;`;
+        popupStyle = `position: absolute; top: ${top}px; left: ${left}px; width: ${rect.width}px; z-index: 99999;`;
     }
 
     function toggleDatepicker() {
         if (disabled) return;
         open = !open;
         if (open) {
-            calculatePortalPosition();
+            // hidden until the first real measurement, so it doesn't flash at the wrong spot
+            popupStyle = "position: absolute; top: 0; left: 0; visibility: hidden;";
             const current = parseSelected();
             if (current) {
                 usedMonth = current.month;
@@ -212,6 +255,7 @@
         {#if open && !disabled}
             <div
                 use:portal
+                bind:this={popupRef}
                 style={popupStyle}
                 class="datepicker-portal-popup flex flex-col rounded-1 bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 overflow-hidden"
             >
