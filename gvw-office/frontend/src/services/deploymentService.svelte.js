@@ -36,6 +36,10 @@ export const deploymentTypeFilterMap = {
     "FAILED": "Failed"
 };
 
+/**
+ * Tracks in-flight request flags to prevent duplicate concurrent API calls.
+ * @type {Object<string, boolean>}
+ */
 const isFetching = {
     getDeployment: false,
     checkDeployment: false,
@@ -51,7 +55,19 @@ const isFetching = {
     deploymentUpdates: false
 };
 
+/**
+ * Map of in-flight deployment existence checks, keyed by deployment ID,
+ * used to deduplicate concurrent requests for the same deployment.
+ * @type {Map<string, Promise<boolean>>}
+ */
 const pendingChecks = new Map();
+
+/**
+ * Map of in-flight deployment update refreshes, keyed by deployment ID,
+ * used to deduplicate concurrent requests for the same deployment.
+ * @type {Map<string, Promise<boolean>>}
+ */
+const pendingDeploymentUpdateQueries = new Map();
 
 /**
  * Adds a new deployment and triggers a success toast notification upon completion.
@@ -122,22 +138,32 @@ export async function getFullDeployment(id) {
  * @returns {Promise<Array<Object>>} The array of updates for a deployment, or an empty array if validation or fetching fails.
  */
 export async function getDeploymentUpdates(id) {
-    if (isFetching.deploymentUpdates || !id) return [];
+    if (!id) return [];
+
+    if (pendingDeploymentUpdateQueries.has(id)) return await pendingDeploymentUpdateQueries.get(id);
 
     isFetching.deploymentUpdates = true;
 
-    try {
-        const { resp, body } = await apiGetDeploymentUpdates(id);
-        const normalized = normalizeResponse(resp);
+    const request = (async () => {
+        try {
+            const { resp, body } = await apiGetDeploymentUpdates(id);
+            const normalized = normalizeResponse(resp);
 
-        if (handleGlobalApiError(normalized)) return [];
+            if (handleGlobalApiError(normalized)) return [];
 
-        if (!(body !== null && typeof body === "object" && "updates" in body)) return [];
+            if (!(body !== null && typeof body === "object" && "updates" in body)) return [];
 
-        return body.updates;
-    } finally {
-        isFetching.deploymentUpdates = false;
-    }
+            return body.updates;
+        } finally {
+            pendingDeploymentUpdateQueries.delete(id);
+            if (pendingDeploymentUpdateQueries.size === 0) {
+                isFetching.deploymentUpdates = false;
+            }
+        }
+    })();
+
+    pendingDeploymentUpdateQueries.set(id, request);
+    return await request;
 }
 
 /**
@@ -306,6 +332,11 @@ export async function getTodayDeployments() {
     }
 }
 
+/**
+ * Triggers a migration dry-run for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to test.
+ * @returns {Promise<void>}
+ */
 export async function triggerMigrationDryRun(deploymentId) {
     if (isFetching.migrationDryRun || !deploymentId) return;
 
@@ -327,8 +358,13 @@ export async function triggerMigrationDryRun(deploymentId) {
     }
 }
 
+/**
+ * Triggers the deployment process for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to trigger.
+ * @returns {Promise<boolean>} True if the deployment was triggered successfully, false otherwise.
+ */
 export async function triggerDeployment(deploymentId) {
-    if (isFetching.deploy || !deploymentId) return;
+    if (isFetching.deploy || !deploymentId) return false;
 
     isFetching.deploy = true;
 
@@ -336,13 +372,15 @@ export async function triggerDeployment(deploymentId) {
         const { resp } = await apiTriggerDeployment(deploymentId);
         const normalized = normalizeResponse(resp);
 
-        if (handleGlobalApiError(normalized)) return;
+        if (handleGlobalApiError(normalized)) return false;
 
         addToast({
             title: "Deployment gestartet",
             subTitle: "Deployment wurde erfolgreich gestartet.",
             type: "success"
         });
+
+        return true;
     } finally {
         isFetching.deploy = false;
     }

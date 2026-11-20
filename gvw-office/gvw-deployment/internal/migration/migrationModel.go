@@ -11,8 +11,8 @@ type Migration struct {
 
 type ConditionalMigration struct {
 	Condition   Branch `json:"condition"`
-	TrueBranch  Branch `json:"trueBranch"`
-	FalseBranch Branch `json:"falseBranch"`
+	TrueBranch  Branch `json:"truePath"`
+	FalseBranch Branch `json:"falsePath"`
 	Negated     bool   `json:"negated"`
 }
 

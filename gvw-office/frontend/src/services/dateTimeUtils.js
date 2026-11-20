@@ -93,30 +93,31 @@ export function germanDateToISO(germanDate) {
 }
 
 /**
- * Converts a valid ISO 8601 date string into a German-formatted date string (DD.MM.YYYY).
+ * Converts a valid ISO 8601 date string into a German-formatted date string (DD.MM.YYYY)
+ * using the local timezone.
  *
  * Responsibilities:
  * - Validates the input as a proper ISO 8601 string via isISOString()
- * - Extracts the UTC day, month and year components
+ * - Extracts the local day, month and year components
  * - Returns the date in German format with zero-padded day and month
  *
  * Behavior:
  * - Returns null if input is falsy or not a valid ISO string
- * - Uses UTC getters, so the result is independent of the local timezone
+ * - Uses local time getters, so the result depends on the runtime timezone
  *
- * @function ISOToGermanDate
+ * @function ISOToGermanDateLocal
  * @param {string} isoString - ISO 8601 date string (e.g. "2026-04-09T00:00:00.000Z")
  * @returns {string|null} German-formatted date string (e.g. "09.04.2026") or null if invalid
  */
-export function ISOToGermanDate(isoString) {
+export function ISOToGermanDateLocal(isoString) {
     if (!isoString || !isISOString(isoString)) return null;
 
     const date = new Date(isoString);
     if (Number.isNaN(date.getTime())) return null;
 
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const year = date.getUTCFullYear();
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
 
     return `${day}.${month}.${year}`;
 }

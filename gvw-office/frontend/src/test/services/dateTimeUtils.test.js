@@ -11,7 +11,7 @@ import {
     getYearFromISOString,
     removeMillisecondsFromTimeStamp,
     getRoundedTime,
-    ISOToGermanDate,
+    ISOToGermanDateLocal,
     getTimeFromISODateString
 } from "../../services/dateTimeUtils";
 
@@ -198,27 +198,36 @@ describe("dateTimeUtils.svelte.js", () => {
         });
     });
 
-    describe("ISOToGermanDate", () => {
-        it("converts a valid ISO date to German format", () => {
-            expect(ISOToGermanDate("2026-04-09T00:00:00.000Z"))
-                .toBe("09.04.2026");
+    describe("ISOToGermanDateLocal", () => {
+        it("converts a valid ISO date to German format using local time", () => {
+            const iso = "2026-04-09T14:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+            expect(ISOToGermanDateLocal(iso)).toBe(expected);
         });
 
         it("zero-pads single-digit days and months", () => {
-            expect(ISOToGermanDate("2026-01-05T12:30:00.000Z"))
-                .toBe("05.01.2026");
+            const iso = "2026-01-05T12:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+            expect(ISOToGermanDateLocal(iso)).toBe(expected);
         });
 
-        it("uses UTC components regardless of local timezone", () => {
-            expect(ISOToGermanDate("2026-12-31T23:30:00.000Z"))
-                .toBe("31.12.2026");
+        it("uses local components, which may differ from UTC near midnight", () => {
+            const iso = "2026-12-31T23:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+            expect(ISOToGermanDateLocal(iso)).toBe(expected);
         });
 
         it("returns null for invalid input", () => {
-            expect(ISOToGermanDate("")).toBeNull();
-            expect(ISOToGermanDate(null)).toBeNull();
-            expect(ISOToGermanDate("not-a-date")).toBeNull();
-            expect(ISOToGermanDate("2026-04-09")).toBeNull();
+            expect(ISOToGermanDateLocal("")).toBeNull();
+            expect(ISOToGermanDateLocal(null)).toBeNull();
+            expect(ISOToGermanDateLocal("not-a-date")).toBeNull();
+            expect(ISOToGermanDateLocal("2026-04-09")).toBeNull();
         });
     });
 

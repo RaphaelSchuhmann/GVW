@@ -248,9 +248,13 @@
 
     async function deploy() {
         triggeredDeployment = true;
-        await triggerDeployment(deploymentData.id);
 
-        await routeToDeployments();
+        const success = await triggerDeployment(deploymentData.id);
+        if (success) {
+            await routeToDeployments();
+        } else {
+            triggeredDeployment = false;
+        }
     }
 
     /**
@@ -469,7 +473,7 @@
             {/if}
         </PageHeader>
 
-        <div class="flex w-full gap-6">
+        <div class="flex flex-1 min-h-0 w-full gap-6">
             <div class="flex-1 min-h-0 overflow-y-auto w-full">
                 <!-- Deployment Information -->
                 <div class="flex flex-col items-center gap-5 w-full mt-5 p-0.5">
@@ -584,7 +588,8 @@
                         <div
                             class="flex flex-col items-center justify-center gap-2 w-full min-h-0 overflow-y-auto">
                             {#each deploymentUpdates as update (update.id)}
-                                <Notification id={update.id} type={update.type.toLocaleLowerCase()} title={update.title} subTitle={update.subTitle} timestamp={update.timestamp} />
+                                <Notification id={update.id} type={update.type.toLocaleLowerCase()} title={update.title}
+                                              subTitle={update.subTitle} timestamp={update.timestamp} />
                             {/each}
                         </div>
                     {:else}

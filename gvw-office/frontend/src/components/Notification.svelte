@@ -1,5 +1,5 @@
 <script>
-    import { getTimeFromISODateString, ISOToGermanDate, isToday } from "../services/dateTimeUtils.js";
+    import { getTimeFromISODateString, ISOToGermanDateLocal, isToday } from "../services/dateTimeUtils.js";
 
     let {
         id,
@@ -47,10 +47,10 @@
             {styles.icon}
         </span>
 
-        <div class={`flex flex-col ${subTitle ? "items-start" : "items-center"} justify-around pr-2 gap-1 overflow-hidden`}>
+        <div class={`flex flex-col ${subTitle ? "items-start" : "items-center"} justify-around gap-1 overflow-hidden w-full pr-2`}>
             <div class="flex items-center w-full gap-2">
                 <p class={`${!isMobile ? "text-dt-5" : "text-dt-6"} font-semibold w-full text-nowrap truncate`}>{title}</p>
-                <p class="text-gv-light-text font-medium ml-auto text-dt-7 text-nowrap">{isTimestampToday() ? getTimeFromISODateString(timestamp) : `${ISOToGermanDate(timestamp)} - ${getTimeFromISODateString(timestamp)}`}</p>
+                <p class="text-gv-light-text font-medium ml-auto text-dt-7 text-nowrap">{isTimestampToday() ? getTimeFromISODateString(timestamp) : `${ISOToGermanDateLocal(timestamp)} - ${getTimeFromISODateString(timestamp)}`}</p>
             </div>
             {#if subTitle}
                 <div class="flex items-start w-full">

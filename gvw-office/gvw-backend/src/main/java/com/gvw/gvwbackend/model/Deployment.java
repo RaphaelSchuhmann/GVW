@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.gvw.gvwbackend.model.helper.ErrorMessageType;
 import com.gvw.gvwbackend.model.helper.StatusMessage;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -36,8 +36,8 @@ public class Deployment {
   private String commit;
   private String hash;
   private DeploymentStatus status;
-  private List<Update> updates;
 
+  @Builder.Default private List<Update> updates = new ArrayList<>();
   @Builder.Default private List<Migration> migrations = new ArrayList<>();
 
   public List<Migration> getMigrations() {
@@ -67,7 +67,7 @@ public class Deployment {
   @AllArgsConstructor
   public static class Update {
     @Builder.Default private String id = UUID.randomUUID().toString();
-    @Builder.Default private LocalDateTime timestamp = LocalDateTime.now();
+    @Builder.Default private OffsetDateTime timestamp = OffsetDateTime.now();
 
     private ErrorMessageType type;
     private String title;

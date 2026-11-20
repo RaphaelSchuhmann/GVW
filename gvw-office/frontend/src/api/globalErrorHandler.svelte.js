@@ -197,7 +197,7 @@ export function handleGenericErrors(result) {
         return dispatchInfraToast(INFRA_ERRORS.BAD_INPUT);
     }
 
-    if (codeStr === "0000503") {
+    if (codeStr === "0000503" || result.errorType === "SYSTEM_MAINTENANCE") {
         return dispatchInfraToast(INFRA_ERRORS.SYSTEM_MAINTENANCE);
     }
 

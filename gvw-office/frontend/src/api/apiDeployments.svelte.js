@@ -164,6 +164,11 @@ export async function apiUpdateDeploymentInformation(deploymentInformation) {
     return { resp, body };
 }
 
+/**
+ * Triggers a migration dry-run for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to test.
+ * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
+ */
 export async function apiTriggerMigrationDryRun(deploymentId) {
     const resp = await httpPost(`${apiUrl}/deployment/dryRun/${deploymentId}`, {});
     if (!resp) return { resp: null, body: null };
@@ -171,6 +176,11 @@ export async function apiTriggerMigrationDryRun(deploymentId) {
     return { resp, body };
 }
 
+/**
+ * Triggers the deployment process for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to trigger.
+ * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
+ */
 export async function apiTriggerDeployment(deploymentId) {
     const resp = await httpPost(`${apiUrl}/deployment/deploy/${deploymentId}`, {});
     if (!resp) return { resp: null, body: null };

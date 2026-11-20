@@ -360,7 +360,7 @@ public class DeploymentService {
     // Only do build when saved commit and new commit differ!
     if (request.commit() != null
         && !request.commit().isBlank()
-        && !deployment.getCommit().equals(request.commit())) {
+        && !Objects.equals(deployment.getCommit(), request.commit())) {
       if (!deploymentValidator.isCommitHashValid(request.commit())) {
         log.debug("Invalid commit hash found {}", request.commit());
         throw new BadRequestException(
@@ -378,7 +378,9 @@ public class DeploymentService {
       }
     }
 
-    deployment.setCommit(request.commit());
+    if (request.commit() != null && !request.commit().isBlank()) {
+      deployment.setCommit(request.commit());
+    }
 
     dbService.update("deployments", deployment.getId(), deployment);
   }
@@ -452,6 +454,10 @@ public class DeploymentService {
       return;
     }
 
+    // Update deployment status to RUNNING
+    deployment.setStatus(DeploymentStatus.RUNNING);
+    dbService.update("deployments", deployment.getId(), deployment);
+
     GVWHttpResponse resp =
         httpUtil.sendPostRequestWithBody(
             "http://localhost:3501/migration/test/" + deploymentId,
@@ -460,6 +466,11 @@ public class DeploymentService {
 
     if (resp.isError()) {
       log.debug("Failed to trigger migration dry run. Responded with {}", resp.status());
+
+      // Set deployment status to cancelled
+      deployment.setStatus(DeploymentStatus.CANCELLED);
+      dbService.update("deployments", deployment.getId(), deployment);
+
       throw new BadGatewayException(
           String.valueOf(
               ErrorDomain.DEPLOYMENT.createCode(
