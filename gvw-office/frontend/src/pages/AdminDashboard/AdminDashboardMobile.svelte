@@ -37,23 +37,25 @@
                         showSlot={false} marginTop="5" hideSubTitle={true} />
             <div class="flex flex-col w-full gap-4 mt-10">
                 <Card>
-                    <div class="w-full flex items-center justify-start p-1">
-                        <p class="text-gv-dark-text text-dt-4">Deployments</p>
+                    <div class="w-full h-full flex flex-col gap-2">
+                        <div class="w-full flex items-center justify-start p-1">
+                            <p class="text-gv-dark-text text-dt-4">Deployments</p>
+                        </div>
+                        <div class="flex flex-col w-full h-full gap-2">
+                            {#each adminDashboardStore.deployments as deployment, index (deployment.id)}
+                                <Card>
+                                    <div class="flex flex-col w-full items-start justify-start gap-2">
+                                        <p class="text-gv-dark-text text-dt-5">{deployment.title}</p>
+                                        <Chip text={deployment.type} colorType={deployment.type.toLowerCase()} />
+                                    </div>
+                                </Card>
+                            {/each}
+                        </div>
+                        <Button type="primary" onclick={routeToDeployments}>
+                            <span class="text-dt-5">Details</span>
+                            <span class="material-symbols-rounded">chevron_right</span>
+                        </Button>
                     </div>
-                    <div class="flex flex-col w-full h-full gap-2">
-                        {#each adminDashboardStore.deployments as deployment, index (deployment.id)}
-                            <Card>
-                                <div class="flex flex-col w-full items-start justify-start gap-2">
-                                    <p class="text-gv-dark-text text-dt-5">{deployment.title}</p>
-                                    <Chip text={deployment.type} colorType={deployment.type.toLowerCase()} />
-                                </div>
-                            </Card>
-                        {/each}
-                    </div>
-                    <Button type="primary" onclick={routeToDeployments}>
-                        <span class="text-dt-5">Details</span>
-                        <span class="material-symbols-rounded">chevron_right</span>
-                    </Button>
                 </Card>
                 <Card>
                     <div class="w-full flex items-center justify-start p-2">

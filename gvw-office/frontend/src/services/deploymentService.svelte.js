@@ -2,7 +2,8 @@ import {
     apiAddDeployment, apiAddMigration,
     apiCheckDeployment,
     apiDeleteDeployment, apiDeleteMigration,
-    apiGetDeployment, apiGetDeploymentsToday, apiUpdateDeploymentInformation
+    apiGetDeployment, apiGetDeploymentsToday,
+    apiGetDeploymentUpdates, apiTriggerDeployment, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
@@ -16,9 +17,9 @@ import { viewport } from "../stores/viewport.svelte.js";
 export const migrationActions = new Set(["ADD", "DELETE", "RENAME", "CONDITIONAL"]);
 
 /**
-* Mapping dictionary for translating deployment type filter labels between UI strings and API values.
-* @type {Object<string, string>}
-*/
+ * Mapping dictionary for translating deployment type filter labels between UI strings and API values.
+ * @type {Object<string, string>}
+ */
 export const deploymentTypeFilterMap = {
     "": "all",
     "Alle Typen": "all",
@@ -35,6 +36,10 @@ export const deploymentTypeFilterMap = {
     "FAILED": "Failed"
 };
 
+/**
+ * Tracks in-flight request flags to prevent duplicate concurrent API calls.
+ * @type {Object<string, boolean>}
+ */
 const isFetching = {
     getDeployment: false,
     checkDeployment: false,
@@ -45,10 +50,24 @@ const isFetching = {
     updateDeployment: false,
     deploy: false,
     testMigrations: false,
-    today: false
-}
+    today: false,
+    migrationDryRun: false,
+    deploymentUpdates: false
+};
 
+/**
+ * Map of in-flight deployment existence checks, keyed by deployment ID,
+ * used to deduplicate concurrent requests for the same deployment.
+ * @type {Map<string, Promise<boolean>>}
+ */
 const pendingChecks = new Map();
+
+/**
+ * Map of in-flight deployment update refreshes, keyed by deployment ID,
+ * used to deduplicate concurrent requests for the same deployment.
+ * @type {Map<string, Promise<Array>>}
+ */
+const pendingDeploymentUpdateQueries = new Map();
 
 /**
  * Adds a new deployment and triggers a success toast notification upon completion.
@@ -70,7 +89,7 @@ export async function addDeployment(data) {
             title: "Deployment hinzugefügt",
             subTitle: viewport.isMobile ? "" : "Das neue Deployment wurde erfolgreich hinzugefügt.",
             type: "success"
-        })
+        });
     } finally {
         isFetching.addDeployment = false;
     }
@@ -101,7 +120,8 @@ export async function getFullDeployment(id) {
             "endTime",
             "commit",
             "migrations",
-            "version"
+            "version",
+            "updates"
         ];
 
         if (!(body !== null && typeof body === "object" && requiredFields.every(field => field in body))) return null;
@@ -110,6 +130,40 @@ export async function getFullDeployment(id) {
     } finally {
         isFetching.getDeployment = false;
     }
+}
+
+/**
+ * Fetches all updates for a deployment by its ID, validating that all required fields are present.
+ * @param {string} id - The unique ID of the deployment.
+ * @returns {Promise<Array>} The array of updates for a deployment, or an empty array if validation or fetching fails.
+ */
+export async function getDeploymentUpdates(id) {
+    if (!id) return [];
+
+    if (pendingDeploymentUpdateQueries.has(id)) return await pendingDeploymentUpdateQueries.get(id);
+
+    isFetching.deploymentUpdates = true;
+
+    const request = (async () => {
+        try {
+            const { resp, body } = await apiGetDeploymentUpdates(id);
+            const normalized = normalizeResponse(resp);
+
+            if (handleGlobalApiError(normalized)) return [];
+
+            if (!(body !== null && typeof body === "object" && "updates" in body)) return [];
+
+            return body.updates;
+        } finally {
+            pendingDeploymentUpdateQueries.delete(id);
+            if (pendingDeploymentUpdateQueries.size === 0) {
+                isFetching.deploymentUpdates = false;
+            }
+        }
+    })();
+
+    pendingDeploymentUpdateQueries.set(id, request);
+    return await request;
 }
 
 /**
@@ -251,7 +305,7 @@ export async function deleteMigration(deploymentId, migrationId) {
             title: "Migration gelöscht",
             subTitle: viewport.isMobile ? "" : "Die Migration wurde erfolgreich aus dem Deployment entfernt.",
             type: "success"
-        })
+        });
     } finally {
         isFetching.removeMigration = false;
     }
@@ -275,5 +329,59 @@ export async function getTodayDeployments() {
         return Array.isArray(body?.times) ? body.times : [];
     } finally {
         isFetching.today = false;
+    }
+}
+
+/**
+ * Triggers a migration dry-run for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to test.
+ * @returns {Promise<void>}
+ */
+export async function triggerMigrationDryRun(deploymentId) {
+    if (isFetching.migrationDryRun || !deploymentId) return;
+
+    isFetching.migrationDryRun = true;
+
+    try {
+        const { resp } = await apiTriggerMigrationDryRun(deploymentId);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return;
+
+        addToast({
+            title: "Migration Test gestartet",
+            subTitle: "Migration Test wurde erfolgreich gestartet.",
+            type: "success"
+        });
+    } finally {
+        isFetching.migrationDryRun = false;
+    }
+}
+
+/**
+ * Triggers the deployment process for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to trigger.
+ * @returns {Promise<boolean>} True if the deployment was triggered successfully, false otherwise.
+ */
+export async function triggerDeployment(deploymentId) {
+    if (isFetching.deploy || !deploymentId) return false;
+
+    isFetching.deploy = true;
+
+    try {
+        const { resp } = await apiTriggerDeployment(deploymentId);
+        const normalized = normalizeResponse(resp);
+
+        if (handleGlobalApiError(normalized)) return false;
+
+        addToast({
+            title: "Deployment gestartet",
+            subTitle: "Deployment wurde erfolgreich gestartet.",
+            type: "success"
+        });
+
+        return true;
+    } finally {
+        isFetching.deploy = false;
     }
 }

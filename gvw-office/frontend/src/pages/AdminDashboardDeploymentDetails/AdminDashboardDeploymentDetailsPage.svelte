@@ -5,7 +5,11 @@
     import { user } from "../../stores/user.svelte";
     import { lastRefresh } from "../../stores/sseStore.svelte.js";
     import { addToast } from "../../stores/toasts.svelte.js";
-    import { deploymentExists, getFullDeployment } from "../../services/deploymentService.svelte.js";
+    import {
+        deploymentExists,
+        getDeploymentUpdates,
+        getFullDeployment
+    } from "../../services/deploymentService.svelte.js";
 
     import AdminDashboardDeploymentDetailsDesktop from "./AdminDashboardDeploymentDetailsDesktop.svelte";
     import GlobalLoader from "../../components/GlobalLoader.svelte";
@@ -49,6 +53,7 @@
             }
 
             deploymentData = result;
+            deploymentUpdates = result.updates;
             ready = true;
         }
 
@@ -58,7 +63,7 @@
     let isDeleting = $state(false);
 
     $effect(() => {
-        const _trigger = lastRefresh.DEPLOYMENTS;
+        const _triggerDeployments = lastRefresh.DEPLOYMENTS;
 
         if (!ready || isDeleting) return;
 
@@ -77,16 +82,41 @@
         })();
     });
 
+    $effect(() => {
+        const _triggerDeploymentUpdates = lastRefresh.DEPLOYMENT_UPDATES;
+
+        if (!ready) return;
+
+        async function getUpdates() {
+            if (!deploymentId) {
+                await route("/admin/deployments");
+                return;
+            }
+
+            const updates = await getDeploymentUpdates(deploymentId);
+
+            // Only update the updates if the new length is bigger than the old one
+            // as updates cannot / should not be deleted
+            if (deploymentUpdates.length < updates.length) {
+                deploymentUpdates = updates;
+            }
+        }
+
+        getUpdates();
+    });
+
     function updateIsEditing(val) { isEditing = val; }
 
     function updateIsDeleting(val) { isDeleting = val; }
 
     let isLoading = $derived(!deploymentData || !deploymentData.rev || !deploymentId || !ready);
+
+    let deploymentUpdates = $state([]);
 </script>
 
 <GlobalLoader loading={isLoading}>
     {#key deploymentData.rev}
-        <AdminDashboardDeploymentDetailsDesktop {deploymentData} bind:isEditing bind:isDeleting
+        <AdminDashboardDeploymentDetailsDesktop {deploymentData} deploymentUpdates={deploymentUpdates} bind:isEditing bind:isDeleting
                                                        onChangeIsEditing={updateIsEditing}
                                                        onChangeIsDeleting={updateIsDeleting} />
     {/key}

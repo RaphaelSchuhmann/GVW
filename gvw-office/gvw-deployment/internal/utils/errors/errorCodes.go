@@ -114,18 +114,18 @@ const (
 	UNKOWN ErrorCode = 1 << 0
 
 	// BUILD Codes
-	BUILD_CodeBuildFailed            ErrorCode = 1 << 1
-	BUILD_CodeCommitInvalid          ErrorCode = 1 << 2
-	BUILD_CodeTestExecutionFailed    ErrorCode = 1 << 3
-	BUILD_CodeBinaryExtractionFailed ErrorCode = 1 << 4
-	BUILD_CodeSchemaGenerationFailed ErrorCode = 1 << 5
+	BUILD_CodeBuildSuccess           ErrorCode = 1 << 1
+	BUILD_CodeBuildFailed            ErrorCode = 1 << 2
+	BUILD_CodeCommitInvalid          ErrorCode = 1 << 3
+	BUILD_CodeTestExecutionFailed    ErrorCode = 1 << 4
+	BUILD_CodeBinaryExtractionFailed ErrorCode = 1 << 5
+	BUILD_CodeSchemaGenerationFailed ErrorCode = 1 << 6
 
 	// Migration Codes
-	MIGRATION_CodeSuccess           ErrorCode = 1 << 6
-	MIGRATION_CodeBadSchema         ErrorCode = 1 << 7
-	MIGRATION_CodeMissingDbInMap    ErrorCode = 1 << 8
-	MIGRATION_CodeBadAffectedDbs    ErrorCode = 1 << 9
-	MIGRATION_CodeDryRunFailed      ErrorCode = 1 << 10
+	MIGRATION_CodeSuccess           ErrorCode = 1 << 7
+	MIGRATION_CodeBadSchema         ErrorCode = 1 << 8
+	MIGRATION_CodeMissingDbInMap    ErrorCode = 1 << 9
+	MIGRATION_CodeBadAffectedDbs    ErrorCode = 1 << 10
 	MIGRATION_CodeBadMigrationFound ErrorCode = 1 << 11
 
 	// Deploy Codes
@@ -139,6 +139,7 @@ const (
 	DEPLOY_CodeAppUnhealthy           ErrorCode = 1 << 19
 	DEPLOY_CodeRecoveryRequired       ErrorCode = 1 << 20
 	DEPLOY_CodeDeploymentInProgress   ErrorCode = 1 << 21
+	DEPLOY_CodeDeploymentSuccesful    ErrorCode = 1 << 22
 )
 
 func CombineErrors(errs ...ErrorCode) ErrorCode {
@@ -147,10 +148,6 @@ func CombineErrors(errs ...ErrorCode) ErrorCode {
 		combined |= e
 	}
 	return combined
-}
-
-func HasErrorFlag(combined, flag ErrorCode) bool {
-	return (combined & flag) != 0
 }
 
 func MapErrorsToCode(err error) ErrorCode {

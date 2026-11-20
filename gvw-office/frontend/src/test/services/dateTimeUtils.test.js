@@ -10,7 +10,9 @@ import {
     yearToISOString,
     getYearFromISOString,
     removeMillisecondsFromTimeStamp,
-    getRoundedTime
+    getRoundedTime,
+    ISOToGermanDateLocal,
+    getTimeFromISODateString
 } from "../../services/dateTimeUtils";
 
 describe("dateTimeUtils.svelte.js", () => {
@@ -193,6 +195,64 @@ describe("dateTimeUtils.svelte.js", () => {
             expect(removeMillisecondsFromTimeStamp(123)).toBe(123);
             expect(removeMillisecondsFromTimeStamp(null)).toBe("");
             expect(removeMillisecondsFromTimeStamp(undefined)).toBe("");
+        });
+    });
+
+    describe("ISOToGermanDateLocal", () => {
+        it("converts a valid ISO date to German format using local time", () => {
+            const iso = "2026-04-09T14:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+            expect(ISOToGermanDateLocal(iso)).toBe(expected);
+        });
+
+        it("zero-pads single-digit days and months", () => {
+            const iso = "2026-01-05T12:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+            expect(ISOToGermanDateLocal(iso)).toBe(expected);
+        });
+
+        it("uses local components, which may differ from UTC near midnight", () => {
+            const iso = "2026-12-31T23:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
+
+            expect(ISOToGermanDateLocal(iso)).toBe(expected);
+        });
+
+        it("returns null for invalid input", () => {
+            expect(ISOToGermanDateLocal("")).toBeNull();
+            expect(ISOToGermanDateLocal(null)).toBeNull();
+            expect(ISOToGermanDateLocal("not-a-date")).toBeNull();
+            expect(ISOToGermanDateLocal("2026-04-09")).toBeNull();
+        });
+    });
+
+    describe("getTimeFromISODateString", () => {
+        it("returns the local time in HH:MM format", () => {
+            const iso = "2026-04-09T14:30:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+            expect(getTimeFromISODateString(iso)).toBe(expected);
+        });
+
+        it("zero-pads single-digit hours and minutes", () => {
+            const iso = "2026-04-09T09:05:00.000Z";
+            const date = new Date(iso);
+            const expected = `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+
+            expect(getTimeFromISODateString(iso)).toBe(expected);
+        });
+
+        it("returns 'Unbekannt' for invalid input", () => {
+            expect(getTimeFromISODateString("")).toBe("Unbekannt");
+            expect(getTimeFromISODateString(null)).toBe("Unbekannt");
+            expect(getTimeFromISODateString("not-a-date")).toBe("Unbekannt");
+            expect(getTimeFromISODateString("2026-04-09")).toBe("Unbekannt");
         });
     });
 

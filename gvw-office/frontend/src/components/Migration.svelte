@@ -13,7 +13,8 @@
             },
             value: ""
         },
-        deleteMigration = () => {}
+        deleteMigration = () => {},
+        canDelete = true
     } = $props();
 
     async function handleDelete() {
@@ -40,9 +41,12 @@
             {@render item(migrationData.action)}
         </div>
 
-        <button class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect" onclick={handleDelete}>
-            <span class="material-symbols-rounded text-icon-dt-5 text-gv-dark-text">delete</span>
-        </button>
+        {#if canDelete}
+            <button class="flex items-center justify-center p-2 rounded-2 cursor-pointer hover:bg-gv-hover-effect"
+                    onclick={handleDelete}>
+                <span class="material-symbols-rounded text-icon-dt-5 text-gv-dark-text">delete</span>
+            </button>
+        {/if}
     </div>
 
     {#if migrationData.action === "RENAME"}
@@ -59,7 +63,7 @@
             <p class="text-gv-dark-text text-dt-4">is</p>
             {@render item(migrationData.conditional.condition.value)}
         </div>
-        
+
         <div class="flex items-center justify-start gap-2">
             <p class="text-gv-dark-text text-dt-4">Then set</p>
             {@render item(migrationData.conditional.truePath.field)}

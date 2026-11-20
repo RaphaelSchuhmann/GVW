@@ -1,5 +1,7 @@
 package com.gvw.gvwbackend.service;
 
+import com.gvw.gvwbackend.exception.ServiceUnavailableException;
+import com.gvw.gvwbackend.state.MaintenanceState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -21,6 +23,17 @@ public class SseService {
   private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
 
   private static final Logger log = LoggerFactory.getLogger(SseService.class);
+  private final MaintenanceState maintenanceState;
+
+  /**
+   * Creates the SSE service with the shared maintenance state used to reject new connections during
+   * deployments.
+   *
+   * @param state the shared maintenance state
+   */
+  public SseService(MaintenanceState state) {
+    this.maintenanceState = state;
+  }
 
   /**
    * Creates and registers a new SSE connection.
@@ -31,6 +44,11 @@ public class SseService {
    * @return newly created and registered SSE emitter
    */
   public SseEmitter createEmitter() {
+    if (maintenanceState.getActive()) {
+      // Hardcoded status code is fine here as it is a general infra error
+      throw new ServiceUnavailableException("0000503");
+    }
+
     SseEmitter emitter = new SseEmitter(3600_000L);
 
     emitter.onCompletion(() -> emitters.remove(emitter));
@@ -101,7 +119,10 @@ public class SseService {
     safeBroadcast("refresh", entityType);
   }
 
-  /** Broadcasts a kill event to all connected clients without a payload. */
+  /**
+   * Broadcasts a kill event to all connected clients without a payload and sets isKilled flag to
+   * true.
+   */
   public void sendKillSignal() {
     safeBroadcast("kill", null);
   }

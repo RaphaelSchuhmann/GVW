@@ -37,6 +37,18 @@ export async function apiGetDeployment(id) {
 }
 
 /**
+ * Fetches all updates for a single deployment by its ID.
+ * @param {string} id - The unique ID of the deployment.
+ * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
+ */
+export async function apiGetDeploymentUpdates(id) {
+    const resp = await httpGet(`${apiUrl}/deployment/updates/${id}`);
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}
+
+/**
  * Checks if a deployment exists by its ID.
  * @param {string} id - The unique ID of the deployment to check.
  * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
@@ -91,7 +103,7 @@ export async function apiAddMigration(migration) {
         field: migration.field,
         action: migration.action,
         conditional: migration.conditional,
-        value: migration.value,
+        value: migration.value
     });
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);
@@ -145,8 +157,32 @@ export async function apiUpdateDeploymentInformation(deploymentInformation) {
         date: deploymentInformation.date,
         startTime: deploymentInformation.startTime,
         endTime: deploymentInformation.endTime,
-        commit: deploymentInformation.commit,
+        commit: deploymentInformation.commit
     });
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}
+
+/**
+ * Triggers a migration dry-run for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to test.
+ * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
+ */
+export async function apiTriggerMigrationDryRun(deploymentId) {
+    const resp = await httpPost(`${apiUrl}/deployment/dryRun/${deploymentId}`, {});
+    if (!resp) return { resp: null, body: null };
+    const body = await parseBodySafe(resp);
+    return { resp, body };
+}
+
+/**
+ * Triggers the deployment process for a deployment.
+ * @param {string} deploymentId - The unique ID of the deployment to trigger.
+ * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
+ */
+export async function apiTriggerDeployment(deploymentId) {
+    const resp = await httpPost(`${apiUrl}/deployment/deploy/${deploymentId}`, {});
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);
     return { resp, body };

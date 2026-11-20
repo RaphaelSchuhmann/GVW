@@ -29,7 +29,9 @@ export function normalizeResponse(response) {
     if (response.status === 404) return { ok: false, errorType: "NOTFOUND", status: 404, message: errorCode };
     if (response.status === 409) return { ok: false, errorType: "CONFLICT", status: 409, message: errorCode };
     if (response.status === 429) return { ok: false, errorType: "REQUEST_TIMEOUT", status: 429, message: errorCode };
-    if (response.status >= 500) return { ok: false, errorType: "SERVER", status: response.status, message: errorCode };
+    if (response.status === 500) return { ok: false, errorType: "SERVER", status: response.status, message: errorCode };
+    if (response.status === 502) return { ok: false, errorType: "REQUIRED_SERVICE_UNAVAILABLE", status: response.status, message: errorCode };
+    if (response.status === 503) return { ok: false, errorType: "SYSTEM_MAINTENANCE", status: response.status, message: errorCode };
 
     return { ok: false, errorType: "HTTP_ERROR", status: response.status, message: errorCode };
 }

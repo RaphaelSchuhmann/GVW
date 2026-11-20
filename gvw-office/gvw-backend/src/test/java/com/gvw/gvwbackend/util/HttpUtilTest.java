@@ -131,7 +131,7 @@ class HttpUtilTest {
   @Test
   void sendPostRequest_NullUrl_ReturnsBadRequest() {
     GVWHttpResponse response =
-        httpUtil.sendPostRequest(null, new TestRequest("value"), String.class);
+        httpUtil.sendPostRequestWithBody(null, new TestRequest("value"), String.class);
 
     assertEquals(400, response.status());
     assertTrue(response.isError());
@@ -140,7 +140,7 @@ class HttpUtilTest {
   @Test
   void sendPostRequest_BlankUrl_ReturnsBadRequest() {
     GVWHttpResponse response =
-        httpUtil.sendPostRequest("   ", new TestRequest("value"), String.class);
+        httpUtil.sendPostRequestWithBody("   ", new TestRequest("value"), String.class);
 
     assertEquals(400, response.status());
     assertTrue(response.isError());
@@ -170,7 +170,8 @@ class HttpUtilTest {
     when(objectMapper.readValue(eq(responseBody), eq(TestResponse.class)))
         .thenReturn(parsedResponse);
 
-    GVWHttpResponse response = httpUtil.sendPostRequest(url, requestBody, TestResponse.class);
+    GVWHttpResponse response =
+        httpUtil.sendPostRequestWithBody(url, requestBody, TestResponse.class);
 
     assertEquals(201, response.status());
     assertFalse(response.isError());
@@ -196,7 +197,7 @@ class HttpUtilTest {
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
 
-    GVWHttpResponse response = httpUtil.sendPostRequest(url, requestBody, String.class);
+    GVWHttpResponse response = httpUtil.sendPostRequestWithBody(url, requestBody, String.class);
 
     assertEquals(400, response.status());
     assertTrue(response.isError());
@@ -211,7 +212,7 @@ class HttpUtilTest {
     when(objectMapper.writeValueAsString(requestBody))
         .thenThrow(new RuntimeException("Serialization failed"));
 
-    GVWHttpResponse response = httpUtil.sendPostRequest(url, requestBody, String.class);
+    GVWHttpResponse response = httpUtil.sendPostRequestWithBody(url, requestBody, String.class);
 
     assertEquals(500, response.status());
     assertTrue(response.isError());
@@ -227,7 +228,7 @@ class HttpUtilTest {
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new RuntimeException("Connection failed"));
 
-    GVWHttpResponse response = httpUtil.sendPostRequest(url, requestBody, String.class);
+    GVWHttpResponse response = httpUtil.sendPostRequestWithBody(url, requestBody, String.class);
 
     assertEquals(500, response.status());
     assertTrue(response.isError());
@@ -251,7 +252,7 @@ class HttpUtilTest {
     when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenReturn(mockResponse);
 
-    GVWHttpResponse response = httpUtil.sendPostRequest(url, requestBody, null);
+    GVWHttpResponse response = httpUtil.sendPostRequestWithBody(url, requestBody, null);
 
     assertEquals(200, response.status());
     assertFalse(response.isError());

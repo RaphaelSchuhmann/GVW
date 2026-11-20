@@ -99,7 +99,8 @@ public class HttpUtil {
    * @return a GVWHttpResponse containing the status code, parsed body, content type, and error
    *     state
    */
-  public <T, U> GVWHttpResponse sendPostRequest(String url, T requestBody, Class<U> responseType) {
+  public <T, U> GVWHttpResponse sendPostRequestWithBody(
+      String url, T requestBody, Class<U> responseType) {
     if (url == null || url.isBlank()) {
       return new GVWHttpResponse(400, null, null, true);
     }
@@ -131,6 +132,49 @@ public class HttpUtil {
   }
 
   /**
+   * Sends an HTTP POST request with a JSON body to the specified URL.
+   *
+   * <p>The request body is automatically serialized to JSON. The response body is automatically
+   * deserialized to the specified type if the request is successful (status code < 400) and the
+   * response type is not null.
+   *
+   * @param url the target URL to send the POST request to
+   * @param responseType the class type to deserialize the response body to, or null to keep as raw
+   *     string
+   * @param <T> the type of the deserialized response body
+   * @return a GVWHttpResponse containing the status code, parsed body, content type, and error
+   *     state
+   */
+  public <T> GVWHttpResponse sendPostRequestWithoutBody(String url, Class<T> responseType) {
+    if (url == null || url.isBlank()) {
+      return new GVWHttpResponse(400, null, null, true);
+    }
+
+    try {
+      HttpRequest request =
+          HttpRequest.newBuilder()
+              .uri(URI.create(url))
+              .header("User-Agent", "Java-GVW-Http")
+              .header("Content-Type", "application/json")
+              .header("Accept", "application/json")
+              .POST(HttpRequest.BodyPublishers.noBody())
+              .build();
+
+      HttpResponse<String> response =
+          httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+      return extractResponse(response, responseType);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      log.debug("POST without body request interrupted for URL: {}", url, e);
+      return new GVWHttpResponse(500, null, null, true);
+    } catch (Exception e) {
+      log.debug("POST without body request failed for URL: {}", url, e);
+      return new GVWHttpResponse(500, null, null, true);
+    }
+  }
+
+  /**
    * Extracts and processes an HTTP response into a GVWHttpResponse wrapper.
    *
    * <p>This method parses the response body to the specified type if the response is successful,
@@ -154,10 +198,32 @@ public class HttpUtil {
     boolean isError = status < 200 || status >= 300;
     String rawBody = response.body();
 
+    log.debug(
+        "HTTP response received - status: {}, isError: {}, contentType: {}, responseType: {}, body: {}",
+        status,
+        isError,
+        response.headers().firstValue("Content-Type").orElse(null),
+        responseType,
+        rawBody);
+
     Object parsedBody;
     if (!isError && rawBody != null && !rawBody.isBlank() && responseType != null) {
-      parsedBody = objectMapper.readValue(rawBody, responseType);
+      try {
+        parsedBody = objectMapper.readValue(rawBody, responseType);
+        log.debug("Successfully deserialized response body to {}", responseType.getName());
+      } catch (Exception e) {
+        log.debug(
+            "Failed to deserialize response body to {}: {}",
+            responseType.getName(),
+            e.getMessage());
+        parsedBody = rawBody;
+      }
     } else {
+      log.debug(
+          "Skipping deserialization - isError: {}, bodyBlank: {}, responseType: {}",
+          isError,
+          rawBody == null || rawBody.isBlank(),
+          responseType);
       parsedBody = rawBody;
     }
 
