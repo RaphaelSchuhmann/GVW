@@ -65,7 +65,7 @@ const pendingChecks = new Map();
 /**
  * Map of in-flight deployment update refreshes, keyed by deployment ID,
  * used to deduplicate concurrent requests for the same deployment.
- * @type {Map<string, Promise<boolean>>}
+ * @type {Map<string, Promise<Array>>}
  */
 const pendingDeploymentUpdateQueries = new Map();
 
@@ -135,7 +135,7 @@ export async function getFullDeployment(id) {
 /**
  * Fetches all updates for a deployment by its ID, validating that all required fields are present.
  * @param {string} id - The unique ID of the deployment.
- * @returns {Promise<Array<Object>>} The array of updates for a deployment, or an empty array if validation or fetching fails.
+ * @returns {Promise<Array>} The array of updates for a deployment, or an empty array if validation or fetching fails.
  */
 export async function getDeploymentUpdates(id) {
     if (!id) return [];
