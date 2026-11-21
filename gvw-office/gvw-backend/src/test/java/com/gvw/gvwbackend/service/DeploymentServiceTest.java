@@ -1058,7 +1058,6 @@ class DeploymentServiceTest {
 
     when(dbService.findById(anyString(), eq("dep-id"), eq(Deployment.class)))
         .thenReturn(deployment);
-    when(maintenanceState.getActive()).thenReturn(true);
 
     deploymentService.updateDeploymentStatus(
         "dep-id", new UpdateDeploymentStatusRequestDTO("failed", 0));
