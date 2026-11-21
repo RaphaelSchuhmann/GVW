@@ -1,4 +1,4 @@
-package com.gvw.gvwbackend.model.helper;
+package com.gvw.gvwbackend.model;
 
 import java.util.Arrays;
 

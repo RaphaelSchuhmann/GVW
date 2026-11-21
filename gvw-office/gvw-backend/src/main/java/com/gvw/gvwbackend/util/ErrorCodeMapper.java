@@ -1,6 +1,6 @@
 package com.gvw.gvwbackend.util;
 
-import com.gvw.gvwbackend.model.helper.ErrorMessageType;
+import com.gvw.gvwbackend.model.ErrorMessageType;
 import com.gvw.gvwbackend.model.helper.StatusMessage;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

@@ -4,9 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import com.gvw.gvwbackend.model.Deployment;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,11 +16,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeFactory;
 
 @ExtendWith(MockitoExtension.class)
 class DeploymentValidatorTest {
 
-  @Mock private HttpClient httpClient;
+  @Mock private HttpUtil httpUtil;
 
   private DeploymentValidator validator;
   private Clock fixedClock;
@@ -30,7 +30,7 @@ class DeploymentValidatorTest {
   @BeforeEach
   void setUp() {
     fixedClock = Clock.fixed(Instant.parse("2024-01-15T12:00:00Z"), ZoneOffset.UTC);
-    validator = new DeploymentValidator(httpClient, fixedClock);
+    validator = new DeploymentValidator(fixedClock, httpUtil);
   }
 
   @Test
@@ -425,37 +425,76 @@ class DeploymentValidatorTest {
   }
 
   @Test
-  void isCommitHashValid_ValidHash_ReturnsTrue() throws Exception {
+  void isCommitHashValid_StatusAhead_ReturnsTrue() {
     String validHash = "abc123def456";
+    JsonNode body = JsonNodeFactory.instance.objectNode().put("status", "ahead");
 
-    @SuppressWarnings("unchecked")
-    HttpResponse<Void> mockResponse = mock(HttpResponse.class);
-    when(mockResponse.statusCode()).thenReturn(200);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(mockResponse);
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(200, body, null));
 
     assertTrue(validator.isCommitHashValid(validHash));
   }
 
   @Test
-  void isCommitHashValid_InvalidHash_ReturnsFalse() throws Exception {
-    String invalidHash = "abcdef123456";
+  void isCommitHashValid_StatusIdentical_ReturnsTrue() {
+    String validHash = "abc123def456";
+    JsonNode body = JsonNodeFactory.instance.objectNode().put("status", "identical");
 
-    @SuppressWarnings("unchecked")
-    HttpResponse<Void> mockResponse = mock(HttpResponse.class);
-    when(mockResponse.statusCode()).thenReturn(404);
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenReturn(mockResponse);
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(200, body, null));
 
-    assertFalse(validator.isCommitHashValid(invalidHash));
+    assertTrue(validator.isCommitHashValid(validHash));
   }
 
   @Test
-  void isCommitHashValid_HttpException_ReturnsFalse() throws Exception {
-    String hash = "abcdef123456";
+  void isCommitHashValid_StatusBehind_ReturnsFalse() {
+    String hash = "abc123def456";
+    JsonNode body = JsonNodeFactory.instance.objectNode().put("status", "behind");
 
-    when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-        .thenThrow(new RuntimeException("Network error"));
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(200, body, null));
+
+    assertFalse(validator.isCommitHashValid(hash));
+  }
+
+  @Test
+  void isCommitHashValid_StatusDiverged_ReturnsFalse() {
+    String hash = "abc123def456";
+    JsonNode body = JsonNodeFactory.instance.objectNode().put("status", "diverged");
+
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(200, body, null));
+
+    assertFalse(validator.isCommitHashValid(hash));
+  }
+
+  @Test
+  void isCommitHashValid_MissingStatus_ReturnsFalse() {
+    String hash = "abc123def456";
+    JsonNode body = JsonNodeFactory.instance.objectNode();
+
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(200, body, null));
+
+    assertFalse(validator.isCommitHashValid(hash));
+  }
+
+  @Test
+  void isCommitHashValid_ErrorResponse_ReturnsFalse() {
+    String hash = "abc123def456";
+
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(404, null, null, true));
+
+    assertFalse(validator.isCommitHashValid(hash));
+  }
+
+  @Test
+  void isCommitHashValid_NonJsonNodeBody_ReturnsFalse() {
+    String hash = "abc123def456";
+
+    when(httpUtil.sendGetRequest(anyString(), eq(JsonNode.class)))
+        .thenReturn(new GVWHttpResponse(200, "unexpected body", null));
 
     assertFalse(validator.isCommitHashValid(hash));
   }
@@ -463,10 +502,19 @@ class DeploymentValidatorTest {
   @Test
   void isCommitHashValid_NullHash_ReturnsFalse() {
     assertFalse(validator.isCommitHashValid(null));
+    verify(httpUtil, never()).sendGetRequest(anyString(), any());
   }
 
   @Test
   void isCommitHashValid_EmptyHash_ReturnsFalse() {
     assertFalse(validator.isCommitHashValid(""));
+    verify(httpUtil, never()).sendGetRequest(anyString(), any());
+  }
+
+  @Test
+  void isCommitHashValid_InvalidFormatHash_ReturnsFalse() {
+    assertFalse(validator.isCommitHashValid("not-a-hash!"));
+    assertFalse(validator.isCommitHashValid("abc"));
+    verify(httpUtil, never()).sendGetRequest(anyString(), any());
   }
 }

@@ -2,7 +2,6 @@ package com.gvw.gvwbackend.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.gvw.gvwbackend.model.helper.ErrorMessageType;
 import com.gvw.gvwbackend.model.helper.StatusMessage;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;

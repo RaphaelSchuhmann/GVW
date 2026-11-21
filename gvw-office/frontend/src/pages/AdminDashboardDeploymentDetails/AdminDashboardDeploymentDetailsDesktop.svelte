@@ -586,7 +586,7 @@
                     </div>
                     {#if deploymentUpdates.length > 0}
                         <div
-                            class="flex flex-col items-center justify-center gap-2 w-full min-h-0 overflow-y-auto">
+                            class="flex flex-col items-center justify-start gap-2 w-full min-h-0 overflow-y-auto">
                             {#each deploymentUpdates as update (update.id)}
                                 <Notification id={update.id} type={update.type.toLocaleLowerCase()} title={update.title}
                                               subTitle={update.subTitle} timestamp={update.timestamp} />

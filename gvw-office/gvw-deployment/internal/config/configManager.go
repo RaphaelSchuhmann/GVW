@@ -14,6 +14,10 @@ type Config struct {
 	InternalToken         string            `json:"internal_token"`
 	JavaBaseURL           string            `json:"java_base_url"`
 	GithubRepoURL         string            `json:"github_repo_url"`
+	GitBranch             string            `json:"git_branch"`
+	GitIntialFetchDepth   int               `json:"git_initial_fetch_depth"`
+	GitDeepenStep         int               `json:"git_deepen_step"`
+	GitMaxDeepenAttempts  int               `json:"git_max_deepen_attempts"`
 	ModelDatabaseMap      map[string]string `json:"model_db_map"`
 	DatabaseURL           string            `json:"database_url"`
 	DatabaseUsername      string            `json:"database_username"`

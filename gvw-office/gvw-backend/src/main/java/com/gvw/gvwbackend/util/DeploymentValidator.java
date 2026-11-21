@@ -1,10 +1,9 @@
 package com.gvw.gvwbackend.util;
 
 import com.gvw.gvwbackend.model.Deployment;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
+import org.springframework.beans.factory.annotation.Value;
+import tools.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,18 +20,23 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class DeploymentValidator {
-  private final HttpClient httpClient;
   private final Clock clock;
+  private final HttpUtil httpUtil;
   private static final Logger log = LoggerFactory.getLogger(DeploymentValidator.class);
 
+  private static final String REPO_API = "https://api.github.com/repos/raphaelschuhmann/gvw";
+
+  @Value("${deployment.validator.branch}")
+  private String BRANCH;
+
   @org.springframework.beans.factory.annotation.Autowired
-  public DeploymentValidator(HttpClient httpClient) {
-    this(httpClient, Clock.systemUTC());
+  public DeploymentValidator(HttpUtil httpUtil) {
+    this(Clock.systemUTC(), httpUtil);
   }
 
-  public DeploymentValidator(HttpClient httpClient, Clock clock) {
-    this.httpClient = httpClient;
+  public DeploymentValidator(Clock clock, HttpUtil httpUtil) {
     this.clock = clock;
+    this.httpUtil = httpUtil;
   }
 
   /**
@@ -131,23 +135,30 @@ public class DeploymentValidator {
       return false;
     }
     log.debug("Validating commit hash {}", hash);
-    String url = "https://api.github.com/repos/raphaelschuhmann/gvw/commits/" + hash;
-    HttpRequest request =
-        HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header("User-Agent", "Java-Commit-Validator")
-            .header("Accept", "application/vnd.github+json")
-            .method("HEAD", HttpRequest.BodyPublishers.noBody())
-            .build();
 
-    try {
-      HttpResponse<Void> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-      return response.statusCode() == 200;
-    } catch (Exception e) {
-      log.debug("Invalid commit hash passed");
+    String url = REPO_API + "/compare/" + hash + "..." + BRANCH + "?per_page=1";
+    GVWHttpResponse response = httpUtil.sendGetRequest(url, JsonNode.class);
+
+    if (response.isError()) {
+      log.debug("Commit validation request failed with status {}", response.status());
       return false;
     }
+
+    if (!(response.body() instanceof JsonNode json)) {
+      log.debug("Unexpected response body while validating commit hash");
+      return false;
+    }
+
+    // hash is the base, branch is the head:
+    // "ahead" = branch is ahead of the commit (commit is in branch's history),
+    // "identical" = the commit is the tip of branch
+    JsonNode statusNode = json.path("status");
+    if (!statusNode.isString()) {
+      log.debug("Commit comparison response missing 'status' field");
+      return false;
+    }
+    String status = statusNode.asString();
+    return status.equals("ahead") || status.equals("identical");
   }
 
   /**

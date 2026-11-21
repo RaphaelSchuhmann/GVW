@@ -361,7 +361,10 @@ func normalizeType(typeName string, classes map[string]bool, enums map[string]bo
 
 	// Primitive and Wrapper Mappings
 	switch typeName {
-	case "String", "char", "Character", "Instant", "LocalDate", "LocalDateTime", "LocalTime":
+	case "String", "char", "Character", "UUID",
+		"Instant", "LocalDate", "LocalDateTime", "LocalTime",
+		"OffsetDateTime", "OffsetTime", "ZonedDateTime",
+		"YearMonth", "Year", "ZoneId", "ZoneOffset":
 		return "string", nil
 	case "byte", "Byte", "short", "Short", "int", "Integer", "long", "Long", "BigInteger":
 		return "int", nil
