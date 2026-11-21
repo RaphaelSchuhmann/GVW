@@ -310,7 +310,7 @@ class DeploymentServiceTest {
   void addMigration_InvalidFields_ThrowsBadRequestException() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", null, MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", null, MigrationAction.ADD, null, null, "");
 
     when(migrationValidator.areMigrationFieldsValid(
             any(MigrationAction.class), any(), any(), any()))
@@ -323,7 +323,7 @@ class DeploymentServiceTest {
   void addMigration_InvalidSequence_ThrowsBadRequestException() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null, "");
 
     Deployment deployment =
         Deployment.builder()
@@ -348,7 +348,7 @@ class DeploymentServiceTest {
   void addMigration_ValidRequest_AddsMigrationAndUpdatesDeployment() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null, "");
 
     Deployment deployment =
         Deployment.builder()
@@ -377,7 +377,7 @@ class DeploymentServiceTest {
   void addMigration_RunningDeployment_ThrowsForbiddenException() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null, "");
 
     Deployment deployment =
         Deployment.builder().id("dep-id").status(DeploymentStatus.RUNNING).build();
