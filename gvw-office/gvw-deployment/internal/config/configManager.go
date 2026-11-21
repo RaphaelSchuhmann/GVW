@@ -30,6 +30,7 @@ type Config struct {
 	BackendEnv            string            `json:"backend_env"`
 	FrontendDir           string            `json:"frontend_dir"`
 	FrontendBackupDir     string            `json:"frontend_backup_dir"`
+	FrontendApiUrl        string            `json:"frontend_api_url"`
 	SmtpHost              string            `json:"smtpHost"`
 	SmtpPort              string            `json:"smtpPort"`
 	SenderEmail           string            `json:"senderEmail"`

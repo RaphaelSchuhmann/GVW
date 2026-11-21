@@ -30,6 +30,7 @@ var validConfig = config.Config{
 	BackendEnv:            "./backend_env",
 	FrontendDir:           "./frontend",
 	FrontendBackupDir:     "./frontend_backup",
+	FrontendApiUrl:        "http://localhost:3500/api",
 	SmtpHost:              "smtp.example.com",
 	SmtpPort:              "587",
 	SenderEmail:           "deploy@example.com",
