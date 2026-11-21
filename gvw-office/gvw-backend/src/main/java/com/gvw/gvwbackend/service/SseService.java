@@ -125,6 +125,9 @@ public class SseService {
    */
   public void sendKillSignal() {
     safeBroadcast("kill", null);
+    // Complete (not just remove) so the underlying HTTP connections close before shutdown
+    emitters.forEach(SseEmitter::complete);
+    emitters.clear();
   }
 
   /**

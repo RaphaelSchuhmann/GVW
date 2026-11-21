@@ -463,8 +463,6 @@ public class DeploymentService {
       return;
     }
 
-    // Update deployment status to RUNNING
-    deployment.setStatus(DeploymentStatus.RUNNING);
     dbService.update("deployments", deployment.getId(), deployment);
 
     GVWHttpResponse resp =
@@ -475,10 +473,6 @@ public class DeploymentService {
 
     if (resp.isError()) {
       log.debug("Failed to trigger migration dry run. Responded with {}", resp.status());
-
-      // Set deployment status to cancelled
-      deployment.setStatus(DeploymentStatus.CANCELLED);
-      dbService.update("deployments", deployment.getId(), deployment);
 
       throw new BadGatewayException(
           String.valueOf(
