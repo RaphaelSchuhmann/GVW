@@ -2,8 +2,6 @@ package com.gvw.gvwbackend.util;
 
 import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
-import org.springframework.beans.factory.annotation.Value;
-import tools.jackson.databind.JsonNode;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,7 +10,9 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.JsonNode;
 
 /**
  * Utility component responsible for validating deployment timing rules, checking for schedule

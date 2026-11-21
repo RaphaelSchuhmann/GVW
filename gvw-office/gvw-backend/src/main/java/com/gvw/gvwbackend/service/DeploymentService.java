@@ -382,9 +382,9 @@ public class DeploymentService {
     // Only trigger builds after the database update finished successfully to avoid races
     if (shouldStartBuild) {
       GVWHttpResponse resp =
-              httpUtil.sendPostRequestWithoutBody(
-                      "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(),
-                      String.class);
+          httpUtil.sendPostRequestWithoutBody(
+              "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(),
+              String.class);
       if (resp.isError()) {
         // Not a problem as the deployment pipeline would run the build pipeline if no build was
         // found

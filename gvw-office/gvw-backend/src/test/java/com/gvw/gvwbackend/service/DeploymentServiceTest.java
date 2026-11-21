@@ -1081,7 +1081,7 @@ class DeploymentServiceTest {
     Deployment deployment =
         Deployment.builder()
             .id("dep-id")
-                .rev("dep-rev")
+            .rev("dep-rev")
             .status(DeploymentStatus.SCHEDULED)
             .updates(new ArrayList<>())
             .build();
