@@ -724,7 +724,7 @@ class DeploymentServiceTest {
   }
 
   @Test
-  void removeMigration_NonScheduledStatus_ThrowsBadRequestException() {
+  void removeMigration_RunningStatus_ThrowsBadRequestException() {
     Migration migration =
         Migration.builder()
             .id("migration-id")
@@ -736,7 +736,7 @@ class DeploymentServiceTest {
     Deployment deployment =
         Deployment.builder()
             .id("dep-id")
-            .status(DeploymentStatus.SUCCESSFUL)
+            .status(DeploymentStatus.RUNNING)
             .migrations(List.of(migration))
             .build();
 

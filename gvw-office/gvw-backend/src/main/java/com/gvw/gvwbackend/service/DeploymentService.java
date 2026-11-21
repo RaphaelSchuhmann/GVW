@@ -422,7 +422,7 @@ public class DeploymentService {
 
     Deployment deployment = findDeploymentById(deploymentId);
 
-    if (deployment.getStatus() != DeploymentStatus.SCHEDULED) {
+    if (deployment.getStatus() == DeploymentStatus.RUNNING) {
       throw new BadRequestException(
           String.valueOf(
               ErrorDomain.DEPLOYMENT.createCode(ErrorAction.DELETE, 400, ErrorResource.MIGRATION)));

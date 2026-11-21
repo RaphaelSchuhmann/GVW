@@ -207,7 +207,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 		plan, err := m.engine.PlanDatabaseMigrations(database, dbMigrations, schema, modelToDbMap)
 		if err != nil {
 			m.logger.Printf("[MIGRATION] Bad migration found while planning deployment %s in db %s with err: %v", deploymentId, database, err)
-			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusFailed)
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusCancelled)
 			return false
 		}
 		plans[database] = plan
@@ -220,7 +220,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 			}
 
 			m.logger.Printf("[MIGRATION] Bad migration found for deployment %s in db %s with err: %v", deploymentId, database, err)
-			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusFailed)
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusCancelled)
 			return false
 		}
 	}
