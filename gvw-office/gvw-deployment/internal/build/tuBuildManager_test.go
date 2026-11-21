@@ -23,6 +23,8 @@ var validConfig = config.Config{
 	DatabaseUsername:      "username",
 	DatabasePassword:      "password",
 	ShutdownTimeout:       15,
+	StartupTimeout:        15,
+	StartupDelay:          5,
 	MaintenanceFlagDir:    "./nginx",
 	BackendDir:            "./backend",
 	BackendEnv:            "./backend_env",

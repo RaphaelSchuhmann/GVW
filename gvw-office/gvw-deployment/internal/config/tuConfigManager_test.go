@@ -24,6 +24,7 @@ var validConfig = Config{
 	DatabasePassword:      "password",
 	ShutdownTimeout:       15,
 	StartupTimeout:        45,
+	StartupDelay:          5,
 	MaintenanceFlagDir:    "./nginx",
 	BackendDir:            "./backend",
 	BackendEnv:            "./backend_env",

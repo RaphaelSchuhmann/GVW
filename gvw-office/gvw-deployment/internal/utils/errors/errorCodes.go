@@ -95,9 +95,10 @@ const (
 	CodeModelLoaderUnsupportedType           Code = "ModelLoder_Unsupported_Type"
 
 	// Build error codes
-	CodeBuildErrorCloneRepo   Code = "BuildError_Clone_Repo"
-	CodeBuildErrorBuildFailed Code = "BuildError_Build_Failed"
-	CodeBuildErrorTestFailed  Code = "BuildError_Test_Failed"
+	CodeBuildErrorCloneRepo      Code = "BuildError_Clone_Repo"
+	CodeBuildErrorEnvSetupFailed Code = "BuildError_Env_Setup_Failed"
+	CodeBuildErrorBuildFailed    Code = "BuildError_Build_Failed"
+	CodeBuildErrorTestFailed     Code = "BuildError_Test_Failed"
 
 	// General codes
 	CodeCancelledError Code = "TaskCancelled"

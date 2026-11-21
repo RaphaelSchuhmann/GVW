@@ -24,6 +24,7 @@ type Config struct {
 	DatabasePassword      string            `json:"database_password"`
 	ShutdownTimeout       int               `json:"shutdown_timeout_s"` // in seconds
 	StartupTimeout        int               `json:"startup_timeout_s"`  // in seconds
+	StartupDelay          int               `json:"startup_delay"`
 	MaintenanceFlagDir    string            `json:"maintenance_flag_dir"`
 	BackendDir            string            `json:"backend_dir"`
 	BackendEnv            string            `json:"backend_env"`

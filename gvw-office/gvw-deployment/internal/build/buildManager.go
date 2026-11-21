@@ -287,6 +287,15 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
 	}
 
+	// Setup .env.production
+	b.logger.Printf("[BUILD] Setting up frontend enviornment for deployment %s", deploymentId)
+	filePath := filepath.Join(workingDir, ".env.production")
+	data := []byte("VITE_API_URL=" + b.cfg.Config.JavaBaseURL)
+	if err := b.fsWrapper.WriteToFile(filePath, data); err != nil {
+		b.logger.Printf("[BUILD] Frontend environment setup failed for deployment %s", deploymentId)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorEnvSetupFailed, err);
+	}
+
 	// Build
 	b.logger.Printf("[BUILD] Building frontend for deployment %s", deploymentId)
 	_, err = commandExecutor.RunCommand(ctx, workingDir, "npm", "run", "build")
