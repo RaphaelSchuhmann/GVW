@@ -105,6 +105,11 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 	for _, rawLine := range lines {
 		line := strings.TrimSpace(rawLine)
 
+		// Strip trailing line comments so declarations like `private int x = 1; // note` still end with ';'
+		if idx := strings.Index(line, "//"); idx != -1 {
+			line = strings.TrimSpace(line[:idx])
+		}
+
 		if m.shouldSkipLine(line) {
 			continue
 		}
