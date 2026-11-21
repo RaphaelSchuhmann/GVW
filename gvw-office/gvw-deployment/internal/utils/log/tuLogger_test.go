@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -15,8 +17,8 @@ func TestNewLogger(t *testing.T) {
 		t.Error("Expected non-nil Logger")
 	}
 
-	if logger.lumberjackLogger == nil {
-		t.Error("Expected lumberjackLogger to be initialized")
+	if logger.lumberjackLogger != nil {
+		t.Error("Expected lumberjackLogger to be nil before SetLogFile is called")
 	}
 
 	if logger.logObj == nil {
@@ -135,5 +137,94 @@ func TestLogger_WritesToStdout(t *testing.T) {
 
 	if output == "" {
 		t.Error("Expected output to stdout")
+	}
+}
+
+func TestSetLogFile_CreatesLogFile(t *testing.T) {
+	dir := t.TempDir()
+
+	logger := NewLogger()
+	if err := logger.SetLogFile(dir); err != nil {
+		t.Fatalf("Expected no error from SetLogFile, got: %v", err)
+	}
+
+	if logger.lumberjackLogger == nil {
+		t.Error("Expected lumberjackLogger to be set after SetLogFile")
+	}
+
+	logPath := filepath.Join(dir, "gvw-deployment.log")
+	if _, err := os.Stat(logPath); err != nil {
+		t.Errorf("Expected log file to exist at %s, got: %v", logPath, err)
+	}
+}
+
+func TestSetLogFile_WritesToFile(t *testing.T) {
+	dir := t.TempDir()
+
+	logger := NewLogger()
+	if err := logger.SetLogFile(dir); err != nil {
+		t.Fatalf("Expected no error from SetLogFile, got: %v", err)
+	}
+
+	logger.Println("file log test message")
+
+	content, err := os.ReadFile(filepath.Join(dir, "gvw-deployment.log"))
+	if err != nil {
+		t.Fatalf("Expected to read log file, got: %v", err)
+	}
+
+	if !strings.Contains(string(content), "file log test message") {
+		t.Errorf("Expected log file to contain message, got: %s", string(content))
+	}
+}
+
+func TestSetLogFile_CalledTwice(t *testing.T) {
+	firstDir := t.TempDir()
+	secondDir := t.TempDir()
+
+	logger := NewLogger()
+	if err := logger.SetLogFile(firstDir); err != nil {
+		t.Fatalf("Expected no error from first SetLogFile, got: %v", err)
+	}
+	firstLogger := logger.lumberjackLogger
+
+	if err := logger.SetLogFile(secondDir); err != nil {
+		t.Fatalf("Expected no error from second SetLogFile, got: %v", err)
+	}
+
+	if logger.lumberjackLogger == nil {
+		t.Error("Expected lumberjackLogger to be set after second SetLogFile")
+	}
+	if logger.lumberjackLogger == firstLogger {
+		t.Error("Expected lumberjackLogger to be replaced on second SetLogFile")
+	}
+
+	logger.Println("second file test message")
+
+	secondContent, err := os.ReadFile(filepath.Join(secondDir, "gvw-deployment.log"))
+	if err != nil {
+		t.Fatalf("Expected to read second log file, got: %v", err)
+	}
+	if !strings.Contains(string(secondContent), "second file test message") {
+		t.Errorf("Expected second log file to contain message, got: %s", string(secondContent))
+	}
+}
+
+func TestSetLogFile_InvalidPath(t *testing.T) {
+	logger := NewLogger()
+
+	// a path inside a file (not a directory) cannot be used as a log dir
+	blocker := filepath.Join(t.TempDir(), "blocker")
+	if err := os.WriteFile(blocker, []byte("not a dir"), 0o644); err != nil {
+		t.Fatalf("Failed to create blocker file: %v", err)
+	}
+	invalidDir := filepath.Join(blocker, "logs")
+
+	if err := logger.SetLogFile(invalidDir); err == nil {
+		t.Error("Expected error from SetLogFile with invalid path")
+	}
+
+	if logger.lumberjackLogger != nil {
+		t.Error("Expected lumberjackLogger to remain nil after failed SetLogFile")
 	}
 }

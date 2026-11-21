@@ -65,7 +65,9 @@ const pendingChecks = new Map();
 /**
  * Map of in-flight deployment update refreshes, keyed by deployment ID,
  * used to deduplicate concurrent requests for the same deployment.
- * @type {Map<string, Promise<Array>>}
+ * Each promise resolves to an object containing the deployment's updates
+ * array and its current revision (`rev`).
+ * @type {Map<string, Promise<{updates: Array<Object>, rev: string}>>}
  */
 const pendingDeploymentUpdateQueries = new Map();
 
@@ -135,10 +137,11 @@ export async function getFullDeployment(id) {
 /**
  * Fetches all updates for a deployment by its ID, validating that all required fields are present.
  * @param {string} id - The unique ID of the deployment.
- * @returns {Promise<Array>} The array of updates for a deployment, or an empty array if validation or fetching fails.
+ * @returns {Promise<{updates: Array<Object>, rev: string}>} An object containing the deployment's updates
+ * array and its current revision, or an object with an empty updates array and empty rev if validation or fetching fails.
  */
 export async function getDeploymentUpdates(id) {
-    if (!id) return [];
+    if (!id) return { updates: [], rev: "" };
 
     if (pendingDeploymentUpdateQueries.has(id)) return await pendingDeploymentUpdateQueries.get(id);
 
@@ -149,11 +152,13 @@ export async function getDeploymentUpdates(id) {
             const { resp, body } = await apiGetDeploymentUpdates(id);
             const normalized = normalizeResponse(resp);
 
-            if (handleGlobalApiError(normalized)) return [];
+            if (handleGlobalApiError(normalized)) return { updates: [], rev: "" };
 
-            if (!(body !== null && typeof body === "object" && "updates" in body)) return [];
+            const requiredFields = ["updates", "rev"]
 
-            return body.updates;
+            if (!(body !== null && typeof body === "object" && requiredFields.every(field => field in body))) return { updates: [], rev: "" };
+
+            return { updates: body.updates, rev: body.rev };
         } finally {
             pendingDeploymentUpdateQueries.delete(id);
             if (pendingDeploymentUpdateQueries.size === 0) {

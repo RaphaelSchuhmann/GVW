@@ -8,6 +8,7 @@ import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentStatusRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
+import com.gvw.gvwbackend.dto.response.DeploymentUpdatesResponseDTO;
 import com.gvw.gvwbackend.dto.response.HealthResponseDTO;
 import com.gvw.gvwbackend.exception.BadGatewayException;
 import com.gvw.gvwbackend.exception.BadRequestException;
@@ -1080,6 +1081,7 @@ class DeploymentServiceTest {
     Deployment deployment =
         Deployment.builder()
             .id("dep-id")
+                .rev("dep-rev")
             .status(DeploymentStatus.SCHEDULED)
             .updates(new ArrayList<>())
             .build();
@@ -1087,9 +1089,11 @@ class DeploymentServiceTest {
     when(dbService.findById(anyString(), eq("dep-id"), eq(Deployment.class)))
         .thenReturn(deployment);
 
-    List<Deployment.Update> result = deploymentService.getDeploymentUpdates("dep-id");
+    DeploymentUpdatesResponseDTO result = deploymentService.getDeploymentUpdates("dep-id");
 
     assertNotNull(result);
-    assertTrue(result.isEmpty());
+    assertTrue(result.updates().isEmpty());
+    assertNotNull(result.rev());
+    assertFalse(result.rev().isBlank());
   }
 }

@@ -29,6 +29,7 @@ var validConfig = config.Config{
 	SenderEmail:           "deploy@example.com",
 	SenderPassword:        "your-smtp-password",
 	NotificationRecipient: "test@example.com",
+	LogDir:                "./logs",
 }
 
 func TestGenerateSchema_Success(t *testing.T) {

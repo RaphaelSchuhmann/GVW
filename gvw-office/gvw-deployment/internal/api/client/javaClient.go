@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"gvw/gvw-deployment/internal/config"
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
+	"gvw/gvw-deployment/internal/utils/log"
 	"io"
 	"net/http"
 	"net/url"
@@ -50,14 +51,16 @@ var InternalTokenHeader string = "X-Internal-Auth"
 type HttpJavaClient struct {
 	cfg        *config.ConfigManager
 	httpClient *http.Client
+	log        *log.Logger
 }
 
-func NewHttpJavaClient(cfg *config.ConfigManager) *HttpJavaClient {
+func NewHttpJavaClient(cfg *config.ConfigManager, log *log.Logger) *HttpJavaClient {
 	return &HttpJavaClient{
 		cfg: cfg,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
+		log: log,
 	}
 }
 
@@ -81,6 +84,8 @@ func (c *HttpJavaClient) UpdateDeploymentState(deploymentId string, status Statu
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set(InternalTokenHeader, c.cfg.Config.InternalToken)
+
+	c.log.Printf("[CLIENT] Calling update deployment state for deploymentId: %s", deploymentId)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
@@ -106,6 +111,8 @@ func (c *HttpJavaClient) RunHealthCheck(ctx context.Context) (HealthCheckRespons
 	}
 
 	req.Header.Set(InternalTokenHeader, c.cfg.Config.InternalToken)
+
+	c.log.Println("[CLIENT] Calling health check endpoint")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

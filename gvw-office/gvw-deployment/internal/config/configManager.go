@@ -30,6 +30,7 @@ type Config struct {
 	SenderEmail           string            `json:"senderEmail"`
 	SenderPassword        string            `json:"senderPassword"`
 	NotificationRecipient string            `json:"notificationRecipient"`
+	LogDir                string            `json:"log_dir"`
 }
 
 type ConfigManager struct {

@@ -93,12 +93,16 @@
                 return;
             }
 
-            const updates = await getDeploymentUpdates(deploymentId);
+            const data = await getDeploymentUpdates(deploymentId);
 
             // Only update the updates if the new length is bigger than the old one
             // as updates cannot / should not be deleted
-            if (deploymentUpdates.length < updates.length) {
-                deploymentUpdates = updates;
+            if (deploymentUpdates.length < data.updates.length) {
+                deploymentUpdates = data.updates;
+            }
+
+            if (data.rev) {
+                deploymentData.rev = data.rev;
             }
         }
 

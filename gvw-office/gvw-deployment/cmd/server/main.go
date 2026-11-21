@@ -3,8 +3,8 @@ package main
 import (
 	"gvw/gvw-deployment/internal/app"
 	"gvw/gvw-deployment/internal/config"
-	"gvw/gvw-deployment/internal/utils/log"
 	"gvw/gvw-deployment/internal/utils/filesystem"
+	"gvw/gvw-deployment/internal/utils/log"
 )
 
 func main() {
@@ -14,6 +14,10 @@ func main() {
 
 	if err := configManager.LoadConfig(false); err != nil {
 		logger.Fatalf("Failed to load server config: %v", err)
+		return
+	}
+
+	if err := logger.SetLogFile(configManager.Config.LogDir); err != nil {
 		return
 	}
 

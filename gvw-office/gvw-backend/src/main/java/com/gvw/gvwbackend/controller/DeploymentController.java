@@ -4,6 +4,7 @@ import com.gvw.gvwbackend.dto.request.AddDeploymentRequestDTO;
 import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
+import com.gvw.gvwbackend.dto.response.DeploymentUpdatesResponseDTO;
 import com.gvw.gvwbackend.model.Deployment;
 import com.gvw.gvwbackend.service.DeploymentService;
 import jakarta.validation.Valid;
@@ -101,9 +102,8 @@ public class DeploymentController {
   @GetMapping("/updates/{deploymentId}")
   @PreAuthorize("hasAnyRole('ADMIN')")
   @ResponseStatus(HttpStatus.OK)
-  public Map<String, List<Deployment.Update>> getDeploymentUpdates(
+  public DeploymentUpdatesResponseDTO getDeploymentUpdates(
       @PathVariable String deploymentId) {
-    List<Deployment.Update> updates = deploymentService.getDeploymentUpdates(deploymentId);
-    return Map.of("updates", updates);
+    return deploymentService.getDeploymentUpdates(deploymentId);
   }
 }

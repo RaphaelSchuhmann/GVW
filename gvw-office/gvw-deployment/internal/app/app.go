@@ -22,7 +22,7 @@ type App struct {
 }
 
 func NewApp(logger *log.Logger, fsWrapper *filesystem.FileSystem, configManager *config.ConfigManager) (*App, error) {
-	javaClient := client.NewHttpJavaClient(configManager)
+	javaClient := client.NewHttpJavaClient(configManager, logger)
 	dbClient := client.NewDbClient(configManager)
 
 	// Build System

@@ -30,6 +30,7 @@ var validConfig = Config{
 	SenderEmail:           "deploy@example.com",
 	SenderPassword:        "your-smtp-password",
 	NotificationRecipient: "test@example.com",
+	LogDir:                "./logs",
 }
 
 func TestValidateConfig_ValidConfig(t *testing.T) {

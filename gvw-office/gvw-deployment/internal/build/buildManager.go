@@ -154,7 +154,7 @@ func (b *BuildManager) updateDeployment(deploymentId string, status client.Statu
 	}
 
 	if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, status, errorCode, ctx); updateErr != nil {
-		b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
+		b.logger.Printf("[BUILD] Failed to update deployment state: %v", updateErr)
 	}
 }
 

@@ -7,6 +7,7 @@ import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentStatusRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
+import com.gvw.gvwbackend.dto.response.DeploymentUpdatesResponseDTO;
 import com.gvw.gvwbackend.dto.response.HealthResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.Deployment;
@@ -357,6 +358,8 @@ public class DeploymentService {
     deployment.setStartTime(request.startTime());
     deployment.setEndTime(request.endTime());
 
+    boolean shouldStartBuild = false;
+
     // Only do build when saved commit and new commit differ!
     if (request.commit() != null
         && !request.commit().isBlank()
@@ -367,15 +370,7 @@ public class DeploymentService {
             String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
       }
 
-      GVWHttpResponse resp =
-          httpUtil.sendPostRequestWithoutBody(
-              "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(),
-              String.class);
-      if (resp.isError()) {
-        // Not a problem as the deployment pipeline would run the build pipeline if no build was
-        // found
-        log.debug("Build request responded with error code {} instead of accepted", resp.status());
-      }
+      shouldStartBuild = true;
     }
 
     if (request.commit() != null && !request.commit().isBlank()) {
@@ -383,6 +378,19 @@ public class DeploymentService {
     }
 
     dbService.update("deployments", deployment.getId(), deployment);
+
+    // Only trigger builds after the database update finished successfully to avoid races
+    if (shouldStartBuild) {
+      GVWHttpResponse resp =
+              httpUtil.sendPostRequestWithoutBody(
+                      "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(),
+                      String.class);
+      if (resp.isError()) {
+        // Not a problem as the deployment pipeline would run the build pipeline if no build was
+        // found
+        log.debug("Build request responded with error code {} instead of accepted", resp.status());
+      }
+    }
   }
 
   /**
@@ -590,14 +598,14 @@ public class DeploymentService {
   }
 
   /**
-   * Retrieves all recorded status updates for a deployment, sorted by timestamp descending.
+   * Retrieves all recorded status updates for a deployment along with its current revision.
    *
    * @param deploymentId The unique identifier of the deployment.
-   * @return A list of deployment updates.
+   * @return A {@link DeploymentUpdatesResponseDTO} containing the deployment's updates and rev.
    * @throws BadRequestException if the deployment ID is null or blank.
    * @throws NotFoundException if the deployment does not exist.
    */
-  public List<Deployment.Update> getDeploymentUpdates(String deploymentId) {
+  public DeploymentUpdatesResponseDTO getDeploymentUpdates(String deploymentId) {
     if (deploymentId == null || deploymentId.isBlank()) {
       throw new BadRequestException(
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.READ_ONE, 400)));
@@ -605,7 +613,7 @@ public class DeploymentService {
 
     Deployment deployment = findDeploymentById(deploymentId);
 
-    return deployment.getUpdates();
+    return new DeploymentUpdatesResponseDTO(deployment.getUpdates(), deployment.getRev());
   }
 
   /**
