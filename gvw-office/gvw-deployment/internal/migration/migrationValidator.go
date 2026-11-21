@@ -214,14 +214,14 @@ func (v *MigrationValidator) AllValuesPresent(modelToDbMap map[string]string, it
 	return true
 }
 
-func (v *MigrationValidator) ValidateMigrationApplication(ctx context.Context, originalDoc, updatedDoc map[string]any, migration Migration) error {
+func (v *MigrationValidator) ValidateMigrationApplication(ctx context.Context, originalDoc, updatedDoc map[string]any, migration Migration, expectedAddValue any) error {
 	if ctx.Err() != nil {
 		return gvwErrors.NewError(gvwErrors.CodeCancelledError)
 	}
 
 	switch migration.Action {
 	case MigrationAdd:
-		return v.validateAddAction(originalDoc, updatedDoc, migration)
+		return v.validateAddAction(originalDoc, updatedDoc, migration, expectedAddValue)
 	case MigrationDelete:
 		return v.validateDeleteAction(originalDoc, updatedDoc, migration)
 	case MigrationRename:
@@ -233,7 +233,7 @@ func (v *MigrationValidator) ValidateMigrationApplication(ctx context.Context, o
 	}
 }
 
-func (v *MigrationValidator) validateAddAction(originalDoc, updatedDoc map[string]any, migration Migration) error {
+func (v *MigrationValidator) validateAddAction(originalDoc, updatedDoc map[string]any, migration Migration, expectedAddValue any) error {
 	before, leaf := resolvePath(originalDoc, migration.Field)
 	after, _ := resolvePath(updatedDoc, migration.Field)
 	if len(before) != len(after) {
@@ -246,8 +246,9 @@ func (v *MigrationValidator) validateAddAction(originalDoc, updatedDoc map[strin
 		}
 	}
 	for _, p := range after {
-		if val, ok := p[leaf]; !ok || val != nil {
-			return fail("add: field %q should exist with value null", migration.Field)
+		val, ok := p[leaf]
+		if !ok || !reflect.DeepEqual(val, expectedAddValue) {
+			return fail("add: field %q should exist with its default value", migration.Field)
 		}
 	}
 	return onlyPathsChanged(originalDoc, updatedDoc, migration.Field)

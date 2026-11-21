@@ -1,12 +1,13 @@
 package migration
 
 type Migration struct {
-	Id          string               `json:"id"`
-	Database    string               `json:"database"`
-	Field       string               `json:"field"`
-	Action      MigrationAction      `json:"action"`
-	Conditional ConditionalMigration `json:"conditional"`
-	Value       string               `json:"value"`
+	Id           string               `json:"id"`
+	Database     string               `json:"database"`
+	Field        string               `json:"field"`
+	Action       MigrationAction      `json:"action"`
+	Conditional  ConditionalMigration `json:"conditional"`
+	Value        string               `json:"value"`
+	DefaultValue string               `json:"defaultValue"`
 }
 
 type ConditionalMigration struct {

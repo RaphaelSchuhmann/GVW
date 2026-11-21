@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
@@ -192,6 +193,121 @@ func (s *Schema) PathExists(roots []string, path string) bool {
 		}
 	}
 	return false
+}
+
+// FieldType resolves the type of the leaf of path within the given root models.
+// It returns nil when the path cannot be resolved to a known type.
+func (s *Schema) FieldType(roots []string, path string) *TypeRef {
+	segs := splitPath(path)
+	for _, r := range roots {
+		if t := s.typeFieldType(&TypeRef{Kind: kindModel, Model: r}, segs); t != nil {
+			return t
+		}
+	}
+	return nil
+}
+
+func (s *Schema) typeFieldType(t *TypeRef, segs []string) *TypeRef {
+	if t == nil || len(segs) == 0 {
+		return t
+	}
+	switch t.Kind {
+	case kindArray:
+		return s.typeFieldType(t.Items, segs)
+	case kindMap:
+		return s.typeFieldType(t.Values, segs[1:]) // first segment is a dynamic key
+	case kindModel:
+		m := s.lookup(t.Model)
+		if m == nil {
+			return &TypeRef{Kind: kindAny}
+		}
+		member, ok := m.Members[segs[0]]
+		if !ok {
+			return nil
+		}
+		return s.typeFieldType(member, segs[1:])
+	case kindAny:
+		return t
+	default:
+		return nil
+	}
+}
+
+// CoerceValue interprets a user-supplied default value (usually a string coming from the
+// Java backend) according to the schema type. Values that cannot be interpreted are
+// returned unchanged so the schema conformance check reports them.
+func (s *Schema) CoerceValue(t *TypeRef, v any) any {
+	if t == nil || v == nil {
+		return v
+	}
+	str, isStr := v.(string)
+	if !isStr {
+		return v
+	}
+	switch t.Kind {
+	case kindNumber:
+		if t.IntOnly {
+			if i, err := strconv.ParseInt(str, 10, 64); err == nil {
+				return i
+			}
+		}
+		if f, err := strconv.ParseFloat(str, 64); err == nil {
+			return f
+		}
+		return v
+	case kindBool:
+		if b, err := strconv.ParseBool(str); err == nil {
+			return b
+		}
+		return v
+	case kindArray, kindMap:
+		var parsed any
+		if err := json.Unmarshal([]byte(str), &parsed); err == nil {
+			return parsed
+		}
+		return v
+	case kindModel:
+		if m := s.lookup(t.Model); m != nil && m.IsEnum {
+			return v
+		}
+		var parsed any
+		if err := json.Unmarshal([]byte(str), &parsed); err == nil {
+			return parsed
+		}
+		return v
+	default:
+		return v
+	}
+}
+
+// DefaultValue returns the value an ADD migration writes for a field of the given type.
+// Unknown types (nil) keep the historical null default.
+func (s *Schema) DefaultValue(t *TypeRef) any {
+	if t == nil {
+		return nil
+	}
+	switch t.Kind {
+	case kindString:
+		return ""
+	case kindNumber:
+		if t.IntOnly {
+			return 0
+		}
+		return float64(0)
+	case kindBool:
+		return false
+	case kindArray:
+		return []any{}
+	case kindMap:
+		return map[string]any{}
+	case kindModel:
+		if m := s.lookup(t.Model); m != nil && m.IsEnum {
+			return ""
+		}
+		return map[string]any{}
+	default:
+		return nil
+	}
 }
 
 func (s *Schema) typeHasPath(t *TypeRef, segs []string) bool {

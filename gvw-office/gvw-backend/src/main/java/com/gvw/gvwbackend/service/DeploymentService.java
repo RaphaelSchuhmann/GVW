@@ -293,6 +293,7 @@ public class DeploymentService {
             .field(request.field())
             .value(request.value())
             .conditional(request.conditional())
+                .defaultValue(request.defaultValue())
             .build();
 
     MigrationValidator.ValidationResult validationResult =

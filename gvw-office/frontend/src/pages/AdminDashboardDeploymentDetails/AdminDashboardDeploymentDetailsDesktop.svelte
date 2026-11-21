@@ -57,7 +57,8 @@
             falsePath: { field: "", value: "" },
             negated: false
         },
-        value: ""
+        value: "",
+        defaultValue: ""
     });
 
     let isSubmittingInformationChanges = $state(false);
@@ -296,6 +297,10 @@
             data.field = null;
         }
 
+        if (data.action !== "ADD") {
+            data.defaultValue = null;
+        }
+
         try {
             await addMigration(data);
             deploymentData = await getFullDeployment(deploymentData.id);
@@ -400,6 +405,10 @@
         <Dropdown title="Aktion" options={Array.from(migrationActions.values())} onChange={updateMigrationAction} />
         {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "RENAME"}
             <Input title="Neuer Feld Name" bind:value={addMigrationInputs.value} placeholder="isActive" />
+        {/if}
+
+        {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "ADD"}
+            <Input title="Standard Wert" bind:value={addMigrationInputs.defaultValue} placeholder="false" />
         {/if}
 
         {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "CONDITIONAL"}

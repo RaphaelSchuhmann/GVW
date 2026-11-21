@@ -30,9 +30,12 @@ type MigrationEngine struct {
 
 // dbPlan is the concrete work for one database: the root models stored in it and the
 // migrations after model prefixes and embedded models have been expanded into plain paths.
+// Defaults is parallel to Migrations and holds the value an ADD migration writes
+// (nil for other actions and for fields whose type the schema does not know).
 type dbPlan struct {
 	Models     []string
 	Migrations []Migration
+	Defaults   []any
 }
 
 func NewMigrationEngine(logger *log.Logger, fsWrapper filesystem.FileSystemWrapper, validator *MigrationValidator, dbClient *client.DbClient) *MigrationEngine {
@@ -173,6 +176,17 @@ func (e *MigrationEngine) PlanDatabaseMigrations(database string, migrations []M
 				return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, err)
 			}
 			plan.Migrations = append(plan.Migrations, concrete)
+
+			var def any
+			if concrete.Action == MigrationAdd {
+				fieldType := schema.FieldType(roots, concrete.Field)
+				if concrete.DefaultValue != "" {
+					def = schema.CoerceValue(fieldType, concrete.DefaultValue)
+				} else {
+					def = schema.DefaultValue(fieldType)
+				}
+			}
+			plan.Defaults = append(plan.Defaults, def)
 		}
 	}
 
@@ -259,7 +273,7 @@ func (e *MigrationEngine) evaluateAndPrepareDoc(ctx context.Context, doc map[str
 		return nil, false, "", nil
 	}
 
-	updated, runErr := e.runMigrationsOnDoc(ctx, doc, plan.Migrations)
+	updated, runErr := e.runMigrationsOnDoc(ctx, doc, plan)
 	if runErr != nil {
 		if gvwErrors.HasCode(runErr, gvwErrors.CodeCancelledError) {
 			return nil, false, "", &gvwErrors.MigrationError{Err: runErr, DocumentId: ""}
@@ -298,7 +312,7 @@ func (e *MigrationEngine) checkConformance(doc map[string]any, models []string, 
 	return firstErr
 }
 
-func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string]any, migrations []Migration) (map[string]any, error) {
+func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string]any, plan dbPlan) (map[string]any, error) {
 	if ctx.Err() != nil {
 		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
 	}
@@ -306,11 +320,15 @@ func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string
 	updatedDoc := doc
 
 	// Apply migrations on document
-	for _, migration := range migrations {
+	for i, migration := range plan.Migrations {
 		before := updatedDoc
+		addDefault := any(nil)
+		if i < len(plan.Defaults) {
+			addDefault = plan.Defaults[i]
+		}
 
 		// Deep clone: migrations may change nested objects and `before` must stay untouched for validation.
-		after, err := e.applyMigrationOnDoc(ctx, deepCloneMap(before), migration)
+		after, err := e.applyMigrationOnDoc(ctx, deepCloneMap(before), migration, addDefault)
 		if err != nil {
 			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
 				return nil, err
@@ -319,7 +337,7 @@ func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string
 		}
 
 		// Validate that migration was successful
-		if err := e.validator.ValidateMigrationApplication(ctx, before, after, migration); err != nil {
+		if err := e.validator.ValidateMigrationApplication(ctx, before, after, migration, addDefault); err != nil {
 			if gvwErrors.HasCode(err, gvwErrors.CodeCancelledError) {
 				return nil, err
 			}
@@ -332,14 +350,14 @@ func (e *MigrationEngine) runMigrationsOnDoc(ctx context.Context, doc map[string
 	return updatedDoc, nil
 }
 
-func (e *MigrationEngine) applyMigrationOnDoc(ctx context.Context, doc map[string]any, migration Migration) (map[string]any, error) {
+func (e *MigrationEngine) applyMigrationOnDoc(ctx context.Context, doc map[string]any, migration Migration, addDefault any) (map[string]any, error) {
 	if ctx.Err() != nil {
 		return nil, gvwErrors.NewError(gvwErrors.CodeCancelledError)
 	}
 
 	switch migration.Action {
 	case MigrationAdd:
-		return e.applyAddMigration(doc, migration)
+		return e.applyAddMigration(doc, migration, addDefault)
 	case MigrationDelete:
 		return e.applyDeleteMigration(doc, migration)
 	case MigrationRename:
@@ -354,7 +372,7 @@ func (e *MigrationEngine) applyMigrationOnDoc(ctx context.Context, doc map[strin
 // For all actions below, a path whose intermediate objects do not exist (e.g. "recurrence.weekDay" on a document
 // without recurrence) resolves to no objects and the migration is a no-op for that document.
 
-func (e *MigrationEngine) applyAddMigration(doc map[string]any, migration Migration) (map[string]any, error) {
+func (e *MigrationEngine) applyAddMigration(doc map[string]any, migration Migration, defaultValue any) (map[string]any, error) {
 	parents, leaf := resolvePath(doc, migration.Field)
 
 	for _, p := range parents {
@@ -363,7 +381,8 @@ func (e *MigrationEngine) applyAddMigration(doc map[string]any, migration Migrat
 		}
 	}
 	for _, p := range parents {
-		p[leaf] = nil
+		// Deep clone so parents (e.g. array elements) never share the same map/slice instance.
+		p[leaf] = deepCloneValue(defaultValue)
 	}
 
 	return doc, nil

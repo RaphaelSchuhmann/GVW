@@ -11,4 +11,5 @@ public record AddMigrationRequestDTO(
     String field,
     @NotNull MigrationAction action,
     Migration.Conditional conditional,
-    String value) {}
+    String value,
+    String defaultValue) {}
