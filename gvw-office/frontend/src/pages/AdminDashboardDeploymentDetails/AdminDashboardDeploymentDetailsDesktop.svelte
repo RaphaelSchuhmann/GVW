@@ -393,6 +393,11 @@
                     bind:this={confirmDeleteUserModal}
 />
 
+<!--TODO: For what ever reason when running a dry run it sometimes removes the migrations visually???-->
+<!--TODO: For what ever reason after adding one migration with action add and a default value set it doesn't show the default value input
+          and blocks adding the new migration regardless of action or filled fields-->
+<!--TODO: Sometimes it shows old data in deployment information and or migrations-->
+
 <Modal bind:this={addMigrationModal} extraFunction={resetAddMigrationInputs}
        title="Migration hinzufügen" subTitle="Erfassen Sie hier die Migrationdaten">
     <div class="flex flex-col items-center w-full gap-4">
