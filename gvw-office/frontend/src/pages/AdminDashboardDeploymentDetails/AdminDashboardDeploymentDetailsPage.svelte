@@ -78,6 +78,9 @@
 
                 await fetchAndSetRaw();
                 await route("/admin/deployments");
+            } else if (!isEditing) {
+                const refreshed = await getFullDeployment(deploymentId);
+                if (refreshed) deploymentData = refreshed;
             }
         })();
     });
@@ -119,9 +122,7 @@
 </script>
 
 <GlobalLoader loading={isLoading}>
-    {#key deploymentData.rev}
-        <AdminDashboardDeploymentDetailsDesktop {deploymentData} deploymentUpdates={deploymentUpdates} bind:isEditing bind:isDeleting
-                                                       onChangeIsEditing={updateIsEditing}
-                                                       onChangeIsDeleting={updateIsDeleting} />
-    {/key}
+    <AdminDashboardDeploymentDetailsDesktop bind:deploymentData={deploymentData} deploymentUpdates={deploymentUpdates} bind:isEditing bind:isDeleting
+                                               onChangeIsEditing={updateIsEditing}
+                                               onChangeIsDeleting={updateIsDeleting} />
 </GlobalLoader>

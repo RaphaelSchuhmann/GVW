@@ -29,7 +29,7 @@
     import EmptyState from "../../components/EmptyState.svelte";
 
     let {
-        deploymentData,
+        deploymentData = $bindable({}),
         deploymentUpdates,
         isEditing = $bindable(false),
         isDeleting = $bindable(false),
@@ -303,7 +303,8 @@
 
         try {
             await addMigration(data);
-            deploymentData = await getFullDeployment(deploymentData.id);
+            const refreshed = await getFullDeployment(deploymentData.id);
+            if (refreshed) deploymentData = refreshed;
         } finally {
             isSubmittingMigration = false;
             addMigrationModal.hideModal();
@@ -321,13 +322,15 @@
                 falsePath: { field: "", value: "" },
                 negated: false
             },
-            value: ""
+            value: "",
+            defaultValue: ""
         };
     }
 
     async function deleteMigrationAndRefresh(migrationId) {
         await deleteMigration(deploymentData.id, migrationId);
-        deploymentData = await getFullDeployment(deploymentData.id);
+        const refreshed = await getFullDeployment(deploymentData.id);
+        if (refreshed) deploymentData = refreshed;
     }
 
     async function startMigrationDryRun() {
@@ -392,11 +395,6 @@
                     onCancel={disableIsDeleting}
                     bind:this={confirmDeleteUserModal}
 />
-
-<!--TODO: For what ever reason when running a dry run it sometimes removes the migrations visually???-->
-<!--TODO: For what ever reason after adding one migration with action add and a default value set it doesn't show the default value input
-          and blocks adding the new migration regardless of action or filled fields-->
-<!--TODO: Sometimes it shows old data in deployment information and or migrations-->
 
 <Modal bind:this={addMigrationModal} extraFunction={resetAddMigrationInputs}
        title="Migration hinzufügen" subTitle="Erfassen Sie hier die Migrationdaten">
@@ -510,8 +508,8 @@
                         <Input value={deploymentData.commit} title="Commit" placeholder="Commit hash" readonly={true} />
                     {:else}
                         <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                            <Input bind:value={informationDraft.title} title="Titel" readonly={true} />
-                            <Input bind:value={informationDraft.version} title="Version" readonly={true} />
+                            <Input bind:value={informationDraft.title} title="Titel" />
+                            <Input bind:value={informationDraft.version} title="Version" />
                         </div>
 
                         <DefaultDatepicker title="Datum" onChange={updateDate}

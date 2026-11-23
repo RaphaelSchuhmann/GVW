@@ -312,6 +312,8 @@ public class DeploymentService {
     deployment.setMigrations(migrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
+
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -393,6 +395,8 @@ public class DeploymentService {
         log.debug("Build request responded with error code {} instead of accepted", resp.status());
       }
     }
+
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -434,6 +438,8 @@ public class DeploymentService {
     deployment.setMigrations(mutableMigrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
+
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -463,8 +469,6 @@ public class DeploymentService {
       // No migrations found, don't trigger a dry run
       return;
     }
-
-    dbService.update("deployments", deployment.getId(), deployment);
 
     GVWHttpResponse resp =
         httpUtil.sendPostRequestWithBody(
