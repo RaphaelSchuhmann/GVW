@@ -595,10 +595,17 @@ public class DeploymentService {
   private void applyStatusUpdate(Deployment deployment, DeploymentStatus requested, int reason) {
     boolean successful = requested == DeploymentStatus.SUCCESSFUL;
 
+    if (reason == DEPLOYMENT_SUCCESSFUL_CODE) {
+      deployment.setStatus(DeploymentStatus.SUCCESSFUL);
+      return;
+    }
+
     if (successful && deployment.getStatus() != DeploymentStatus.RUNNING) {
       deployment.setStatus(DeploymentStatus.SCHEDULED);
-    } else if (!successful || reason == DEPLOYMENT_SUCCESSFUL_CODE) {
-      // CANCELLED/FAILED always apply, SUCCESSFUL only with the success reason code
+      return;
+    }
+
+    if (!successful) {
       deployment.setStatus(requested);
     }
   }
