@@ -240,9 +240,6 @@ func (d *DeploymentManager) StartDeploymentPipeline(deploymentId, commit, appVer
 		return
 	}
 
-	// Give the backend time to fully start before attempting the health check
-	time.Sleep(time.Duration(d.cfg.Config.StartupDelay) * time.Second)
-
 	// Health check
 	if healthy, data := d.isApplicationHealthy(); !healthy {
 		d.logger.Printf("[DEPLOY] Deployment unhealthy with data: %s. Starting rollback", data)

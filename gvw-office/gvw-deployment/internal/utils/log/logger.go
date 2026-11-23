@@ -20,7 +20,7 @@ type Logger struct {
 func NewLogger() *Logger {
 	return &Logger{
 		// console only until a log file is configured
-		logObj: log.New(os.Stdout, "[GVW-DEPLOYMENT] ", log.Ldate|log.Ltime|log.Lshortfile),
+		logObj: log.New(os.Stdout, "[GVW-DEPLOYMENT] ", log.Ldate|log.Ltime|log.Lmicroseconds|log.Lshortfile),
 	}
 }
 
