@@ -188,11 +188,7 @@
                 return !isNonEmpty(field) || !isNonEmpty(value);
 
             case "CONDITIONAL":
-                return (
-                    !isNonEmpty(conditional.condition.field) ||
-                    !isNonEmpty(conditional.truePath.field) ||
-                    !isNonEmpty(conditional.falsePath.field)
-                );
+                return !isNonEmpty(conditional.condition.field);
 
             default:
                 return true;

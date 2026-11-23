@@ -93,6 +93,7 @@ export async function apiAddDeployment(deployment) {
  * @param {string} migration.action - Action to perform.
  * @param {string} migration.conditional - Conditional check string.
  * @param {string} migration.value - Value applied by the migration.
+ * @param {string} [migration.defaultValue] - Default value for ADD migrations.
  * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.
  */
 export async function apiAddMigration(migration) {
@@ -103,7 +104,8 @@ export async function apiAddMigration(migration) {
         field: migration.field,
         action: migration.action,
         conditional: migration.conditional,
-        value: migration.value
+        value: migration.value,
+        defaultValue: migration.defaultValue
     });
     if (!resp) return { resp: null, body: null };
     const body = await parseBodySafe(resp);

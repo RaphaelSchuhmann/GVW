@@ -251,6 +251,8 @@ func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema 
 
 	backupDbs := make(map[string]string)
 
+	m.logger.Printf("[MIGRATION] Creating database backups for %d databases for deployment %s", len(databases), deploymentId);
+
 	for _, database := range databases {
 		backupDb, err := m.db.CreateBackupOfDatabase(ctx, database)
 		if err != nil {
