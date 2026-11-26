@@ -505,6 +505,11 @@ public class DeploymentService {
 
     Deployment deployment = findDeploymentById(deploymentId);
 
+    // Update deployment status to running
+    deployment.setStatus(DeploymentStatus.RUNNING);
+    dbService.update("deployments", deployment.getId(), deployment);
+    sseService.sendRefresh("DEPLOYMENTS");
+
     // Send kill signal for shutdown
     maintenanceState.setActive(true);
     sseService.sendKillSignal();
@@ -520,8 +525,13 @@ public class DeploymentService {
     if (resp.isError()) {
       log.debug(
           "Failed to start deployment for deploymentId {}. Responded with {}",
-          deployment,
+          deployment.getId(),
           resp.status());
+
+      // Reset deployment status to cancelled
+      deployment.setStatus(DeploymentStatus.CANCELLED);
+      dbService.update("deployments", deployment.getId(), deployment);
+
       maintenanceState.setActive(false);
       throw new BadGatewayException(
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 502)));
