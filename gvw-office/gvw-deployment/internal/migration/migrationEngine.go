@@ -163,30 +163,8 @@ func (e *MigrationEngine) PlanDatabaseMigrations(database string, migrations []M
 	}
 
 	for _, migration := range migrations {
-		expanded, err := schema.ExpandMigration(migration, roots)
-		if err != nil {
+		if err := e.planMigration(&plan, migration, schema); err != nil {
 			return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, err)
-		}
-
-		for _, concrete := range expanded {
-			if !e.validator.isMigrationValid(concrete) {
-				return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidField))
-			}
-			if err := e.validator.ValidateMigrationAgainstSchema(concrete, roots, schema); err != nil {
-				return dbPlan{}, fmt.Errorf("migration %s: %w", migration.Id, err)
-			}
-			plan.Migrations = append(plan.Migrations, concrete)
-
-			var def any
-			if concrete.Action == MigrationAdd {
-				fieldType := schema.FieldType(roots, concrete.Field)
-				if concrete.DefaultValue != "" {
-					def = schema.CoerceValue(fieldType, concrete.DefaultValue)
-				} else {
-					def = schema.DefaultValue(fieldType)
-				}
-			}
-			plan.Defaults = append(plan.Defaults, def)
 		}
 	}
 
@@ -195,6 +173,49 @@ func (e *MigrationEngine) PlanDatabaseMigrations(database string, migrations []M
 	}
 
 	return plan, nil
+}
+
+// planMigration expands one migration, validates every concrete result and appends it
+// (together with its default value) to the plan. Errors are returned unwrapped,
+// the caller adds the migration id.
+func (e *MigrationEngine) planMigration(plan *dbPlan, migration Migration, schema *Schema) error {
+	expanded, err := schema.ExpandMigration(migration, plan.Models)
+	if err != nil {
+		return err
+	}
+
+	for _, concrete := range expanded {
+		if err := e.validateConcreteMigration(concrete, plan, schema); err != nil {
+			return err
+		}
+
+		plan.Migrations = append(plan.Migrations, concrete)
+		plan.Defaults = append(plan.Defaults, defaultForMigration(concrete, plan, schema))
+	}
+
+	return nil
+}
+
+func (e *MigrationEngine) validateConcreteMigration(concrete Migration, plan *dbPlan, schema *Schema) error {
+	if !e.validator.isMigrationValid(concrete) {
+		return gvwErrors.NewError(gvwErrors.CodeMigrationEngineInvalidField)
+	}
+
+	return e.validator.ValidateMigrationAgainstSchema(concrete, plan.Models, schema)
+}
+
+// defaultForMigration returns the default value for add migrations and nil for all others.
+func defaultForMigration(concrete Migration, plan *dbPlan, schema *Schema) any {
+	if concrete.Action != MigrationAdd {
+		return nil
+	}
+
+	fieldType := schema.FieldType(plan.Models, concrete.Field)
+	if concrete.DefaultValue != "" {
+		return schema.CoerceValue(fieldType, concrete.DefaultValue)
+	}
+
+	return schema.DefaultValue(fieldType)
 }
 
 // TestMigrationsAgainstDatabase is the read-only run (dry run / pre-flight): nothing is written.
