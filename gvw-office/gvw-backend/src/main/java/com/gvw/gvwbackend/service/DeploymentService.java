@@ -500,10 +500,16 @@ public class DeploymentService {
   public void startDeployment(String deploymentId) {
     if (deploymentId == null || deploymentId.isBlank()) {
       throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
     }
 
     Deployment deployment = findDeploymentById(deploymentId);
+
+    if (deployment.getStatus() == DeploymentStatus.RUNNING) {
+      throw new ForbiddenException(
+              String.valueOf(
+                      ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403)));
+    }
 
     // Update deployment status to running
     deployment.setStatus(DeploymentStatus.RUNNING);
