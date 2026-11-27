@@ -595,8 +595,14 @@ func (s *Schema) checkNumberValue(t *TypeRef, v any, path string) error {
 	if !ok {
 		return typeErr(path, "number", v)
 	}
-	if t.IntOnly && f != math.Trunc(f) {
-		return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+	if t.IntOnly {
+		if n, ok := v.(json.Number); ok {
+			if !jsonNumberIsInteger(n) {
+				return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+			}
+		} else if f != math.Trunc(f) {
+			return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+		}
 	}
 	return nil
 }
@@ -654,6 +660,81 @@ func (s *Schema) checkMapValue(t *TypeRef, v any, path string) error {
 
 func typeErr(path, want string, got any) error {
 	return fmt.Errorf("%s: expected %s, got %T", path, want, got)
+}
+
+// jsonNumberIsInteger reports whether a JSON number token denotes an integer value.
+// Lexical forms such as 42.0 and 1e3 are integers; fractional tokens like 42.5 or 1e-3 are not.
+func jsonNumberIsInteger(n json.Number) bool {
+	s := string(n)
+	if strings.HasPrefix(s, "-") {
+		s = s[1:]
+	}
+
+	mant := s
+	exp := int64(0)
+	if i := strings.IndexAny(s, "eE"); i >= 0 {
+		mant = s[:i]
+		exp = parseJSONNumberExponent(s[i+1:])
+	}
+
+	intPart := mant
+	fracPart := ""
+	if i := strings.IndexByte(mant, '.'); i >= 0 {
+		intPart = mant[:i]
+		fracPart = mant[i+1:]
+	}
+
+	digits := intPart + fracPart
+	nonZero := false
+	for i := 0; i < len(digits); i++ {
+		if digits[i] != '0' {
+			nonZero = true
+			break
+		}
+	}
+	if !nonZero {
+		return true
+	}
+
+	fracLen := int64(len(fracPart))
+	if exp >= fracLen {
+		return true
+	}
+
+	trailingZeros := int64(0)
+	for i := len(digits) - 1; i >= 0 && digits[i] == '0'; i-- {
+		trailingZeros++
+	}
+	return trailingZeros >= fracLen-exp
+}
+
+func parseJSONNumberExponent(s string) int64 {
+	neg := false
+	if strings.HasPrefix(s, "+") {
+		s = s[1:]
+	} else if strings.HasPrefix(s, "-") {
+		neg = true
+		s = s[1:]
+	}
+
+	const maxExp = int64(1) << 62
+	var val int64
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c < '0' || c > '9' {
+			return 0
+		}
+		d := int64(c - '0')
+		if val > (maxExp-d)/10 {
+			val = maxExp
+			break
+		}
+		val = val*10 + d
+	}
+	if neg {
+		return -val
+	}
+	return val
 }
 
 func toFloat(v any) (float64, bool) {

@@ -142,21 +142,25 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 
 func stripLineComment(line string) string {
 	inString := false
+	inChar := false
 	escaped := false
 
 	for i := 0; i < len(line); i++ {
 		c := line[i]
-		if inString {
+		if inString || inChar {
 			if escaped {
 				escaped = false
 				continue
 			}
-			switch c {
-			case '\\':
+
+			if c == '\\' {
 				escaped = true
-			case '"':
+			} else if inString && c == '"' {
 				inString = false
+			} else if inChar && c == '\'' {
+				inChar = false
 			}
+
 			continue
 		}
 
@@ -164,6 +168,12 @@ func stripLineComment(line string) string {
 			inString = true
 			continue
 		}
+
+		if c == '\'' {
+			inChar = true
+			continue
+		}
+
 		if c == '/' && i+1 < len(line) && line[i+1] == '/' {
 			return strings.TrimSpace(line[:i])
 		}

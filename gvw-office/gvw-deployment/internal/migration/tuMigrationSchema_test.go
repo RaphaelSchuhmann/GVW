@@ -454,6 +454,32 @@ func TestCheckDocument(t *testing.T) {
 		}
 	})
 
+	t.Run("json.Number int tokens", func(t *testing.T) {
+		for _, tc := range []struct {
+			token   string
+			wantErr bool
+		}{
+			{"42", false},
+			{"42.0", false},
+			{"1e3", false},
+			{"10e-1", false},
+			{"0.0", false},
+			{"42.5", true},
+			{"1e-3", true},
+			{"9007199254740992.5", true},
+			{"1.0000000000000000001", true},
+		} {
+			doc := map[string]any{"count": json.Number(tc.token)}
+			err := schema.CheckDocument("Event", doc)
+			if tc.wantErr && err == nil {
+				t.Errorf("count=%s: expected error", tc.token)
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("count=%s: unexpected error %v", tc.token, err)
+			}
+		}
+	})
+
 	t.Run("null values allowed", func(t *testing.T) {
 		doc := map[string]any{"title": nil, "count": nil}
 		if err := schema.CheckDocument("Event", doc); err != nil {
