@@ -7,7 +7,6 @@ import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentStatusRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
-import com.gvw.gvwbackend.dto.response.DeploymentUpdatesResponseDTO;
 import com.gvw.gvwbackend.dto.response.HealthResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.Deployment;
@@ -598,7 +597,7 @@ public class DeploymentService {
     deployment.addUpdate(ErrorCodeMapper.getMessages(request.reason()));
 
     dbService.update("deployments", deployment.getId(), deployment);
-    sseService.sendRefresh("DEPLOYMENT_UPDATES");
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -634,25 +633,6 @@ public class DeploymentService {
   private BadRequestException invalidUpdateRequest() {
     return new BadRequestException(
         String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
-  }
-
-  /**
-   * Retrieves all recorded status updates for a deployment along with its current revision.
-   *
-   * @param deploymentId The unique identifier of the deployment.
-   * @return A {@link DeploymentUpdatesResponseDTO} containing the deployment's updates and rev.
-   * @throws BadRequestException if the deployment ID is null or blank.
-   * @throws NotFoundException if the deployment does not exist.
-   */
-  public DeploymentUpdatesResponseDTO getDeploymentUpdates(String deploymentId) {
-    if (deploymentId == null || deploymentId.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.READ_ONE, 400)));
-    }
-
-    Deployment deployment = findDeploymentById(deploymentId);
-
-    return new DeploymentUpdatesResponseDTO(deployment.getUpdates(), deployment.getRev());
   }
 
   /**

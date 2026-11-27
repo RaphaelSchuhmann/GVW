@@ -37,18 +37,6 @@ export async function apiGetDeployment(id) {
 }
 
 /**
- * Fetches all updates for a single deployment by its ID.
- * @param {string} id - The unique ID of the deployment.
- * @returns {Promise<{resp: Response|null, body: {updates: Array<Object>, rev: string}|null}>} The HTTP response and parsed response body containing the updates array and deployment revision.
- */
-export async function apiGetDeploymentUpdates(id) {
-    const resp = await httpGet(`${apiUrl}/deployment/updates/${id}`);
-    if (!resp) return { resp: null, body: null };
-    const body = await parseBodySafe(resp);
-    return { resp, body };
-}
-
-/**
  * Checks if a deployment exists by its ID.
  * @param {string} id - The unique ID of the deployment to check.
  * @returns {Promise<{resp: Response|null, body: any}>} The HTTP response and parsed response body.

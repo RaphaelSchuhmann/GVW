@@ -7,7 +7,6 @@
     import { addToast } from "../../stores/toasts.svelte.js";
     import {
         deploymentExists,
-        getDeploymentUpdates,
         getFullDeployment
     } from "../../services/deploymentService.svelte.js";
 
@@ -63,7 +62,7 @@
     let isDeleting = $state(false);
 
     $effect(() => {
-        const _triggerDeployments = lastRefresh.DEPLOYMENTS;
+        const _trigger = lastRefresh.DEPLOYMENTS;
 
         if (!ready || isDeleting) return;
 
@@ -80,36 +79,12 @@
                 await route("/admin/deployments");
             } else if (!isEditing) {
                 const refreshed = await getFullDeployment(deploymentId);
-                if (refreshed) deploymentData = refreshed;
+                if (refreshed) {
+                    deploymentData = refreshed;
+                    deploymentUpdates = refreshed.updates;
+                }
             }
         })();
-    });
-
-    $effect(() => {
-        const _triggerDeploymentUpdates = lastRefresh.DEPLOYMENT_UPDATES;
-
-        if (!ready) return;
-
-        async function getUpdates() {
-            if (!deploymentId) {
-                await route("/admin/deployments");
-                return;
-            }
-
-            const data = await getDeploymentUpdates(deploymentId);
-
-            // Only update the updates if the new length is bigger than the old one
-            // as updates cannot / should not be deleted
-            if (deploymentUpdates.length < data.updates.length) {
-                deploymentUpdates = data.updates;
-            }
-
-            if (data.rev) {
-                deploymentData.rev = data.rev;
-            }
-        }
-
-        getUpdates();
     });
 
     function updateIsEditing(val) { isEditing = val; }

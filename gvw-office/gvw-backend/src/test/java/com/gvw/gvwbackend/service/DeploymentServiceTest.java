@@ -8,7 +8,6 @@ import com.gvw.gvwbackend.dto.request.AddMigrationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentInformationRequestDTO;
 import com.gvw.gvwbackend.dto.request.UpdateDeploymentStatusRequestDTO;
 import com.gvw.gvwbackend.dto.response.DeploymentResponseDTO;
-import com.gvw.gvwbackend.dto.response.DeploymentUpdatesResponseDTO;
 import com.gvw.gvwbackend.dto.response.HealthResponseDTO;
 import com.gvw.gvwbackend.exception.BadGatewayException;
 import com.gvw.gvwbackend.exception.BadRequestException;
@@ -1005,7 +1004,7 @@ class DeploymentServiceTest {
     assertEquals(DeploymentStatus.CANCELLED, deployment.getStatus());
     assertEquals(1, deployment.getUpdates().size());
     verify(dbService).update(eq("deployments"), eq("dep-id"), any(Deployment.class));
-    verify(sseService).sendRefresh("DEPLOYMENT_UPDATES");
+    verify(sseService).sendRefresh("DEPLOYMENTS");
   }
 
   @Test
@@ -1063,36 +1062,5 @@ class DeploymentServiceTest {
         "dep-id", new UpdateDeploymentStatusRequestDTO("failed", 0));
 
     verify(maintenanceState).setActive(false);
-  }
-
-  @Test
-  void getDeploymentUpdates_NullId_ThrowsBadRequestException() {
-    assertThrows(BadRequestException.class, () -> deploymentService.getDeploymentUpdates(null));
-  }
-
-  @Test
-  void getDeploymentUpdates_BlankId_ThrowsBadRequestException() {
-    assertThrows(BadRequestException.class, () -> deploymentService.getDeploymentUpdates("   "));
-  }
-
-  @Test
-  void getDeploymentUpdates_ValidId_ReturnsUpdates() {
-    Deployment deployment =
-        Deployment.builder()
-            .id("dep-id")
-            .rev("dep-rev")
-            .status(DeploymentStatus.SCHEDULED)
-            .updates(new ArrayList<>())
-            .build();
-
-    when(dbService.findById(anyString(), eq("dep-id"), eq(Deployment.class)))
-        .thenReturn(deployment);
-
-    DeploymentUpdatesResponseDTO result = deploymentService.getDeploymentUpdates("dep-id");
-
-    assertNotNull(result);
-    assertTrue(result.updates().isEmpty());
-    assertNotNull(result.rev());
-    assertFalse(result.rev().isBlank());
   }
 }
