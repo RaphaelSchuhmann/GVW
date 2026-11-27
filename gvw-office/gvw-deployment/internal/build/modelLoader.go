@@ -106,9 +106,7 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 		line := strings.TrimSpace(rawLine)
 
 		// Strip trailing line comments so declarations like `private int x = 1; // note` still end with ';'
-		if idx := strings.Index(line, "//"); idx != -1 {
-			line = strings.TrimSpace(line[:idx])
-		}
+		line = stripLineComment(line)
 
 		if m.shouldSkipLine(line) {
 			continue
@@ -140,6 +138,38 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 	}
 
 	return result
+}
+
+func stripLineComment(line string) string {
+	inString := false
+	escaped := false
+
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			switch c {
+			case '\\':
+				escaped = true
+			case '"':
+				inString = false
+			}
+			continue
+		}
+
+		if c == '"' {
+			inString = true
+			continue
+		}
+		if c == '/' && i+1 < len(line) && line[i+1] == '/' {
+			return strings.TrimSpace(line[:i])
+		}
+	}
+
+	return line
 }
 
 func (m *ModelLoader) shouldSkipLine(line string) bool {

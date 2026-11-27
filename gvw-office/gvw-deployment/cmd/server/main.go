@@ -18,6 +18,7 @@ func main() {
 	}
 
 	if err := logger.SetLogFile(configManager.Config.LogDir); err != nil {
+		logger.Fatalf("Failed to set log file: %v", err)
 		return
 	}
 

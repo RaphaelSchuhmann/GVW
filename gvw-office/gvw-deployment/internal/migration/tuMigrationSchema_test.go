@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -189,6 +190,14 @@ func TestCoerceValue(t *testing.T) {
 	if got := schema.CoerceValue(floatType, "4.5"); got != 4.5 {
 		t.Errorf("CoerceValue float = %v, want 4.5", got)
 	}
+	for _, nonFinite := range []string{"NaN", "Inf", "-Inf", "Infinity"} {
+		if got := schema.CoerceValue(floatType, nonFinite); got != nonFinite {
+			t.Errorf("CoerceValue(%s) = %v (%T), want unchanged string", nonFinite, got, got)
+		}
+	}
+	if err := schema.CheckDocument("Event", map[string]any{"score": schema.CoerceValue(floatType, "NaN")}); err == nil {
+		t.Error("expected non-finite numeric default to fail schema check")
+	}
 
 	boolType := schema.FieldType(roots, "active")
 	if got := schema.CoerceValue(boolType, "true"); got != true {
@@ -200,6 +209,19 @@ func TestCoerceValue(t *testing.T) {
 		t.Error("CoerceValue array should parse JSON")
 	} else if arr, ok := got.([]any); !ok || len(arr) != 2 {
 		t.Errorf("CoerceValue array = %v", got)
+	}
+
+	big := schema.CoerceValue(arrType, `[12345678901234567890]`)
+	if arr, ok := big.([]any); !ok || len(arr) != 1 {
+		t.Fatalf("CoerceValue big-int array = %v", big)
+	} else if arr[0] != json.Number("12345678901234567890") {
+		t.Errorf("CoerceValue big-int array[0] = %v (%T), want json.Number", arr[0], arr[0])
+	}
+
+	for _, trailing := range []string{`["a"] {}`, `["a"] trailing`} {
+		if got := schema.CoerceValue(arrType, trailing); got != trailing {
+			t.Errorf("CoerceValue(%s) = %v (%T), want unchanged string", trailing, got, got)
+		}
 	}
 
 	// Non-string values pass through

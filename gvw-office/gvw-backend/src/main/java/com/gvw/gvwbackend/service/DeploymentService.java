@@ -535,9 +535,12 @@ public class DeploymentService {
 
       // Reset deployment status to cancelled
       deployment.setStatus(DeploymentStatus.CANCELLED);
-      dbService.update("deployments", deployment.getId(), deployment);
-
       maintenanceState.setActive(false);
+
+      Deployment current = findDeploymentById(deploymentId);
+      current.setStatus(DeploymentStatus.CANCELLED);
+      dbService.update("deployments", current.getId(), current);
+
       throw new BadGatewayException(
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 502)));
     }
@@ -610,7 +613,7 @@ public class DeploymentService {
   private void applyStatusUpdate(Deployment deployment, DeploymentStatus requested, int reason) {
     boolean successful = requested == DeploymentStatus.SUCCESSFUL;
 
-    if (reason == DEPLOYMENT_SUCCESSFUL_CODE) {
+    if (reason == DEPLOYMENT_SUCCESSFUL_CODE && successful) {
       deployment.setStatus(DeploymentStatus.SUCCESSFUL);
       return;
     }

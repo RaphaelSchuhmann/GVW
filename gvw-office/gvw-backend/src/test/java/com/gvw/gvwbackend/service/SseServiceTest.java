@@ -64,17 +64,28 @@ class SseServiceTest {
   void sendKillSignal_WithEmitters_SendsEvent() throws Exception {
     SseEmitter emitter = mock(SseEmitter.class);
 
-    Field emittersField = SseService.class.getDeclaredField("emitters");
-    emittersField.setAccessible(true);
-
-    @SuppressWarnings("unchecked")
-    List<SseEmitter> emitters = (List<SseEmitter>) emittersField.get(sseService);
-
-    emitters.add(emitter);
+    emitters().add(emitter);
 
     sseService.sendKillSignal();
 
     verify(emitter).send(any(SseEmitter.SseEventBuilder.class));
+    verify(emitter).complete();
+    assertTrue(emitters().isEmpty());
+  }
+
+  @Test
+  void sendKillSignal_CompletesEmitterWhenKillSendFails() throws Exception {
+    SseEmitter emitter = mock(SseEmitter.class);
+    doThrow(new RuntimeException("send failed"))
+        .when(emitter)
+        .send(any(SseEmitter.SseEventBuilder.class));
+
+    emitters().add(emitter);
+
+    sseService.sendKillSignal();
+
+    verify(emitter).complete();
+    assertTrue(emitters().isEmpty());
   }
 
   @Test
@@ -102,5 +113,15 @@ class SseServiceTest {
   @Test
   void sendHeartbeat_WithoutEmitters_DoesNothing() {
     assertDoesNotThrow(() -> sseService.sendHeartbeat());
+  }
+
+  private List<SseEmitter> emitters() throws Exception {
+    Field emittersField = SseService.class.getDeclaredField("emitters");
+    emittersField.setAccessible(true);
+
+    @SuppressWarnings("unchecked")
+    List<SseEmitter> emitters = (List<SseEmitter>) emittersField.get(sseService);
+
+    return emitters;
   }
 }

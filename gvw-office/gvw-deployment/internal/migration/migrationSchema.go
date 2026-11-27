@@ -3,6 +3,7 @@ package migration
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"slices"
 	"strconv"
@@ -251,7 +252,7 @@ func (s *Schema) CoerceValue(t *TypeRef, v any) any {
 				return i
 			}
 		}
-		if f, err := strconv.ParseFloat(str, 64); err == nil {
+		if f, err := strconv.ParseFloat(str, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
 			return f
 		}
 		return v
@@ -261,8 +262,7 @@ func (s *Schema) CoerceValue(t *TypeRef, v any) any {
 		}
 		return v
 	case kindArray, kindMap:
-		var parsed any
-		if err := json.Unmarshal([]byte(str), &parsed); err == nil {
+		if parsed, ok := decodeSingleJSONValue(str); ok {
 			return parsed
 		}
 		return v
@@ -270,14 +270,30 @@ func (s *Schema) CoerceValue(t *TypeRef, v any) any {
 		if m := s.lookup(t.Model); m != nil && m.IsEnum {
 			return v
 		}
-		var parsed any
-		if err := json.Unmarshal([]byte(str), &parsed); err == nil {
+		if parsed, ok := decodeSingleJSONValue(str); ok {
 			return parsed
 		}
 		return v
 	default:
 		return v
 	}
+}
+
+func decodeSingleJSONValue(str string) (any, bool) {
+	dec := json.NewDecoder(strings.NewReader(str))
+	dec.UseNumber()
+
+	var parsed any
+	if err := dec.Decode(&parsed); err != nil {
+		return nil, false
+	}
+
+	var extra any
+	if err := dec.Decode(&extra); err != io.EOF {
+		return nil, false
+	}
+
+	return parsed, true
 }
 
 // DefaultValue returns the value an ADD migration writes for a field of the given type.
