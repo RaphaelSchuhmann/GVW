@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func RunCommand(ctx context.Context, workDir string, name string, args ...string) (string, error) {
+func RunCommand(ctx context.Context, workDir, name string, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Env = os.Environ()
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}

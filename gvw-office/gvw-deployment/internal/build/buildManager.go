@@ -211,7 +211,7 @@ func (b *BuildManager) setupBuildDirs(deploymentId string) {
 	b.fsWrapper.CreateDir(buildBaseDir+deploymentId+"/bin", 0755)
 }
 
-func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commit string) error {
+func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId, commit string) error {
 	workingDir := buildBaseDir + deploymentId + "/repo"
 
 	var branch string = b.cfg.Config.GitBranch

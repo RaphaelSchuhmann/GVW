@@ -252,14 +252,7 @@ func (m *ModelLoader) processClassOrEnumDeclaration(line string, braceDepth int,
 	return false
 }
 
-func (m *ModelLoader) processFieldDeclaration(
-	line string,
-	currentClass string,
-	braceDepth int,
-	classStartDepth int,
-	pendingJsonProperty *string,
-	result map[string]any,
-) {
+func (m *ModelLoader) processFieldDeclaration(line, currentClass string, braceDepth, classStartDepth int, pendingJsonProperty *string, result map[string]any) {
 	if currentClass == "" || braceDepth != classStartDepth || !strings.HasSuffix(line, ";") {
 		return
 	}
@@ -401,7 +394,7 @@ func (m *ModelLoader) normalizeMembers(className string, members map[string]any,
 	return newMembers, nil
 }
 
-func normalizeType(typeName string, classes map[string]bool, enums map[string]bool) (any, error) {
+func normalizeType(typeName string, classes, enums map[string]bool) (any, error) {
 	typeName = strings.TrimSpace(typeName)
 
 	// Primitive and Wrapper Mappings
@@ -527,7 +520,7 @@ func (m *ModelLoader) extractClassNamesFromSchema(schema map[string]any) map[str
 	return classNames
 }
 
-func (m *ModelLoader) collectReferences(fieldType any, referenced map[string]bool, classNames map[string]bool) {
+func (m *ModelLoader) collectReferences(fieldType any, referenced, classNames map[string]bool) {
 	switch t := fieldType.(type) {
 	case string:
 		if classNames[t] {
