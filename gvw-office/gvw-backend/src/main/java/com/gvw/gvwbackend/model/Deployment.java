@@ -2,7 +2,6 @@ package com.gvw.gvwbackend.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.gvw.gvwbackend.model.helper.ErrorMessageType;
 import com.gvw.gvwbackend.model.helper.StatusMessage;
 import java.time.LocalTime;
 import java.time.OffsetDateTime;
@@ -37,8 +36,11 @@ public class Deployment {
   private String hash;
   private DeploymentStatus status;
 
-  @Builder.Default private List<Update> updates = new ArrayList<>();
-  @Builder.Default private List<Migration> migrations = new ArrayList<>();
+  @Builder.Default
+  private List<Update> updates = new ArrayList<>();
+
+  @Builder.Default
+  private List<Migration> migrations = new ArrayList<>();
 
   public List<Migration> getMigrations() {
     if (this.migrations == null) {
@@ -66,8 +68,11 @@ public class Deployment {
   @NoArgsConstructor
   @AllArgsConstructor
   public static class Update {
-    @Builder.Default private String id = UUID.randomUUID().toString();
-    @Builder.Default private OffsetDateTime timestamp = OffsetDateTime.now();
+    @Builder.Default
+    private String id = UUID.randomUUID().toString();
+
+    @Builder.Default
+    private OffsetDateTime timestamp = OffsetDateTime.now();
 
     private ErrorMessageType type;
     private String title;

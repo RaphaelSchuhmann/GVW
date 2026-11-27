@@ -37,10 +37,6 @@ func NewFileSystem(logger *log.Logger) *FileSystem {
 func (f *FileSystem) DirOrFileExists(path string) bool {
 	_, err := os.Stat(path)
 
-	if err != nil {
-		f.logger.Printf("Failed to check directory or file existance: %v", err)
-	}
-
 	return err == nil
 }
 

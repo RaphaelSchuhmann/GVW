@@ -29,7 +29,7 @@
     import EmptyState from "../../components/EmptyState.svelte";
 
     let {
-        deploymentData,
+        deploymentData = $bindable({}),
         deploymentUpdates,
         isEditing = $bindable(false),
         isDeleting = $bindable(false),
@@ -57,7 +57,8 @@
             falsePath: { field: "", value: "" },
             negated: false
         },
-        value: ""
+        value: "",
+        defaultValue: ""
     });
 
     let isSubmittingInformationChanges = $state(false);
@@ -187,11 +188,7 @@
                 return !isNonEmpty(field) || !isNonEmpty(value);
 
             case "CONDITIONAL":
-                return (
-                    !isNonEmpty(conditional.condition.field) ||
-                    !isNonEmpty(conditional.truePath.field) ||
-                    !isNonEmpty(conditional.falsePath.field)
-                );
+                return !isNonEmpty(conditional.condition.field);
 
             default:
                 return true;
@@ -296,9 +293,14 @@
             data.field = null;
         }
 
+        if (data.action !== "ADD") {
+            data.defaultValue = null;
+        }
+
         try {
             await addMigration(data);
-            deploymentData = await getFullDeployment(deploymentData.id);
+            const refreshed = await getFullDeployment(deploymentData.id);
+            if (refreshed) deploymentData = refreshed;
         } finally {
             isSubmittingMigration = false;
             addMigrationModal.hideModal();
@@ -316,13 +318,15 @@
                 falsePath: { field: "", value: "" },
                 negated: false
             },
-            value: ""
+            value: "",
+            defaultValue: ""
         };
     }
 
     async function deleteMigrationAndRefresh(migrationId) {
         await deleteMigration(deploymentData.id, migrationId);
-        deploymentData = await getFullDeployment(deploymentData.id);
+        const refreshed = await getFullDeployment(deploymentData.id);
+        if (refreshed) deploymentData = refreshed;
     }
 
     async function startMigrationDryRun() {
@@ -400,6 +404,10 @@
         <Dropdown title="Aktion" options={Array.from(migrationActions.values())} onChange={updateMigrationAction} />
         {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "RENAME"}
             <Input title="Neuer Feld Name" bind:value={addMigrationInputs.value} placeholder="isActive" />
+        {/if}
+
+        {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "ADD"}
+            <Input title="Standard Wert" bind:value={addMigrationInputs.defaultValue} placeholder="false" />
         {/if}
 
         {#if migrationActions.has(addMigrationInputs.action) && addMigrationInputs.action === "CONDITIONAL"}
@@ -496,8 +504,8 @@
                         <Input value={deploymentData.commit} title="Commit" placeholder="Commit hash" readonly={true} />
                     {:else}
                         <div class="flex items-center gap-4 w-full max-[900px]:flex-col">
-                            <Input bind:value={informationDraft.title} title="Titel" readonly={true} />
-                            <Input bind:value={informationDraft.version} title="Version" readonly={true} />
+                            <Input bind:value={informationDraft.title} title="Titel" />
+                            <Input bind:value={informationDraft.version} title="Version" />
                         </div>
 
                         <DefaultDatepicker title="Datum" onChange={updateDate}
@@ -586,7 +594,7 @@
                     </div>
                     {#if deploymentUpdates.length > 0}
                         <div
-                            class="flex flex-col items-center justify-center gap-2 w-full min-h-0 overflow-y-auto">
+                            class="flex flex-col items-center justify-start gap-2 w-full min-h-0 overflow-y-auto">
                             {#each deploymentUpdates as update (update.id)}
                                 <Notification id={update.id} type={update.type.toLocaleLowerCase()} title={update.title}
                                               subTitle={update.subTitle} timestamp={update.timestamp} />

@@ -7,7 +7,6 @@
     import { addToast } from "../../stores/toasts.svelte.js";
     import {
         deploymentExists,
-        getDeploymentUpdates,
         getFullDeployment
     } from "../../services/deploymentService.svelte.js";
 
@@ -63,7 +62,7 @@
     let isDeleting = $state(false);
 
     $effect(() => {
-        const _triggerDeployments = lastRefresh.DEPLOYMENTS;
+        const _trigger = lastRefresh.DEPLOYMENTS;
 
         if (!ready || isDeleting) return;
 
@@ -78,31 +77,14 @@
 
                 await fetchAndSetRaw();
                 await route("/admin/deployments");
+            } else if (!isEditing) {
+                const refreshed = await getFullDeployment(deploymentId);
+                if (refreshed) {
+                    deploymentData = refreshed;
+                    deploymentUpdates = refreshed.updates;
+                }
             }
         })();
-    });
-
-    $effect(() => {
-        const _triggerDeploymentUpdates = lastRefresh.DEPLOYMENT_UPDATES;
-
-        if (!ready) return;
-
-        async function getUpdates() {
-            if (!deploymentId) {
-                await route("/admin/deployments");
-                return;
-            }
-
-            const updates = await getDeploymentUpdates(deploymentId);
-
-            // Only update the updates if the new length is bigger than the old one
-            // as updates cannot / should not be deleted
-            if (deploymentUpdates.length < updates.length) {
-                deploymentUpdates = updates;
-            }
-        }
-
-        getUpdates();
     });
 
     function updateIsEditing(val) { isEditing = val; }
@@ -115,9 +97,7 @@
 </script>
 
 <GlobalLoader loading={isLoading}>
-    {#key deploymentData.rev}
-        <AdminDashboardDeploymentDetailsDesktop {deploymentData} deploymentUpdates={deploymentUpdates} bind:isEditing bind:isDeleting
-                                                       onChangeIsEditing={updateIsEditing}
-                                                       onChangeIsDeleting={updateIsDeleting} />
-    {/key}
+    <AdminDashboardDeploymentDetailsDesktop bind:deploymentData={deploymentData} deploymentUpdates={deploymentUpdates} bind:isEditing bind:isDeleting
+                                               onChangeIsEditing={updateIsEditing}
+                                               onChangeIsDeleting={updateIsDeleting} />
 </GlobalLoader>

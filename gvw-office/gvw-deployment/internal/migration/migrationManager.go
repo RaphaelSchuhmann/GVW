@@ -207,7 +207,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 		plan, err := m.engine.PlanDatabaseMigrations(database, dbMigrations, schema, modelToDbMap)
 		if err != nil {
 			m.logger.Printf("[MIGRATION] Bad migration found while planning deployment %s in db %s with err: %v", deploymentId, database, err)
-			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusFailed)
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusCancelled)
 			return false
 		}
 		plans[database] = plan
@@ -220,7 +220,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 			}
 
 			m.logger.Printf("[MIGRATION] Bad migration found for deployment %s in db %s with err: %v", deploymentId, database, err)
-			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusFailed)
+			m.sendDryRunResponse(ctx, deploymentId, gvwErrors.MIGRATION_CodeBadMigrationFound, client.StatusCancelled)
 			return false
 		}
 	}
@@ -232,7 +232,7 @@ func (m *MigrationManager) executeDryRunPipeline(ctx context.Context, deployment
 //  1. plan every database and run a read-only pre-flight against the current data,
 //  2. create a new ephemeral replication db which exists during the migration process for each touched database
 //  3. write the migrated documents database by database.
-func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema *Schema, migrations []Migration) (map[string]string ,error) {
+func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema *Schema, migrations []Migration) (map[string]string, error) {
 	// Never cancelled: an aborted write run would leave the data half-migrated.
 	ctx := context.Background()
 
@@ -250,6 +250,8 @@ func (m *MigrationManager) executeMigrationPipeline(deploymentId string, schema 
 	}
 
 	backupDbs := make(map[string]string)
+
+	m.logger.Printf("[MIGRATION] Creating database backups for %d databases for deployment %s", len(databases), deploymentId)
 
 	for _, database := range databases {
 		backupDb, err := m.db.CreateBackupOfDatabase(ctx, database)

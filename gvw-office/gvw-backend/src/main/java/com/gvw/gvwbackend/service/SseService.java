@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseService {
   /** Thread-safe collection of currently connected SSE clients. */
   private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+  private final Object emitterLock = new Object();
 
   private static final Logger log = LoggerFactory.getLogger(SseService.class);
   private final MaintenanceState maintenanceState;
@@ -44,22 +45,25 @@ public class SseService {
    * @return newly created and registered SSE emitter
    */
   public SseEmitter createEmitter() {
-    if (maintenanceState.getActive()) {
-      // Hardcoded status code is fine here as it is a general infra error
-      throw new ServiceUnavailableException("0000503");
+    SseEmitter emitter;
+    synchronized (emitterLock) {
+      if (maintenanceState.getActive()) {
+        // Hardcoded status code is fine here as it is a general infra error
+        throw new ServiceUnavailableException("0000503");
+      }
+
+      emitter = new SseEmitter(3600_000L);
+
+      emitter.onCompletion(() -> emitters.remove(emitter));
+      emitter.onTimeout(() -> emitters.remove(emitter));
+      emitter.onError(
+          e -> {
+            log.debug("SSE client disconnected: {}", e.getMessage());
+            emitters.remove(emitter);
+          });
+
+      emitters.add(emitter);
     }
-
-    SseEmitter emitter = new SseEmitter(3600_000L);
-
-    emitter.onCompletion(() -> emitters.remove(emitter));
-    emitter.onTimeout(() -> emitters.remove(emitter));
-    emitter.onError(
-        e -> {
-          log.debug("SSE client disconnected: {}", e.getMessage());
-          emitters.remove(emitter);
-        });
-
-    emitters.add(emitter);
 
     try {
       emitter.send(SseEmitter.event().name("connected").data("success"));
@@ -124,7 +128,26 @@ public class SseService {
    * true.
    */
   public void sendKillSignal() {
-    safeBroadcast("kill", null);
+    List<SseEmitter> emittersToKill;
+    synchronized (emitterLock) {
+      emittersToKill = new ArrayList<>(emitters);
+      emitters.clear();
+    }
+
+    emittersToKill.forEach(
+        emitter -> {
+          try {
+            emitter.send(SseEmitter.event().name("kill"));
+          } catch (Exception ex) {
+            log.debug("Failed to send kill event to emitter: {}", ex.getMessage());
+          } finally {
+            try {
+              emitter.complete();
+            } catch (Exception ex) {
+              log.debug("Failed to complete emitter after kill signal: {}", ex.getMessage());
+            }
+          }
+        });
   }
 
   /**

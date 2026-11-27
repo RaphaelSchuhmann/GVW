@@ -309,7 +309,7 @@ class DeploymentServiceTest {
   void addMigration_InvalidFields_ThrowsBadRequestException() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", null, MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", null, MigrationAction.ADD, null, null, "");
 
     when(migrationValidator.areMigrationFieldsValid(
             any(MigrationAction.class), any(), any(), any()))
@@ -322,7 +322,7 @@ class DeploymentServiceTest {
   void addMigration_InvalidSequence_ThrowsBadRequestException() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null, "");
 
     Deployment deployment =
         Deployment.builder()
@@ -347,7 +347,7 @@ class DeploymentServiceTest {
   void addMigration_ValidRequest_AddsMigrationAndUpdatesDeployment() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null, "");
 
     Deployment deployment =
         Deployment.builder()
@@ -376,7 +376,7 @@ class DeploymentServiceTest {
   void addMigration_RunningDeployment_ThrowsForbiddenException() {
     AddMigrationRequestDTO request =
         new AddMigrationRequestDTO(
-            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null);
+            "dep-id", "1-rev", "test-db", "field1", MigrationAction.ADD, null, null, "");
 
     Deployment deployment =
         Deployment.builder().id("dep-id").status(DeploymentStatus.RUNNING).build();
@@ -723,7 +723,7 @@ class DeploymentServiceTest {
   }
 
   @Test
-  void removeMigration_NonScheduledStatus_ThrowsBadRequestException() {
+  void removeMigration_RunningStatus_ThrowsBadRequestException() {
     Migration migration =
         Migration.builder()
             .id("migration-id")
@@ -735,7 +735,7 @@ class DeploymentServiceTest {
     Deployment deployment =
         Deployment.builder()
             .id("dep-id")
-            .status(DeploymentStatus.SUCCESSFUL)
+            .status(DeploymentStatus.RUNNING)
             .migrations(List.of(migration))
             .build();
 
@@ -1004,7 +1004,7 @@ class DeploymentServiceTest {
     assertEquals(DeploymentStatus.CANCELLED, deployment.getStatus());
     assertEquals(1, deployment.getUpdates().size());
     verify(dbService).update(eq("deployments"), eq("dep-id"), any(Deployment.class));
-    verify(sseService).sendRefresh("DEPLOYMENT_UPDATES");
+    verify(sseService).sendRefresh("DEPLOYMENTS");
   }
 
   @Test
@@ -1057,39 +1057,10 @@ class DeploymentServiceTest {
 
     when(dbService.findById(anyString(), eq("dep-id"), eq(Deployment.class)))
         .thenReturn(deployment);
-    when(maintenanceState.getActive()).thenReturn(true);
 
     deploymentService.updateDeploymentStatus(
         "dep-id", new UpdateDeploymentStatusRequestDTO("failed", 0));
 
     verify(maintenanceState).setActive(false);
-  }
-
-  @Test
-  void getDeploymentUpdates_NullId_ThrowsBadRequestException() {
-    assertThrows(BadRequestException.class, () -> deploymentService.getDeploymentUpdates(null));
-  }
-
-  @Test
-  void getDeploymentUpdates_BlankId_ThrowsBadRequestException() {
-    assertThrows(BadRequestException.class, () -> deploymentService.getDeploymentUpdates("   "));
-  }
-
-  @Test
-  void getDeploymentUpdates_ValidId_ReturnsUpdates() {
-    Deployment deployment =
-        Deployment.builder()
-            .id("dep-id")
-            .status(DeploymentStatus.SCHEDULED)
-            .updates(new ArrayList<>())
-            .build();
-
-    when(dbService.findById(anyString(), eq("dep-id"), eq(Deployment.class)))
-        .thenReturn(deployment);
-
-    List<Deployment.Update> result = deploymentService.getDeploymentUpdates("dep-id");
-
-    assertNotNull(result);
-    assertTrue(result.isEmpty());
   }
 }

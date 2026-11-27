@@ -39,25 +39,27 @@
         return Math.max(longestLength * 8 + 80, 120);
     });
 
-
-    function calculatePortalPosition() {
+    function positionMenu() {
         if (!buttonRef || !menuRef) return;
 
         const rect = buttonRef.getBoundingClientRect();
-        const menuHeight = menuRef.getBoundingClientRect().height;
+        const menuHeight = menuRef.offsetHeight;
+        const width = Math.max(rect.width, minWidth);
+        // keep the menu inside the viewport horizontally
+        const left = Math.max(0, Math.min(rect.left, window.innerWidth - width));
 
         Object.assign(menuRef.style, {
             position: "fixed",
             top: `${displayTop ? rect.top - menuHeight : rect.bottom}px`,
-            left: `${rect.left}px`,
-            width: `${Math.max(rect.width, minWidth)}px`,
+            left: `${left}px`,
+            width: `${width}px`,
             minWidth: "0",
             boxSizing: "border-box",
             margin: "0",
-            zIndex: "99999"
+            zIndex: "99999",
+            visibility: "visible"
         });
     }
-
 
     function selectOption(event) {
         const option = event.currentTarget.dataset.option;
@@ -82,20 +84,42 @@
         return () => document.removeEventListener("mousedown", handleClickOutside);
     });
 
+    // Position the portal menu as soon as it exists and keep it attached to the button while open
+    $effect(() => {
+        if (!open || !usePortal || !menuRef) return;
+
+        positionMenu();
+
+        const handler = (event) => {
+            // ignore scrolling inside the menu itself
+            if (event?.target instanceof Node && menuRef?.contains(event.target)) return;
+            positionMenu();
+        };
+
+        window.addEventListener("resize", handler);
+        window.addEventListener("scroll", handler, true);
+        return () => {
+            window.removeEventListener("resize", handler);
+            window.removeEventListener("scroll", handler, true);
+        };
+    });
+
     function toggleDropdown() {
         open = !open;
         if (!open || options.length === 0) return;
 
         requestAnimationFrame(() => {
-            calculatePortalPosition();
-
             if (selected.toLowerCase() === "wählen") return;
 
             const index = options.indexOf(selected);
-            if (index === -1) return;
+            const item = menuRef?.children[index];
+            if (!menuRef || !item) return;
 
-            const selectedElement = menuRef?.children[index];
-            selectedElement?.scrollIntoView({ block: "center", behavior: "smooth" });
+            // scroll only the menu itself, not every scrollable ancestor
+            menuRef.scrollTo({
+                top: item.offsetTop - (menuRef.clientHeight - item.offsetHeight) / 2,
+                behavior: "smooth"
+            });
         });
     }
 
@@ -145,6 +169,7 @@
                 <div
                     use:portal
                     bind:this={menuRef}
+                    style="position: fixed; top: 0; left: 0; visibility: hidden;"
                     class={`dropdown-portal-menu ${showDropshadow ? dropShadow : ""} ${bgWhite ? "bg-white" : "bg-gv-input-bg"} ${displayTop ? "rounded-t-1" : "rounded-b-1"} max-h-[20vh] flex flex-col items-center overflow-y-auto`}
                 >
                     {@render dropdownItems()}

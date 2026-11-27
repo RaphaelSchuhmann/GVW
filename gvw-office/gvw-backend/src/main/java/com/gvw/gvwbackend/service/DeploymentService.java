@@ -14,7 +14,6 @@ import com.gvw.gvwbackend.model.DeploymentStatus;
 import com.gvw.gvwbackend.model.Migration;
 import com.gvw.gvwbackend.model.deploymentSystem.HealthStatus;
 import com.gvw.gvwbackend.model.helper.GVWHttpResponse;
-import com.gvw.gvwbackend.model.helper.StatusMessage;
 import com.gvw.gvwbackend.state.MaintenanceState;
 import com.gvw.gvwbackend.util.*;
 import java.time.Clock;
@@ -46,6 +45,8 @@ public class DeploymentService {
   private static final Logger log = LoggerFactory.getLogger(DeploymentService.class);
 
   private static final int DEPLOYMENT_SUCCESSFUL_CODE = 1 << 22;
+  private static final Set<DeploymentStatus> ALLOWED_UPDATE_STATUSES =
+      EnumSet.of(DeploymentStatus.SUCCESSFUL, DeploymentStatus.CANCELLED, DeploymentStatus.FAILED);
 
   /**
    * Creates the deployment service using the system UTC clock.
@@ -291,6 +292,7 @@ public class DeploymentService {
             .field(request.field())
             .value(request.value())
             .conditional(request.conditional())
+                .defaultValue(request.defaultValue())
             .build();
 
     MigrationValidator.ValidationResult validationResult =
@@ -309,6 +311,8 @@ public class DeploymentService {
     deployment.setMigrations(migrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
+
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -357,6 +361,8 @@ public class DeploymentService {
     deployment.setStartTime(request.startTime());
     deployment.setEndTime(request.endTime());
 
+    boolean shouldStartBuild = false;
+
     // Only do build when saved commit and new commit differ!
     if (request.commit() != null
         && !request.commit().isBlank()
@@ -367,6 +373,17 @@ public class DeploymentService {
             String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
       }
 
+      shouldStartBuild = true;
+    }
+
+    if (request.commit() != null && !request.commit().isBlank()) {
+      deployment.setCommit(request.commit());
+    }
+
+    dbService.update("deployments", deployment.getId(), deployment);
+
+    // Only trigger builds after the database update finished successfully to avoid races
+    if (shouldStartBuild) {
       GVWHttpResponse resp =
           httpUtil.sendPostRequestWithoutBody(
               "http://localhost:3501/build/" + deployment.getId() + "/" + request.commit(),
@@ -378,11 +395,7 @@ public class DeploymentService {
       }
     }
 
-    if (request.commit() != null && !request.commit().isBlank()) {
-      deployment.setCommit(request.commit());
-    }
-
-    dbService.update("deployments", deployment.getId(), deployment);
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -413,7 +426,7 @@ public class DeploymentService {
 
     Deployment deployment = findDeploymentById(deploymentId);
 
-    if (deployment.getStatus() != DeploymentStatus.SCHEDULED) {
+    if (deployment.getStatus() == DeploymentStatus.RUNNING) {
       throw new BadRequestException(
           String.valueOf(
               ErrorDomain.DEPLOYMENT.createCode(ErrorAction.DELETE, 400, ErrorResource.MIGRATION)));
@@ -424,6 +437,8 @@ public class DeploymentService {
     deployment.setMigrations(mutableMigrations);
 
     dbService.update("deployments", deployment.getId(), deployment);
+
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
@@ -454,10 +469,6 @@ public class DeploymentService {
       return;
     }
 
-    // Update deployment status to RUNNING
-    deployment.setStatus(DeploymentStatus.RUNNING);
-    dbService.update("deployments", deployment.getId(), deployment);
-
     GVWHttpResponse resp =
         httpUtil.sendPostRequestWithBody(
             "http://localhost:3501/migration/test/" + deploymentId,
@@ -466,10 +477,6 @@ public class DeploymentService {
 
     if (resp.isError()) {
       log.debug("Failed to trigger migration dry run. Responded with {}", resp.status());
-
-      // Set deployment status to cancelled
-      deployment.setStatus(DeploymentStatus.CANCELLED);
-      dbService.update("deployments", deployment.getId(), deployment);
 
       throw new BadGatewayException(
           String.valueOf(
@@ -492,10 +499,21 @@ public class DeploymentService {
   public void startDeployment(String deploymentId) {
     if (deploymentId == null || deploymentId.isBlank()) {
       throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
+              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
     }
 
     Deployment deployment = findDeploymentById(deploymentId);
+
+    if (deployment.getStatus() == DeploymentStatus.RUNNING) {
+      throw new ForbiddenException(
+              String.valueOf(
+                      ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403)));
+    }
+
+    // Update deployment status to running
+    deployment.setStatus(DeploymentStatus.RUNNING);
+    dbService.update("deployments", deployment.getId(), deployment);
+    sseService.sendRefresh("DEPLOYMENTS");
 
     // Send kill signal for shutdown
     maintenanceState.setActive(true);
@@ -512,9 +530,17 @@ public class DeploymentService {
     if (resp.isError()) {
       log.debug(
           "Failed to start deployment for deploymentId {}. Responded with {}",
-          deployment,
+          deployment.getId(),
           resp.status());
+
+      // Reset deployment status to cancelled
+      deployment.setStatus(DeploymentStatus.CANCELLED);
       maintenanceState.setActive(false);
+
+      Deployment current = findDeploymentById(deploymentId);
+      current.setStatus(DeploymentStatus.CANCELLED);
+      dbService.update("deployments", current.getId(), current);
+
       throw new BadGatewayException(
           String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 502)));
     }
@@ -541,9 +567,9 @@ public class DeploymentService {
    * corresponding status messages as deployment updates.
    *
    * <p>Only {@code SUCCESSFUL}, {@code CANCELLED}, and {@code FAILED} are accepted as target
-   * statuses. The deployment status is only changed for {@code CANCELLED}, {@code FAILED}, or when
-   * the reason code signals a successful deployment. Maintenance mode is always deactivated after a
-   * status update.
+   * statuses. {@code CANCELLED} and {@code FAILED} always apply, while {@code SUCCESSFUL} only
+   * changes the deployment status when the reason code signals a successful deployment. Maintenance
+   * mode is always deactivated after a status update.
    *
    * @param deploymentId The unique identifier of the deployment.
    * @param request The status update request containing the new status and reason code.
@@ -553,59 +579,63 @@ public class DeploymentService {
   public void updateDeploymentStatus(
       String deploymentId, UpdateDeploymentStatusRequestDTO request) {
     if (deploymentId == null || deploymentId.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+      throw invalidUpdateRequest();
     }
 
     Deployment deployment = findDeploymentById(deploymentId);
 
-    // Only valid status values are SUCCESSFUL, CANCELLED, FAILED
-    DeploymentStatus deploymentStatus = DeploymentStatus.fromString(request.status());
-    if (deploymentStatus != DeploymentStatus.SUCCESSFUL
-        && deploymentStatus != DeploymentStatus.CANCELLED
-        && deploymentStatus != DeploymentStatus.FAILED) {
+    DeploymentStatus requestedStatus = DeploymentStatus.fromString(request.status());
+    if (!ALLOWED_UPDATE_STATUSES.contains(requestedStatus)) {
       log.warn(
-          "Received deployment status update request with passed status {} which is not a valid status for this endpoint",
+          "Received deployment status update with status {}, which is not valid for this endpoint",
           request.status());
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
+      throw invalidUpdateRequest();
     }
 
-    List<StatusMessage> statusMessage = ErrorCodeMapper.getMessages(request.reason());
-    if (deploymentStatus == DeploymentStatus.CANCELLED
-        || deploymentStatus == DeploymentStatus.FAILED
-        || request.reason() == DEPLOYMENT_SUCCESSFUL_CODE) {
-      deployment.setStatus(deploymentStatus);
-    }
+    applyStatusUpdate(deployment, requestedStatus, request.reason());
 
-    // If the maintenance state is set it should always be reset after a deployment update
-    if (maintenanceState.getActive()) {
-      maintenanceState.setActive(false);
-    }
+    // The maintenance state is always reset after a deployment update
+    maintenanceState.setActive(false);
 
-    deployment.addUpdate(statusMessage);
+    deployment.addUpdate(ErrorCodeMapper.getMessages(request.reason()));
 
     dbService.update("deployments", deployment.getId(), deployment);
-    sseService.sendRefresh("DEPLOYMENT_UPDATES");
+    sseService.sendRefresh("DEPLOYMENTS");
   }
 
   /**
-   * Retrieves all recorded status updates for a deployment, sorted by timestamp descending.
+   * Applies a requested status update to a deployment according to the pipeline status rules.
    *
-   * @param deploymentId The unique identifier of the deployment.
-   * @return A list of deployment updates.
-   * @throws BadRequestException if the deployment ID is null or blank.
-   * @throws NotFoundException if the deployment does not exist.
+   * @param deployment The deployment to update.
+   * @param requested The requested target status.
+   * @param reason The Reason code accompanying the status update.
    */
-  public List<Deployment.Update> getDeploymentUpdates(String deploymentId) {
-    if (deploymentId == null || deploymentId.isBlank()) {
-      throw new BadRequestException(
-          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.READ_ONE, 400)));
+  private void applyStatusUpdate(Deployment deployment, DeploymentStatus requested, int reason) {
+    boolean successful = requested == DeploymentStatus.SUCCESSFUL;
+
+    if (reason == DEPLOYMENT_SUCCESSFUL_CODE && successful) {
+      deployment.setStatus(DeploymentStatus.SUCCESSFUL);
+      return;
     }
 
-    Deployment deployment = findDeploymentById(deploymentId);
+    if (successful && deployment.getStatus() != DeploymentStatus.RUNNING) {
+      deployment.setStatus(DeploymentStatus.SCHEDULED);
+      return;
+    }
 
-    return deployment.getUpdates();
+    if (!successful) {
+      deployment.setStatus(requested);
+    }
+  }
+
+  /**
+   * Creates a {@link BadRequestException} for invalid deployment status update requests.
+   *
+   * @return A BadRequestException with the deployment update error code.
+   */
+  private BadRequestException invalidUpdateRequest() {
+    return new BadRequestException(
+        String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UPDATE, 400)));
   }
 
   /**

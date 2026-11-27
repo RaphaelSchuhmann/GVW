@@ -3,7 +3,7 @@ import {
     apiCheckDeployment,
     apiDeleteDeployment, apiDeleteMigration,
     apiGetDeployment, apiGetDeploymentsToday,
-    apiGetDeploymentUpdates, apiTriggerDeployment, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
+    apiTriggerDeployment, apiTriggerMigrationDryRun, apiUpdateDeploymentInformation
 } from "../api/apiDeployments.svelte.js";
 import { handleGlobalApiError } from "../api/globalErrorHandler.svelte.js";
 import { normalizeResponse } from "../api/http.svelte.js";
@@ -51,8 +51,7 @@ const isFetching = {
     deploy: false,
     testMigrations: false,
     today: false,
-    migrationDryRun: false,
-    deploymentUpdates: false
+    migrationDryRun: false
 };
 
 /**
@@ -61,13 +60,6 @@ const isFetching = {
  * @type {Map<string, Promise<boolean>>}
  */
 const pendingChecks = new Map();
-
-/**
- * Map of in-flight deployment update refreshes, keyed by deployment ID,
- * used to deduplicate concurrent requests for the same deployment.
- * @type {Map<string, Promise<Array>>}
- */
-const pendingDeploymentUpdateQueries = new Map();
 
 /**
  * Adds a new deployment and triggers a success toast notification upon completion.
@@ -130,40 +122,6 @@ export async function getFullDeployment(id) {
     } finally {
         isFetching.getDeployment = false;
     }
-}
-
-/**
- * Fetches all updates for a deployment by its ID, validating that all required fields are present.
- * @param {string} id - The unique ID of the deployment.
- * @returns {Promise<Array>} The array of updates for a deployment, or an empty array if validation or fetching fails.
- */
-export async function getDeploymentUpdates(id) {
-    if (!id) return [];
-
-    if (pendingDeploymentUpdateQueries.has(id)) return await pendingDeploymentUpdateQueries.get(id);
-
-    isFetching.deploymentUpdates = true;
-
-    const request = (async () => {
-        try {
-            const { resp, body } = await apiGetDeploymentUpdates(id);
-            const normalized = normalizeResponse(resp);
-
-            if (handleGlobalApiError(normalized)) return [];
-
-            if (!(body !== null && typeof body === "object" && "updates" in body)) return [];
-
-            return body.updates;
-        } finally {
-            pendingDeploymentUpdateQueries.delete(id);
-            if (pendingDeploymentUpdateQueries.size === 0) {
-                isFetching.deploymentUpdates = false;
-            }
-        }
-    })();
-
-    pendingDeploymentUpdateQueries.set(id, request);
-    return await request;
 }
 
 /**

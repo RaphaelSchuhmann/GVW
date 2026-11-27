@@ -14,22 +14,29 @@ type Config struct {
 	InternalToken         string            `json:"internal_token"`
 	JavaBaseURL           string            `json:"java_base_url"`
 	GithubRepoURL         string            `json:"github_repo_url"`
+	GitBranch             string            `json:"git_branch"`
+	GitIntialFetchDepth   int               `json:"git_initial_fetch_depth"`
+	GitDeepenStep         int               `json:"git_deepen_step"`
+	GitMaxDeepenAttempts  int               `json:"git_max_deepen_attempts"`
 	ModelDatabaseMap      map[string]string `json:"model_db_map"`
 	DatabaseURL           string            `json:"database_url"`
 	DatabaseUsername      string            `json:"database_username"`
 	DatabasePassword      string            `json:"database_password"`
 	ShutdownTimeout       int               `json:"shutdown_timeout_s"` // in seconds
 	StartupTimeout        int               `json:"startup_timeout_s"`  // in seconds
+	StartupDelay          int               `json:"startup_delay"`
 	MaintenanceFlagDir    string            `json:"maintenance_flag_dir"`
 	BackendDir            string            `json:"backend_dir"`
 	BackendEnv            string            `json:"backend_env"`
 	FrontendDir           string            `json:"frontend_dir"`
 	FrontendBackupDir     string            `json:"frontend_backup_dir"`
+	FrontendApiUrl        string            `json:"frontend_api_url"`
 	SmtpHost              string            `json:"smtpHost"`
 	SmtpPort              string            `json:"smtpPort"`
 	SenderEmail           string            `json:"senderEmail"`
 	SenderPassword        string            `json:"senderPassword"`
 	NotificationRecipient string            `json:"notificationRecipient"`
+	LogDir                string            `json:"log_dir"`
 }
 
 type ConfigManager struct {

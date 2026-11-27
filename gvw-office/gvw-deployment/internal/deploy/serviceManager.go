@@ -64,6 +64,11 @@ func (s *ServiceManager) StartService(serviceName string, timeoutDuration int) e
 		return err
 	}
 
+	if serviceName == backendService {
+		// Give the backend time to fully start
+		time.Sleep(time.Duration(s.cfg.Config.StartupDelay) * time.Second)
+	}
+
 	s.log.Printf("[SERVICE] Started service %s successfully", serviceName)
 
 	return nil

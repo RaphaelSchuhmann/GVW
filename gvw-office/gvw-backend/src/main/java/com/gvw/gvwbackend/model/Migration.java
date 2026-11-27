@@ -18,6 +18,7 @@ public class Migration {
   private MigrationAction action;
   private Conditional conditional;
   private String value;
+  private String defaultValue;
 
   @Data
   @Builder

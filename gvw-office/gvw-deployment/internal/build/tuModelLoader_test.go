@@ -78,10 +78,10 @@ func TestParseLines_Annotations(t *testing.T) {
 	_, _, loader := setupTestLoader()
 
 	tests := []struct {
-		name           string
-		lines          []string
-		wantField      string
-		wantFieldType  string
+		name            string
+		lines           []string
+		wantField       string
+		wantFieldType   string
 		wantFieldAbsent string
 	}{
 		{
@@ -128,14 +128,41 @@ func TestParseLines_Annotations(t *testing.T) {
 	}
 }
 
+func TestParseLines_PreservesCommentMarkersInsideStrings(t *testing.T) {
+	_, _, loader := setupTestLoader()
+
+	lines := []string{
+		"public class TestClass {",
+		"    @JsonProperty(\"https://example.com/json-name\") // trailing comment",
+		"    private String javaName;",
+		"    private String homepage = \"https://example.com\"; // real comment",
+		"}",
+	}
+
+	result := loader.parseLines(lines)
+
+	class := assertClassExists(t, result, "TestClass")
+	members, ok := class["members"].(map[string]any)
+	if !ok {
+		t.Fatalf("TestClass has no members map")
+	}
+
+	if len(members) != 2 {
+		t.Fatalf("Expected 2 members, got %d", len(members))
+	}
+
+	assertSchemaField(t, result, "TestClass", "https://example.com/json-name", "String")
+	assertSchemaField(t, result, "TestClass", "homepage", "String")
+}
+
 func TestParseLines_ComplexParsing(t *testing.T) {
 	_, _, loader := setupTestLoader()
 
 	tests := []struct {
-		name         string
-		lines        []string
-		wantMembers  map[string]string
-		wantCount    int
+		name        string
+		lines       []string
+		wantMembers map[string]string
+		wantCount   int
 	}{
 		{
 			name: "generic declarations",
@@ -300,11 +327,11 @@ func TestNormalizeType_PrimitiveTypes(t *testing.T) {
 
 func TestNormalizeType_KnownTypes(t *testing.T) {
 	tests := []struct {
-		name          string
-		input         string
-		classes       map[string]bool
-		enums         map[string]bool
-		expected      string
+		name     string
+		input    string
+		classes  map[string]bool
+		enums    map[string]bool
+		expected string
 	}{
 		{
 			name:     "known enum",
@@ -337,12 +364,12 @@ func TestNormalizeType_KnownTypes(t *testing.T) {
 
 func TestNormalizeType_CollectionTypes(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      string
-		classes    map[string]bool
-		enums      map[string]bool
-		wantType   string
-		wantItems  string
+		name      string
+		input     string
+		classes   map[string]bool
+		enums     map[string]bool
+		wantType  string
+		wantItems string
 	}{
 		{
 			name:      "List with primitive",
@@ -462,10 +489,10 @@ func TestNormalizeType_NestedStructures(t *testing.T) {
 	enums := map[string]bool{}
 
 	tests := []struct {
-		name          string
-		input         string
-		wantType      string
-		wantNested    bool
+		name           string
+		input          string
+		wantType       string
+		wantNested     bool
 		wantNestedType string
 		wantNestedItem string
 	}{
@@ -512,9 +539,9 @@ func TestNormalizeType_ErrorCases(t *testing.T) {
 	enums := map[string]bool{}
 
 	tests := []struct {
-		name      string
-		input     string
-		wantCode  gvwErrors.Code
+		name     string
+		input    string
+		wantCode gvwErrors.Code
 	}{
 		{
 			name:     "unknown class",
@@ -571,7 +598,7 @@ func TestNormalizeAndValidateSchema_ClassReferencingAnotherClass(t *testing.T) {
 
 	rawSchema := map[string]any{
 		"Deployment": createClassSchema("class", map[string]any{"migration": "Migration"}),
-		"Migration": createClassSchema("class", map[string]any{"id": "String"}),
+		"Migration":  createClassSchema("class", map[string]any{"id": "String"}),
 	}
 
 	result, err := loader.NormalizeAndValidateSchema(rawSchema)
@@ -587,7 +614,7 @@ func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
 	_, _, loader := setupTestLoader()
 
 	rawSchema := map[string]any{
-		"Task": createClassSchema("class", map[string]any{"status": "Status"}),
+		"Task":   createClassSchema("class", map[string]any{"status": "Status"}),
 		"Status": createClassSchema("enum", nil),
 	}
 
@@ -603,7 +630,6 @@ func TestNormalizeAndValidateSchema_ClassReferencingEnum(t *testing.T) {
 		t.Errorf("Enum should not appear in normalized schema")
 	}
 }
-
 
 func TestNormalizeAndValidateSchema_UnknownTypes(t *testing.T) {
 	_, _, loader := setupTestLoader()
@@ -703,7 +729,7 @@ func TestMarkEmbeddedClasses_ReferenceTypes(t *testing.T) {
 			name: "direct reference",
 			schema: map[string]any{
 				"Deployment": createClassSchema("class", map[string]any{"migration": "Migration"}),
-				"Migration": createClassSchema("class", map[string]any{"id": "String"}),
+				"Migration":  createClassSchema("class", map[string]any{"id": "String"}),
 			},
 			check: func(schema map[string]any) {
 				assertClassNotEmbedded(t, schema, "Deployment")
@@ -771,7 +797,7 @@ func TestMarkEmbeddedClasses_NoEmbeddingScenarios(t *testing.T) {
 			name: "unreferenced class",
 			schema: map[string]any{
 				"Deployment": createClassSchema("class", map[string]any{"id": "String"}),
-				"Migration": createClassSchema("class", map[string]any{"id": "String"}),
+				"Migration":  createClassSchema("class", map[string]any{"id": "String"}),
 			},
 			check: func(schema map[string]any) {
 				assertClassNotEmbedded(t, schema, "Deployment")
@@ -793,7 +819,7 @@ func TestMarkEmbeddedClasses_NoEmbeddingScenarios(t *testing.T) {
 		{
 			name: "enum not embedded",
 			schema: map[string]any{
-				"Task": createClassSchema("class", map[string]any{"status": "string"}),
+				"Task":   createClassSchema("class", map[string]any{"status": "string"}),
 				"Status": createClassSchema("enum", nil),
 			},
 			check: func(schema map[string]any) {
@@ -830,8 +856,8 @@ func TestMarkEmbeddedClasses_MultipleReferencesToSameModel(t *testing.T) {
 
 	schema := map[string]any{
 		"Deployment": createClassSchema("class", map[string]any{"migration": "Migration"}),
-		"Backup": createClassSchema("class", map[string]any{"migration": "Migration"}),
-		"Migration": createClassSchema("class", map[string]any{"id": "String"}),
+		"Backup":     createClassSchema("class", map[string]any{"migration": "Migration"}),
+		"Migration":  createClassSchema("class", map[string]any{"id": "String"}),
 	}
 
 	loader.MarkEmbeddedClasses(schema)
@@ -847,9 +873,9 @@ func TestMarkEmbeddedClasses_TransitiveEmbedding(t *testing.T) {
 		"Deployment": createClassSchema("class", map[string]any{
 			"migrations": createFieldSchema("Migration"),
 		}),
-		"Migration": createClassSchema("class", map[string]any{"conditional": "Conditional"}),
+		"Migration":   createClassSchema("class", map[string]any{"conditional": "Conditional"}),
 		"Conditional": createClassSchema("class", map[string]any{"condition": "Branch"}),
-		"Branch": createClassSchema("class", map[string]any{"id": "String"}),
+		"Branch":      createClassSchema("class", map[string]any{"id": "String"}),
 	}
 
 	loader.MarkEmbeddedClasses(schema)

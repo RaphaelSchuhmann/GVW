@@ -105,6 +105,9 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 	for _, rawLine := range lines {
 		line := strings.TrimSpace(rawLine)
 
+		// Strip trailing line comments so declarations like `private int x = 1; // note` still end with ';'
+		line = stripLineComment(line)
+
 		if m.shouldSkipLine(line) {
 			continue
 		}
@@ -135,6 +138,48 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 	}
 
 	return result
+}
+
+func stripLineComment(line string) string {
+	var quote byte // 0 outside literals, otherwise the opening quote (' or ")
+	escaped := false
+
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+
+		if quote != 0 {
+			quote, escaped = advanceInLiteral(c, quote, escaped)
+			continue
+		}
+
+		switch {
+		case c == '"' || c == '\'':
+			quote = c
+		case isLineCommentStart(line, i):
+			return strings.TrimSpace(line[:i])
+		}
+	}
+
+	return line
+}
+
+// advanceInLiteral returns the new (quote, escaped) state after reading c inside
+// a string or char literal.
+func advanceInLiteral(c, quote byte, escaped bool) (byte, bool) {
+	switch {
+	case escaped:
+		return quote, false
+	case c == '\\':
+		return quote, true
+	case c == quote:
+		return 0, false
+	default:
+		return quote, false
+	}
+}
+
+func isLineCommentStart(line string, i int) bool {
+	return line[i] == '/' && i+1 < len(line) && line[i+1] == '/'
 }
 
 func (m *ModelLoader) shouldSkipLine(line string) bool {
@@ -361,7 +406,10 @@ func normalizeType(typeName string, classes map[string]bool, enums map[string]bo
 
 	// Primitive and Wrapper Mappings
 	switch typeName {
-	case "String", "char", "Character", "Instant", "LocalDate", "LocalDateTime", "LocalTime":
+	case "String", "char", "Character", "UUID",
+		"Instant", "LocalDate", "LocalDateTime", "LocalTime",
+		"OffsetDateTime", "OffsetTime", "ZonedDateTime",
+		"YearMonth", "Year", "ZoneId", "ZoneOffset":
 		return "string", nil
 	case "byte", "Byte", "short", "Short", "int", "Integer", "long", "Long", "BigInteger":
 		return "int", nil

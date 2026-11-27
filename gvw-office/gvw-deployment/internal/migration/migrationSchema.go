@@ -3,8 +3,10 @@ package migration
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	gvwErrors "gvw/gvw-deployment/internal/utils/errors"
@@ -192,6 +194,150 @@ func (s *Schema) PathExists(roots []string, path string) bool {
 		}
 	}
 	return false
+}
+
+// FieldType resolves the type of the leaf of path within the given root models.
+// It returns nil when the path cannot be resolved to a known type.
+func (s *Schema) FieldType(roots []string, path string) *TypeRef {
+	segs := splitPath(path)
+	for _, r := range roots {
+		if t := s.typeFieldType(&TypeRef{Kind: kindModel, Model: r}, segs); t != nil {
+			return t
+		}
+	}
+	return nil
+}
+
+func (s *Schema) typeFieldType(t *TypeRef, segs []string) *TypeRef {
+	if t == nil || len(segs) == 0 {
+		return t
+	}
+	switch t.Kind {
+	case kindArray:
+		return s.typeFieldType(t.Items, segs)
+	case kindMap:
+		return s.typeFieldType(t.Values, segs[1:]) // first segment is a dynamic key
+	case kindModel:
+		m := s.lookup(t.Model)
+		if m == nil {
+			return &TypeRef{Kind: kindAny}
+		}
+		member, ok := m.Members[segs[0]]
+		if !ok {
+			return nil
+		}
+		return s.typeFieldType(member, segs[1:])
+	case kindAny:
+		return t
+	default:
+		return nil
+	}
+}
+
+// CoerceValue interprets a user-supplied default value (usually a string coming from the
+// Java backend) according to the schema type. Values that cannot be interpreted are
+// returned unchanged so the schema conformance check reports them.
+func (s *Schema) CoerceValue(t *TypeRef, v any) any {
+	if t == nil || v == nil {
+		return v
+	}
+	str, isStr := v.(string)
+	if !isStr {
+		return v
+	}
+
+	switch t.Kind {
+	case kindNumber:
+		return coerceNumber(t, str, v)
+	case kindBool:
+		return coerceBool(str, v)
+	case kindArray, kindMap:
+		return coerceJSON(str, v)
+	case kindModel:
+		return s.coerceModel(t, str, v)
+	default:
+		return v
+	}
+}
+
+func coerceNumber(t *TypeRef, str string, v any) any {
+	if t.IntOnly {
+		if i, err := strconv.ParseInt(str, 10, 64); err == nil {
+			return i
+		}
+	}
+	if f, err := strconv.ParseFloat(str, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
+		return f
+	}
+	return v
+}
+
+func coerceBool(str string, v any) any {
+	if b, err := strconv.ParseBool(str); err == nil {
+		return b
+	}
+	return v
+}
+
+func coerceJSON(str string, v any) any {
+	if parsed, ok := decodeSingleJSONValue(str); ok {
+		return parsed
+	}
+	return v
+}
+
+func (s *Schema) coerceModel(t *TypeRef, str string, v any) any {
+	if m := s.lookup(t.Model); m != nil && m.IsEnum {
+		return v
+	}
+	return coerceJSON(str, v)
+}
+
+func decodeSingleJSONValue(str string) (any, bool) {
+	dec := json.NewDecoder(strings.NewReader(str))
+	dec.UseNumber()
+
+	var parsed any
+	if err := dec.Decode(&parsed); err != nil {
+		return nil, false
+	}
+
+	var extra any
+	if dec.Decode(&extra) != io.EOF {
+		return nil, false
+	}
+
+	return parsed, true
+}
+
+// DefaultValue returns the value an ADD migration writes for a field of the given type.
+// Unknown types (nil) keep the historical null default.
+func (s *Schema) DefaultValue(t *TypeRef) any {
+	if t == nil {
+		return nil
+	}
+	switch t.Kind {
+	case kindString:
+		return ""
+	case kindNumber:
+		if t.IntOnly {
+			return 0
+		}
+		return float64(0)
+	case kindBool:
+		return false
+	case kindArray:
+		return []any{}
+	case kindMap:
+		return map[string]any{}
+	case kindModel:
+		if m := s.lookup(t.Model); m != nil && m.IsEnum {
+			return ""
+		}
+		return map[string]any{}
+	default:
+		return nil
+	}
 }
 
 func (s *Schema) typeHasPath(t *TypeRef, segs []string) bool {
@@ -449,8 +595,14 @@ func (s *Schema) checkNumberValue(t *TypeRef, v any, path string) error {
 	if !ok {
 		return typeErr(path, "number", v)
 	}
-	if t.IntOnly && f != math.Trunc(f) {
-		return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+	if t.IntOnly {
+		if n, ok := v.(json.Number); ok {
+			if !jsonNumberIsInteger(n) {
+				return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+			}
+		} else if f != math.Trunc(f) {
+			return fmt.Errorf("%s: expected a whole number, got %v", path, v)
+		}
 	}
 	return nil
 }
@@ -508,6 +660,81 @@ func (s *Schema) checkMapValue(t *TypeRef, v any, path string) error {
 
 func typeErr(path, want string, got any) error {
 	return fmt.Errorf("%s: expected %s, got %T", path, want, got)
+}
+
+// jsonNumberIsInteger reports whether a JSON number token denotes an integer value.
+// Lexical forms such as 42.0 and 1e3 are integers; fractional tokens like 42.5 or 1e-3 are not.
+func jsonNumberIsInteger(n json.Number) bool {
+	s := string(n)
+	if strings.HasPrefix(s, "-") {
+		s = s[1:]
+	}
+
+	mant := s
+	exp := int64(0)
+	if i := strings.IndexAny(s, "eE"); i >= 0 {
+		mant = s[:i]
+		exp = parseJSONNumberExponent(s[i+1:])
+	}
+
+	intPart := mant
+	fracPart := ""
+	if i := strings.IndexByte(mant, '.'); i >= 0 {
+		intPart = mant[:i]
+		fracPart = mant[i+1:]
+	}
+
+	digits := intPart + fracPart
+	nonZero := false
+	for i := 0; i < len(digits); i++ {
+		if digits[i] != '0' {
+			nonZero = true
+			break
+		}
+	}
+	if !nonZero {
+		return true
+	}
+
+	fracLen := int64(len(fracPart))
+	if exp >= fracLen {
+		return true
+	}
+
+	trailingZeros := int64(0)
+	for i := len(digits) - 1; i >= 0 && digits[i] == '0'; i-- {
+		trailingZeros++
+	}
+	return trailingZeros >= fracLen-exp
+}
+
+func parseJSONNumberExponent(s string) int64 {
+	neg := false
+	if strings.HasPrefix(s, "+") {
+		s = s[1:]
+	} else if strings.HasPrefix(s, "-") {
+		neg = true
+		s = s[1:]
+	}
+
+	const maxExp = int64(1) << 62
+	var val int64
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c < '0' || c > '9' {
+			return 0
+		}
+		d := int64(c - '0')
+		if val > (maxExp-d)/10 {
+			val = maxExp
+			break
+		}
+		val = val*10 + d
+	}
+	if neg {
+		return -val
+	}
+	return val
 }
 
 func toFloat(v any) (float64, bool) {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"gvw/gvw-deployment/internal/api/client"
 	"gvw/gvw-deployment/internal/config"
 	"gvw/gvw-deployment/internal/utils/commandExecutor"
@@ -12,6 +13,7 @@ import (
 	"gvw/gvw-deployment/internal/utils/filesystem"
 	"gvw/gvw-deployment/internal/utils/log"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -154,7 +156,7 @@ func (b *BuildManager) updateDeployment(deploymentId string, status client.Statu
 	}
 
 	if updateErr := b.javaClient.UpdateDeploymentState(deploymentId, status, errorCode, ctx); updateErr != nil {
-		b.logger.Printf("[BUILD] Failed to update dpeloyment state: %v", updateErr)
+		b.logger.Printf("[BUILD] Failed to update deployment state: %v", updateErr)
 	}
 }
 
@@ -212,6 +214,13 @@ func (b *BuildManager) setupBuildDirs(deploymentId string) {
 func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commit string) error {
 	workingDir := buildBaseDir + deploymentId + "/repo"
 
+	var branch string = b.cfg.Config.GitBranch
+	var initialFetchDepth int = b.cfg.Config.GitIntialFetchDepth
+	var deepenStep int = b.cfg.Config.GitDeepenStep
+	var maxDeepenAttempts int = b.cfg.Config.GitMaxDeepenAttempts
+	
+	remoteRef := "refs/remotes/origin/" + branch
+
 	run := func(name string, args ...string) error {
 		output, err := commandExecutor.RunCommand(ctx, workingDir, name, args...)
 		if err != nil {
@@ -219,6 +228,14 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 			return gvwErrors.Wrap(gvwErrors.CodeBuildErrorCloneRepo, err)
 		}
 		return nil
+	}
+
+	// a non-zero exit just means "commit not in the fetched history (yet)",
+	// so this deliberately doesn't log or wrap
+	commitOnBranch := func() bool {
+		_, err := commandExecutor.RunCommand(ctx, workingDir,
+			"git", "merge-base", "--is-ancestor", commit, remoteRef)
+		return err == nil
 	}
 
 	if err := run("git", "init"); err != nil {
@@ -229,15 +246,32 @@ func (b *BuildManager) cloneRepo(ctx context.Context, deploymentId string, commi
 		return err
 	}
 
-	if err := run("git", "fetch", "--depth", "1", "origin", commit); err != nil {
+	refspec := "+refs/heads/" + branch + ":" + remoteRef
+	if err := run("git", "fetch", "--depth", strconv.Itoa(initialFetchDepth), "origin", refspec); err != nil {
 		return err
 	}
 
-	if err := run("git", "checkout", "FETCH_HEAD"); err != nil {
-		return err
+	// deepen until the commit shows up in the branch history
+	for attempt := 0; attempt < maxDeepenAttempts && !commitOnBranch(); attempt++ {
+		if err := ctx.Err(); err != nil {
+			return gvwErrors.Wrap(gvwErrors.CodeBuildErrorCloneRepo, err)
+		}
+
+		b.logger.Printf("[BUILD] commit %s not in fetched history of %s for deployment %s, deepening by %d (attempt %d/%d)",
+			commit, branch, deploymentId, deepenStep, attempt+1, maxDeepenAttempts)
+
+		if err := run("git", "fetch", "--deepen", strconv.Itoa(deepenStep), "origin", refspec); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	if !commitOnBranch() {
+		err := fmt.Errorf("commit %s not found on branch %s within the fetched history", commit, branch)
+		b.logger.Printf("[BUILD] %v (deployment %s)", err, deploymentId)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorCloneRepo, err)
+	}
+
+	return run("git", "checkout", "--detach", commit)
 }
 
 func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) error {
@@ -251,6 +285,15 @@ func (b *BuildManager) buildFrontend(ctx context.Context, deploymentId string) e
 	if err != nil {
 		b.logger.Printf("[BUILD] Failed to install dependencies for frontend in deployment %s", deploymentId)
 		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorBuildFailed, err)
+	}
+
+	// Setup .env.production
+	b.logger.Printf("[BUILD] Setting up frontend enviornment for deployment %s", deploymentId)
+	filePath := filepath.Join(workingDir, ".env.production")
+	data := []byte("VITE_API_URL=" + b.cfg.Config.FrontendApiUrl)
+	if err := b.fsWrapper.WriteToFile(filePath, data); err != nil {
+		b.logger.Printf("[BUILD] Frontend environment setup failed for deployment %s", deploymentId)
+		return gvwErrors.Wrap(gvwErrors.CodeBuildErrorEnvSetupFailed, err)
 	}
 
 	// Build
