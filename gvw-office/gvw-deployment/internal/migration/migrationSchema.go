@@ -245,38 +245,52 @@ func (s *Schema) CoerceValue(t *TypeRef, v any) any {
 	if !isStr {
 		return v
 	}
+
 	switch t.Kind {
 	case kindNumber:
-		if t.IntOnly {
-			if i, err := strconv.ParseInt(str, 10, 64); err == nil {
-				return i
-			}
-		}
-		if f, err := strconv.ParseFloat(str, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
-			return f
-		}
-		return v
+		return coerceNumber(t, str, v)
 	case kindBool:
-		if b, err := strconv.ParseBool(str); err == nil {
-			return b
-		}
-		return v
+		return coerceBool(str, v)
 	case kindArray, kindMap:
-		if parsed, ok := decodeSingleJSONValue(str); ok {
-			return parsed
-		}
-		return v
+		return coerceJSON(str, v)
 	case kindModel:
-		if m := s.lookup(t.Model); m != nil && m.IsEnum {
-			return v
-		}
-		if parsed, ok := decodeSingleJSONValue(str); ok {
-			return parsed
-		}
-		return v
+		return s.coerceModel(t, str, v)
 	default:
 		return v
 	}
+}
+
+func coerceNumber(t *TypeRef, str string, v any) any {
+	if t.IntOnly {
+		if i, err := strconv.ParseInt(str, 10, 64); err == nil {
+			return i
+		}
+	}
+	if f, err := strconv.ParseFloat(str, 64); err == nil && !math.IsNaN(f) && !math.IsInf(f, 0) {
+		return f
+	}
+	return v
+}
+
+func coerceBool(str string, v any) any {
+	if b, err := strconv.ParseBool(str); err == nil {
+		return b
+	}
+	return v
+}
+
+func coerceJSON(str string, v any) any {
+	if parsed, ok := decodeSingleJSONValue(str); ok {
+		return parsed
+	}
+	return v
+}
+
+func (s *Schema) coerceModel(t *TypeRef, str string, v any) any {
+	if m := s.lookup(t.Model); m != nil && m.IsEnum {
+		return v
+	}
+	return coerceJSON(str, v)
 }
 
 func decodeSingleJSONValue(str string) (any, bool) {
@@ -289,7 +303,7 @@ func decodeSingleJSONValue(str string) (any, bool) {
 	}
 
 	var extra any
-	if err := dec.Decode(&extra); err != io.EOF {
+	if dec.Decode(&extra) != io.EOF {
 		return nil, false
 	}
 
