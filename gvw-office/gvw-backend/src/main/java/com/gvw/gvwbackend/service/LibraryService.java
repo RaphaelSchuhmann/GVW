@@ -10,8 +10,6 @@ import com.gvw.gvwbackend.model.File;
 import com.gvw.gvwbackend.model.Score;
 import com.gvw.gvwbackend.util.FileUtils;
 import java.util.*;
-import java.util.stream.Collectors;
-
 import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -61,3 +61,28 @@ jobs:
 
       - name: Build
         run: ./mvnw package
+
+  gvw-deployment:
+    name: GVW-Deployment
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: gvw-office/gvw-deployment
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: gvw-office/gvw-deployment/go.mod
+          cache: true
+          cache-dependency-path: gvw-office/gvw-deployment/go.sum
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build
+        run: go build ./...

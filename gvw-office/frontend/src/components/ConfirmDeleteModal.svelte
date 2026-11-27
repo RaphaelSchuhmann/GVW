@@ -9,6 +9,7 @@
     import { deleteUser } from "../services/userService.svelte";
     import { addToast } from "../stores/toasts.svelte";
     import { deleteArticle, deleteHelpCenterCategory } from "../services/helpCenterService.svelte.js";
+    import { deleteDeployment } from "../services/deploymentService.svelte.js";
 
     const actionMap = {
         "deleteMember": removeMember,
@@ -16,7 +17,8 @@
         "deleteLibEntry": deleteScore,
         "deleteUser": deleteUser,
         "deleteHelpCategory": deleteHelpCenterCategory,
-        "deleteHelpArticle": deleteArticle
+        "deleteHelpArticle": deleteArticle,
+        "deleteDeployment": deleteDeployment,
     };
 
     let {

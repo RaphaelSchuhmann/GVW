@@ -2,6 +2,7 @@
  * Svelte store for dashboard data
  */
 export const adminDashboardStore = $state({
+    deployments: [],
     reportHub: {
         feedbackCount: 0,
         bugReportCount: 0,

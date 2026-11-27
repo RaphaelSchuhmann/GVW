@@ -24,6 +24,10 @@
             <span class="material-symbols-rounded text-icon-dt-4">patient_list</span>
             <p class="ml-2 text-nowrap">Nutzerverwaltung</p>
         </SidebarButton>
+        <SidebarButton fontSize={viewport.isMobile ? "5" : "3"} rounded2={true} hugWidth={true} selected={currentPage === "deployments"} minimized={false} onclick={async () => await route("/admin/deployments")}>
+            <span class="material-symbols-rounded text-icon-dt-4">deployed_code</span>
+            <p class="ml-2 text-nowrap">Deployments</p>
+        </SidebarButton>
     </div>
 </div>
 

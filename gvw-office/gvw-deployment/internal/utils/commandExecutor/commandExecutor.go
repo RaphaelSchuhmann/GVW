@@ -1,0 +1,37 @@
+package commandExecutor
+
+import (
+	"context"
+	"gvw/gvw-deployment/internal/utils/errors"
+	"os"
+	"os/exec"
+	"syscall"
+	"time"
+)
+
+func RunCommand(ctx context.Context, workDir, name string, args ...string) (string, error) {
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = os.Environ()
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error {
+		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+	cmd.WaitDelay = 5 * time.Second
+
+	if workDir != "" {
+		cmd.Dir = workDir
+	}
+
+	outputBytes, err := cmd.CombinedOutput()
+	outputStr := string(outputBytes)
+
+	if err != nil {
+		if ctx.Err() != nil {
+			return outputStr, gvwErrors.Wrap(gvwErrors.CodeCommandExecutionErrorCancelledOrTimedout, ctx.Err())
+		}
+
+		return outputStr, gvwErrors.Wrap(gvwErrors.CodeCommandExecutionErrorCommandFailed, err)
+	}
+
+	return outputStr, nil
+}

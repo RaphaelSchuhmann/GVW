@@ -42,6 +42,10 @@ export function initSSE() {
        }
     });
 
+    eventSource.addEventListener('kill', (e) => {
+        teardownEventSource();
+    });
+
     eventSource.onerror = async (err) => {
         if (err.status === 401 || err.status === 403) {
             logout();

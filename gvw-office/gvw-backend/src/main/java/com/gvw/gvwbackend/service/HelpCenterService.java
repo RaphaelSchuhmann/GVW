@@ -5,6 +5,7 @@ import com.gvw.gvwbackend.dto.request.UpdateArticleRequestDTO;
 import com.gvw.gvwbackend.dto.response.*;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.model.*;
+import com.gvw.gvwbackend.model.helper.TextDocumentSearchResult;
 import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

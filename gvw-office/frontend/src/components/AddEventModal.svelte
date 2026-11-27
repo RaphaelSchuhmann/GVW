@@ -164,14 +164,8 @@
               placeholder="Kurze Beschreibung zur Veranstaltung..." marginTop="5" />
 
     <div class="w-full flex flex-col md:flex-row items-center gap-4 mt-5">
-        <div class="flex flex-col items-start w-full h-full">
-            <p class="text-dt-6 font-medium">Datum</p>
-            <DefaultDatepicker marginTop="1" onChange={updateDate} />
-        </div>
-        <div class="flex flex-col items-start w-full h-full">
-            <p class="text-dt-6 font-medium">Uhrzeit</p>
-            <TimePicker marginTop="1" selected={eventInput.time} onChange={updateTime} />
-        </div>
+        <DefaultDatepicker title="Datum" onChange={updateDate} />
+        <TimePicker title="Uhrzeit" selected={eventInput.time} onChange={updateTime} />
     </div>
 
     <div class="h-min mt-5">

@@ -20,23 +20,31 @@
         title = "",
     } = $props();
 
-    let open = $state(false);
-    let datepickerRef = null;
+    // Popup placement settings
+    const POPUP_GAP = 4;
+    const FALLBACK_POPUP_HEIGHT = 350;
+    const PREFER_ABOVE = true;
 
-    // usedMonth/Year/Date are the "Working State" for the UI
+    let open = $state(false);
+    let datepickerRef = $state(null);
+    let popupRef = $state(null);
+    let popupStyle = $state("");
+
     let usedMonth = $state(currentMonth);
     let usedYear = $state(currentYear);
     const todayDay = new Date().getDate();
     let selectedDay = $state(todayDay);
 
-    const monthOptions = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+    const monthOptions = [
+        "Januar", "Februar", "März", "April", "Mai", "Juni",
+        "Juli", "August", "September", "Oktober", "November", "Dezember"
+    ];
 
-    function generateYears(center, range = 10) {
+    function generateYears(center, range = 101) {
         return Array.from({ length: range * 2 + 1 }, (_, i) => String(center - range + i));
     }
     const yearOptions = generateYears(currentYear, 101);
 
-    // Helper to parse the current 'selected' prop into numbers we can use
     function parseSelected() {
         if (!selected) return null;
 
@@ -50,13 +58,25 @@
         return parts ? { day: parts[0], month: parts[1] - 1, year: parts[2] } : null;
     }
 
-    // Reactively build the calendar grid
+    $effect(() => {
+        const current = parseSelected();
+        if (current) {
+            usedMonth = current.month;
+            usedYear = current.year;
+            selectedDay = current.day;
+        }
+    });
+
     let calendar = $derived(buildCalendar(usedYear, usedMonth));
 
-    // Handle clicking outside to close
     $effect(() => {
         const handleClickOutside = (event) => {
-            if (datepickerRef && !datepickerRef.contains(event.target)) {
+            if (
+                datepickerRef &&
+                !datepickerRef.contains(event.target) &&
+                !event.target.closest('.datepicker-portal-popup') &&
+                !event.target.closest('.dropdown-portal-popup')
+            ) {
                 open = false;
             }
         };
@@ -64,12 +84,30 @@
         return () => document.removeEventListener("mousedown", handleClickOutside);
     });
 
-    // Ensure selectedDay doesn't exceed days in month when month/year changes
     $effect(() => {
         const maxDays = daysInMonth(usedYear, usedMonth);
         if (selectedDay > maxDays) {
             selectedDay = maxDays;
         }
+    });
+
+    $effect(() => {
+        if (!open || !popupRef) return;
+
+        updatePopupPosition();
+
+        const handler = () => updatePopupPosition();
+        window.addEventListener("resize", handler);
+        window.addEventListener("scroll", handler, true);
+
+        const resizeObserver = new ResizeObserver(handler);
+        resizeObserver.observe(popupRef);
+
+        return () => {
+            window.removeEventListener("resize", handler);
+            window.removeEventListener("scroll", handler, true);
+            resizeObserver.disconnect();
+        };
     });
 
     function buildCalendar(year, month) {
@@ -93,9 +131,42 @@
         return calendarGrid;
     }
 
+    function updatePopupPosition() {
+        if (!datepickerRef) return;
+
+        const rect = datepickerRef.getBoundingClientRect();
+        const popupHeight = popupRef?.offsetHeight || FALLBACK_POPUP_HEIGHT;
+
+        const spaceAbove = rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const fitsAbove = spaceAbove >= popupHeight + POPUP_GAP;
+        const fitsBelow = spaceBelow >= popupHeight + POPUP_GAP;
+
+        let showAbove;
+        if (PREFER_ABOVE) {
+            showAbove = fitsAbove || (!fitsBelow && spaceAbove > spaceBelow);
+        } else {
+            showAbove = !fitsBelow && (fitsAbove || spaceAbove > spaceBelow);
+        }
+
+        let top = showAbove
+            ? rect.top + window.scrollY - popupHeight - POPUP_GAP
+            : rect.bottom + window.scrollY + POPUP_GAP;
+
+        // never position the popup above the top of the page
+        top = Math.max(top, POPUP_GAP);
+
+        const left = rect.left + window.scrollX;
+
+        popupStyle = `position: absolute; top: ${top}px; left: ${left}px; width: ${rect.width}px; z-index: 99999;`;
+    }
+
     function toggleDatepicker() {
+        if (disabled) return;
         open = !open;
         if (open) {
+            // hidden until the first real measurement, so it doesn't flash at the wrong spot
+            popupStyle = "position: absolute; top: 0; left: 0; visibility: hidden;";
             const current = parseSelected();
             if (current) {
                 usedMonth = current.month;
@@ -106,10 +177,9 @@
     }
 
     function itemClicked(event) {
-        const day = event.currentTarget.dataset.day;
+        const day = Number(event.currentTarget.dataset.day);
 
         selectedDay = day;
-        // Construct the display string and convert to ISO for emission
         const displayStr = `${String(day).padStart(2, '0')}.${String(usedMonth + 1).padStart(2, '0')}.${usedYear}`;
         selected = displayStr;
         onChange(germanDateToISO(displayStr));
@@ -136,7 +206,6 @@
         }
     }
 
-    // Highlighting logic helper
     function isSelected(day) {
         const current = parseSelected();
         return current &&
@@ -146,8 +215,18 @@
     }
 
     function updateUsedYear(val) { usedYear = Number(val); }
-
     function updateUsedMonth(val) { usedMonth = monthOptions.indexOf(val); }
+
+    function portal(node) {
+        document.body.appendChild(node);
+        return {
+            destroy() {
+                if (node.parentNode) {
+                    node.parentNode.removeChild(node);
+                }
+            }
+        };
+    }
 </script>
 
 <div class="flex w-full flex-col">
@@ -174,7 +253,12 @@
         </div>
 
         {#if open && !disabled}
-            <div class="absolute flex flex-col bottom-full right-0 rounded-1 w-max min-w-full bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 mb-1">
+            <div
+                use:portal
+                bind:this={popupRef}
+                style={popupStyle}
+                class="datepicker-portal-popup flex flex-col rounded-1 bg-gv-input-bg border border-gv-primary p-2 pt-4 gap-2 overflow-hidden"
+            >
                 <div class="w-full items-center flex flex-col">
                     {@render calendarGrid()}
                 </div>
@@ -197,6 +281,7 @@
                             onChange={updateUsedMonth}
                             disableMinWidth={true}
                             displayTop={true}
+                            usePortal={false}
                         />
                         <Dropdown
                             bgWhite={true}
@@ -206,6 +291,7 @@
                             onChange={updateUsedYear}
                             disableMinWidth={true}
                             displayTop={true}
+                            usePortal={false}
                         />
                     </div>
 
@@ -237,7 +323,7 @@
                         {#if day}
                             <button
                                 type="button"
-                                class="w-10 h-10 rounded-full text-dt-8 cursor-pointer transition-colors"
+                                class="w-8 h-8 md:w-10 md:h-10 rounded-full text-dt-8 cursor-pointer transition-colors"
                                 class:bg-gv-dark-turquoise={isSelected(day)}
                                 class:text-white={isSelected(day) || isToday(day, usedMonth, usedYear)}
                                 class:bg-gv-primary={isToday(day, usedMonth, usedYear) && !isSelected(day)}
@@ -249,7 +335,7 @@
                                 {day}
                             </button>
                         {:else}
-                            <div class="w-10 h-10"></div>
+                            <div class="w-8 h-8 md:w-10 md:h-10"></div>
                         {/if}
                     </td>
                 {/each}

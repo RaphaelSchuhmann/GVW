@@ -18,7 +18,7 @@ const DOMAINS = {
     "80": { default: "Noteneintrag", },
     "90": { default: "Feedback" },
     "11": { default: "Fehlerbericht" },
-    "12": { default: "Changelog" },
+    // #12 -> (originally changelog) unused
     "13": { default: "Datei" },
     "14": {
         default: "Dokument",
@@ -27,6 +27,11 @@ const DOMAINS = {
     "15": {
         default: "Artikel",
         "001": "Hilfe-Center Kategorie"
+    },
+    "16": { default: "Datei" },
+    "17": {
+        default: "Deployment",
+        "005": "Migration",
     }
 };
 
@@ -55,9 +60,13 @@ const STATUS_TEMPLATES = {
         subTitle: "{domain} - Die Daten sind nicht aktuell oder bereits vergeben."
     },
     "403": {
-        title: "Zugriff verweigert",
-        subTitle: "{domain} - Sie haben nicht die Berechtigung, diese Aktion auszuführen."
-    }
+        title: "Aktion nicht erlaubt",
+        subTitle: "{domain} - Diese Aktion ist gerade nicht erlaubt."
+    },
+    "502": {
+        title: "Dienst vorübergehend nicht verfügbar",
+        subTitle: "{domain} - Ein benötigter Dienst konnte die Anfrage nicht erfolgreich verarbeiten."
+    },
 };
 
 const INFRA_ERRORS = {
@@ -75,6 +84,11 @@ const INFRA_ERRORS = {
         typeId: "5",
         title: "Eingabe ungültig",
         subTitle: "Die übermittelten Daten sind fehlerhaft oder unvollständig."
+    },
+    "SYSTEM_MAINTENANCE": {
+        typeId: "6",
+        title: "Anwendung nicht verfügbar",
+        subTitle: "Die Anwendung wird gerade gewartet. Bitte versuche es in wenigen Minuten erneut."
     }
 };
 
@@ -86,10 +100,11 @@ const INFRA_ERRORS = {
  * generate a user-friendly error message from the backend error code.
  *
  * Error code format:
- * - DD AA SSS
+ * - DD AA SSS RRR
  * - DD  = domain
  * - AA  = action
  * - SSS = status
+ * - RRR = resource
  *
  * Returns `true` when a toast was shown or another global action was
  * performed and no further error handling should occur.
@@ -180,6 +195,10 @@ export function handleGenericErrors(result) {
 
     if (codeStr === "0000400") {
         return dispatchInfraToast(INFRA_ERRORS.BAD_INPUT);
+    }
+
+    if (codeStr === "0000503" || result.errorType === "SYSTEM_MAINTENANCE") {
+        return dispatchInfraToast(INFRA_ERRORS.SYSTEM_MAINTENANCE);
     }
 
     return false;

@@ -4,6 +4,7 @@ import com.gvw.gvwbackend.exception.BadRequestException;
 import com.gvw.gvwbackend.exception.ErrorAction;
 import com.gvw.gvwbackend.exception.ErrorDomain;
 import com.gvw.gvwbackend.model.*;
+import com.gvw.gvwbackend.model.helper.Pair;
 import com.gvw.gvwbackend.util.FileUtils;
 import java.util.List;
 import java.util.Set;
@@ -168,7 +169,8 @@ public class FileService {
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_TYPE, mimeType)
         .header(
-            HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getOriginalName() + "\"")
+            HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"" + file.getOriginalName() + "\"")
         .body(
             out -> fileUtils.streamFile(file, payload.directory(), out, ErrorDomain.FILE_SERVICE));
   }

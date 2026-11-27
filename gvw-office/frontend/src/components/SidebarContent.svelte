@@ -5,7 +5,6 @@
     
     import SidebarButton from "./SidebarButton.svelte";
     import FeedbackModal from "./FeedbackModal.svelte";
-    import ChangelogsModal from "./ChangelogsModal.svelte";
 
     let {
         currentPage = "",
@@ -13,9 +12,6 @@
         isMobile = false,
         ...restProps
     } = $props();
-
-    /** @type {import("../components/ChangelogsModal.svelte").default} */
-    let changelogModal = null;
 
     /** @type {import("../components/FeedbackModal.svelte").default} */
     let feedbackModal = null;
@@ -42,7 +38,6 @@
     }
 </script>
 
-<ChangelogsModal bind:this={changelogModal} isMobile={isMobile} />
 <FeedbackModal bind:this={feedbackModal} isMobile={isMobile} />
 
 <div class="flex flex-col items-center w-full flex-1 overflow-y-auto">
@@ -120,11 +115,6 @@
                             <span class="material-symbols-rounded text-icon-dt-5 mr-2">chat_bubble</span>
                             Feedback
                         </button>
-                        <button onclick={async () => {await changelogModal.showModal(); toggleUserOptions()}}
-                                class="w-full flex items-center rounded-2 cursor-pointer hover:bg-gv-hover-effect p-2 pl-3 pr-3 duration-150 text-dt-6">
-                            <span class="material-symbols-rounded text-icon-dt-5 mr-2">campaign</span>
-                            Changelogs
-                        </button>
                         <button onclick={handleLogout}
                                 class="w-full flex items-center rounded-2 cursor-pointer hover:bg-gv-hover-effect p-2 pl-3 pr-3 duration-150 text-dt-6">
                             <span class="material-symbols-rounded text-icon-dt-5 mr-2">logout</span>
@@ -140,9 +130,6 @@
                 </SidebarButton>
                 <SidebarButton minimized={minimized} onclick={openFeedback}>
                     <span class="material-symbols-rounded text-icon-dt-3">chat_bubble</span>
-                </SidebarButton>
-                <SidebarButton minimized={minimized} onclick={async () => {await changelogModal.showModal()}}>
-                    <span class="material-symbols-rounded text-icon-dt-3">campaign</span>
                 </SidebarButton>
                 <SidebarButton minimized={minimized} onclick={handleLogout}>
                     <span class="material-symbols-rounded text-icon-dt-3">logout</span>

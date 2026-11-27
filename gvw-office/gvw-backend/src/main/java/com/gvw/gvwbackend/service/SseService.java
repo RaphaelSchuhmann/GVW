@@ -1,5 +1,7 @@
 package com.gvw.gvwbackend.service;
 
+import com.gvw.gvwbackend.exception.ServiceUnavailableException;
+import com.gvw.gvwbackend.state.MaintenanceState;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -19,8 +21,20 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseService {
   /** Thread-safe collection of currently connected SSE clients. */
   private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+  private final Object emitterLock = new Object();
 
   private static final Logger log = LoggerFactory.getLogger(SseService.class);
+  private final MaintenanceState maintenanceState;
+
+  /**
+   * Creates the SSE service with the shared maintenance state used to reject new connections during
+   * deployments.
+   *
+   * @param state the shared maintenance state
+   */
+  public SseService(MaintenanceState state) {
+    this.maintenanceState = state;
+  }
 
   /**
    * Creates and registers a new SSE connection.
@@ -31,17 +45,25 @@ public class SseService {
    * @return newly created and registered SSE emitter
    */
   public SseEmitter createEmitter() {
-    SseEmitter emitter = new SseEmitter(3600_000L);
+    SseEmitter emitter;
+    synchronized (emitterLock) {
+      if (maintenanceState.getActive()) {
+        // Hardcoded status code is fine here as it is a general infra error
+        throw new ServiceUnavailableException("0000503");
+      }
 
-    emitter.onCompletion(() -> emitters.remove(emitter));
-    emitter.onTimeout(() -> emitters.remove(emitter));
-    emitter.onError(
-        e -> {
-          log.debug("SSE client disconnected: {}", e.getMessage());
-          emitters.remove(emitter);
-        });
+      emitter = new SseEmitter(3600_000L);
 
-    emitters.add(emitter);
+      emitter.onCompletion(() -> emitters.remove(emitter));
+      emitter.onTimeout(() -> emitters.remove(emitter));
+      emitter.onError(
+          e -> {
+            log.debug("SSE client disconnected: {}", e.getMessage());
+            emitters.remove(emitter);
+          });
+
+      emitters.add(emitter);
+    }
 
     try {
       emitter.send(SseEmitter.event().name("connected").data("success"));
@@ -54,22 +76,25 @@ public class SseService {
   }
 
   /**
-   * Broadcasts a refresh event to all connected clients.
+   * Generic internal broadcast runner that handles SSE delivery, dead emitter cleanup, and
+   * exceptions during iteration.
    *
-   * <p>Clients receive an event named {@code refresh} containing the affected entity type. Emitters
-   * that can no longer receive events are removed.
-   *
-   * @param entityType type of entity that has changed and requires refreshing
+   * @param eventName name of the SSE event (e.g., "refresh", "kill")
+   * @param data payload data to attach, or {@code null} if no payload is required
    */
-  private void broadcastRefresh(String entityType) {
+  private void broadcast(String eventName, Object data) {
     List<SseEmitter> deadEmitters = new ArrayList<>();
 
     emitters.forEach(
         emitter -> {
           try {
-            emitter.send(SseEmitter.event().name("refresh").data(entityType));
+            SseEmitter.SseEventBuilder event = SseEmitter.event().name(eventName);
+            if (data != null) {
+              event.data(data);
+            }
+            emitter.send(event);
           } catch (Exception ex) {
-            log.debug("Failed to send refresh event to emitter: {}", ex.getMessage());
+            log.debug("Failed to send {} event to emitter: {}", eventName, ex.getMessage());
             deadEmitters.add(emitter);
           }
         });
@@ -78,19 +103,51 @@ public class SseService {
   }
 
   /**
+   * Safely executes a broadcast, swallowing unchecked exceptions to prevent SSE failures from
+   * interrupting the caller flow.
+   */
+  private void safeBroadcast(String eventName, Object data) {
+    try {
+      broadcast(eventName, data);
+    } catch (RuntimeException ex) {
+      log.warn("Failed to broadcast {} event", eventName, ex);
+    }
+  }
+
+  /**
    * Triggers a non-blocking refresh broadcast for the specified entity type.
-   *
-   * <p>Delegates to {@link #broadcastRefresh(String)} and catches any unchecked runtime exceptions
-   * to prevent SSE notification failures from disrupting the main execution flow.
    *
    * @param entityType type of entity that changed and requires client-side refreshing
    */
   public void sendRefresh(String entityType) {
-    try {
-      broadcastRefresh(entityType);
-    } catch (RuntimeException ex) {
-      log.warn("Failed to broadcast {}", entityType, ex);
+    safeBroadcast("refresh", entityType);
+  }
+
+  /**
+   * Broadcasts a kill event to all connected clients without a payload and sets isKilled flag to
+   * true.
+   */
+  public void sendKillSignal() {
+    List<SseEmitter> emittersToKill;
+    synchronized (emitterLock) {
+      emittersToKill = new ArrayList<>(emitters);
+      emitters.clear();
     }
+
+    emittersToKill.forEach(
+        emitter -> {
+          try {
+            emitter.send(SseEmitter.event().name("kill"));
+          } catch (Exception ex) {
+            log.debug("Failed to send kill event to emitter: {}", ex.getMessage());
+          } finally {
+            try {
+              emitter.complete();
+            } catch (Exception ex) {
+              log.debug("Failed to complete emitter after kill signal: {}", ex.getMessage());
+            }
+          }
+        });
   }
 
   /**

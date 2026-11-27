@@ -1,6 +1,7 @@
 package com.gvw.gvwbackend.configuration;
 
 import com.gvw.gvwbackend.service.JwtService;
+import java.net.http.HttpClient;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -38,7 +39,6 @@ public class AppConfig {
     return restTemplate;
   }
 
-  // BCrypt is used for one-way password hashing
   @Bean
   public PasswordEncoder passwordEncoder() {
     return new BCryptPasswordEncoder();
@@ -47,5 +47,10 @@ public class AppConfig {
   @Bean
   public JwtService jwtService() {
     return new JwtService();
+  }
+
+  @Bean
+  public HttpClient httpclient() {
+    return HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build();
   }
 }

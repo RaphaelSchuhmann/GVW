@@ -51,18 +51,19 @@ import tools.jackson.databind.ObjectMapper;
  */
 @Service
 public class DbService {
-  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private final ObjectMapper objectMapper;
   private static final Logger log = LoggerFactory.getLogger(DbService.class);
-  private final ObjectMapper mapper = new ObjectMapper();
 
   private final RestTemplate restTemplate;
   private final String baseUrl;
 
   public DbService(
       @Value("${couchdb.url}") String baseUrl,
-      @Qualifier("dbRestTemplate") RestTemplate restTemplate) {
+      @Qualifier("dbRestTemplate") RestTemplate restTemplate,
+      ObjectMapper objectMapper) {
     this.restTemplate = restTemplate;
     this.baseUrl = baseUrl;
+    this.objectMapper = objectMapper;
 
     log.info("DB Service initialized");
   }
@@ -188,7 +189,7 @@ public class DbService {
       if (doc != null) docsRaw.add(doc);
     }
 
-    return docsRaw.stream().map(map -> mapper.convertValue(map, clazz)).toList();
+    return docsRaw.stream().map(map -> objectMapper.convertValue(map, clazz)).toList();
   }
 
   /**
@@ -239,8 +240,6 @@ public class DbService {
     if (resp == null || resp.isEmpty()) return List.of();
 
     try {
-      ObjectMapper objectMapper = new ObjectMapper();
-
       Map<String, Object> map = objectMapper.readValue(resp, new TypeReference<>() {});
       List<Map<String, Object>> docs = (List<Map<String, Object>>) map.get("docs");
 

@@ -11,11 +11,11 @@
         ...restProps
     } = $props();
 
-    const validPages = ["events", "reports", "library", "userManager"];
+    const validPages = ["events", "reports", "library", "userManager", "deployments"];
     const activePage = $derived(validPages.includes(page) ? page : "none");
 
     const DEFAULT_FILTER_ENTRY = {
-        optionMap: {},
+        optionMap: { "default": "filter_entry" },
         config: { dropdown: { options: null, customDefault: null } },
         filterState: {
             update: () => {}
@@ -24,9 +24,9 @@
 
     let regEntry = filterRegistry[activePage] || DEFAULT_FILTER_ENTRY;
 
-    const usedOptions = $derived(regEntry.config.dropdown.options ?? options);
+    const usedOptions = $derived(regEntry.config.dropdown?.options ?? options);
     const usedDefault = $derived.by(() => {
-        if (regEntry.config.dropdown.customDefault) {
+        if (regEntry.config.dropdown?.customDefault) {
             return regEntry.config.dropdown.customDefault;
         }
 

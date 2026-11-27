@@ -50,3 +50,11 @@ logging:
 
 cors:
   allowed-origins: ${ALLOWED_ORIGINS}
+
+internal:
+  api:
+    token: ${GVW_INTERNAL_API_TOKEN}
+
+deployment:
+  validator:
+    branch: ${GVW_DEPLOYMENT_BRANCH}

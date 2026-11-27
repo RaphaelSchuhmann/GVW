@@ -16,7 +16,8 @@ public enum ErrorResource {
   HELP_CENTER_CATEGORY(1),
   HELP_CENTER_ARTICLE(2),
   LIBRARY_CATEGORY(3),
-  TEXT_EDITOR_CONTENT(4);
+  TEXT_EDITOR_CONTENT(4),
+  MIGRATION(5);
 
   private final int id;
 

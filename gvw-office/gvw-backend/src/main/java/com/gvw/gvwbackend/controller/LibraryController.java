@@ -6,7 +6,6 @@ import com.gvw.gvwbackend.dto.response.FullScoreResponseDTO;
 import com.gvw.gvwbackend.dto.response.ScoreResponseDTO;
 import com.gvw.gvwbackend.exception.*;
 import com.gvw.gvwbackend.exception.handler.ErrorContext;
-import com.gvw.gvwbackend.service.DbService;
 import com.gvw.gvwbackend.service.LibraryService;
 import com.gvw.gvwbackend.util.FileValidator;
 import jakarta.validation.Valid;
@@ -23,13 +22,10 @@ import org.springframework.web.multipart.MultipartFile;
 public class LibraryController {
   private final LibraryService libraryService;
   private final FileValidator fileValidator;
-  private final DbService dbService;
 
-  public LibraryController(
-      LibraryService libraryService, FileValidator fileValidator, DbService dbService) {
+  public LibraryController(LibraryService libraryService, FileValidator fileValidator) {
     this.libraryService = libraryService;
     this.fileValidator = fileValidator;
-    this.dbService = dbService;
   }
 
   @GetMapping("/all")

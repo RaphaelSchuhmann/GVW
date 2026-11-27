@@ -124,6 +124,24 @@ public class GlobalExceptionHandler {
         HttpStatus.TOO_MANY_REQUESTS);
   }
 
+  @ExceptionHandler(ForbiddenException.class)
+  @ResponseStatus(HttpStatus.FORBIDDEN)
+  public ResponseEntity<ErrorResponseDTO> handleForbidden(ForbiddenException ex) {
+    return generateResponse(ex.getMessage(), null, HttpStatus.FORBIDDEN);
+  }
+
+  @ExceptionHandler(BadGatewayException.class)
+  @ResponseStatus(HttpStatus.BAD_GATEWAY)
+  public ResponseEntity<ErrorResponseDTO> handleBadGateway(BadGatewayException ex) {
+    return generateResponse(ex.getMessage(), null, HttpStatus.BAD_GATEWAY);
+  }
+
+  @ExceptionHandler(ServiceUnavailableException.class)
+  @ResponseStatus(HttpStatus.SERVICE_UNAVAILABLE)
+  public ResponseEntity<ErrorResponseDTO> handleServiceUnavailable(ServiceUnavailableException ex) {
+    return generateResponse(ex.getMessage(), null, HttpStatus.SERVICE_UNAVAILABLE);
+  }
+
   /**
    * Handles unexpected exceptions that are not explicitly mapped.
    *

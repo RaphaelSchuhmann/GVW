@@ -1,0 +1,156 @@
+package config
+
+import (
+	"encoding/json"
+	"gvw/gvw-deployment/internal/utils/errors"
+	"gvw/gvw-deployment/internal/utils/filesystem"
+	"reflect"
+	"strings"
+	"sync"
+)
+
+type Config struct {
+	Port                  string            `json:"port"`
+	InternalToken         string            `json:"internal_token"`
+	JavaBaseURL           string            `json:"java_base_url"`
+	GithubRepoURL         string            `json:"github_repo_url"`
+	GitBranch             string            `json:"git_branch"`
+	GitIntialFetchDepth   int               `json:"git_initial_fetch_depth"`
+	GitDeepenStep         int               `json:"git_deepen_step"`
+	GitMaxDeepenAttempts  int               `json:"git_max_deepen_attempts"`
+	ModelDatabaseMap      map[string]string `json:"model_db_map"`
+	DatabaseURL           string            `json:"database_url"`
+	DatabaseUsername      string            `json:"database_username"`
+	DatabasePassword      string            `json:"database_password"`
+	ShutdownTimeout       int               `json:"shutdown_timeout_s"` // in seconds
+	StartupTimeout        int               `json:"startup_timeout_s"`  // in seconds
+	StartupDelay          int               `json:"startup_delay"`
+	MaintenanceFlagDir    string            `json:"maintenance_flag_dir"`
+	BackendDir            string            `json:"backend_dir"`
+	BackendEnv            string            `json:"backend_env"`
+	FrontendDir           string            `json:"frontend_dir"`
+	FrontendBackupDir     string            `json:"frontend_backup_dir"`
+	FrontendApiUrl        string            `json:"frontend_api_url"`
+	SmtpHost              string            `json:"smtpHost"`
+	SmtpPort              string            `json:"smtpPort"`
+	SenderEmail           string            `json:"senderEmail"`
+	SenderPassword        string            `json:"senderPassword"`
+	NotificationRecipient string            `json:"notificationRecipient"`
+	LogDir                string            `json:"log_dir"`
+}
+
+type ConfigManager struct {
+	Config            Config
+	FileSystemWrapper filesystem.FileSystemWrapper
+	FilePath          string
+	mu                sync.RWMutex
+}
+
+func NewConfigManager(filesystemWrapper filesystem.FileSystemWrapper, path string) *ConfigManager {
+	return &ConfigManager{
+		FileSystemWrapper: filesystemWrapper,
+		FilePath:          path,
+	}
+}
+
+func (c *ConfigManager) LoadConfig(revertOnError bool) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	var originalConfig Config
+
+	if revertOnError {
+		originalConfig = c.Config
+	}
+
+	data, err := c.FileSystemWrapper.ReadFile(c.FilePath)
+	if err != nil {
+		c.revertOnError(revertOnError, originalConfig)
+		return gvwErrors.Wrap(gvwErrors.CodeConfigError, err)
+	}
+
+	var config Config
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		c.revertOnError(revertOnError, originalConfig)
+		return gvwErrors.Wrap(gvwErrors.CodeConfigError, err)
+	}
+
+	if err := ValidateConfig(config); err != nil {
+		c.revertOnError(revertOnError, originalConfig)
+		return gvwErrors.Wrap(gvwErrors.CodeConfigError, err)
+	}
+
+	c.Config = config
+
+	return nil
+}
+
+func (c *ConfigManager) revertOnError(shouldRevert bool, originalConfig Config) {
+	if shouldRevert {
+		c.Config = originalConfig
+	}
+}
+
+func ValidateConfig(config Config) error {
+	val := reflect.ValueOf(config)
+
+	if val.Kind() != reflect.Struct {
+		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigNoStruct)
+	}
+
+	for i := 0; i < val.NumField(); i++ {
+		if IsConfigValueInvalid(val.Field(i)) {
+			return gvwErrors.NewError(gvwErrors.CodeInvalidConfigEmptyField)
+		}
+	}
+
+	// Ensure that model to db map always has at least one value
+	if !isModelToDbMapValid(config.ModelDatabaseMap) {
+		return gvwErrors.NewError(gvwErrors.CodeInvalidConfigBadModelMap)
+	}
+
+	// Check overlaps in frontend / backend dirs
+	if config.FrontendBackupDir == config.FrontendDir || config.BackendDir == config.FrontendDir || config.BackendDir == config.FrontendBackupDir {
+		return gvwErrors.NewError(gvwErrors.CodeOverlappingPaths)
+	}
+
+	return nil
+}
+
+func isModelToDbMapValid(modelToDbMap map[string]string) bool {
+	if len(modelToDbMap) <= 0 {
+		return false
+	}
+
+	for k, v := range modelToDbMap {
+		if strings.TrimSpace(k) == "" || strings.TrimSpace(v) == "" {
+			return false
+		}
+	}
+
+	return true
+}
+
+func IsConfigValueInvalid(member reflect.Value) bool {
+	if member.Kind() == reflect.Ptr {
+		if member.IsNil() {
+			return true
+		}
+		member = member.Elem()
+	}
+
+	if member.Kind() != reflect.Struct {
+		return member.IsZero()
+	}
+
+	for i := 0; i < member.NumField(); i++ {
+		field := member.Field(i)
+
+		if field.IsZero() {
+			return true
+		}
+	}
+
+	return false
+}

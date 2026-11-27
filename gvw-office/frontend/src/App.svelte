@@ -17,6 +17,8 @@
     import AdminDashboardReportHub from "./pages/AdminDashboardReportHub/AdminDashboardReportHubPage.svelte";
     import AdminDashboardUserManagement from "./pages/AdminDashboardUserManager/AdminDashboardUserManagerPage.svelte";
     import AdminDashboardUserManagerDetails from "./pages/AdminDashboardUserManagerDetails/AdminDashboardUserManagerDetailsPage.svelte";
+    import AdminDashboardDeployments from "./pages/AdminDashboardDeployments/AdminDashboardDeploymentsPage.svelte";
+    import AdminDashboardDeploymentDetails from "./pages/AdminDashboardDeploymentDetails/AdminDashboardDeploymentDetailsPage.svelte";
     import HelpCenter from "./pages/HelpCenter/HelpCenterPage.svelte";
     import NotFound from "./pages/NotFound/NotFoundPage.svelte";
 
@@ -26,6 +28,8 @@
     import { ensureUserData } from "./services/userService.svelte";
     import { initSettingsSync } from "./services/appSettingsSyncService.svelte.js";
     import { initFontLoader } from "./stores/appLoading.svelte.js";
+    import { getTodayDeployments } from "./services/deploymentService.svelte.js";
+    import DowntimeModal from "./components/DowntimeModal.svelte";
 
     const routes = {
         "/": Login,
@@ -43,6 +47,8 @@
         "/admin/reportHub": AdminDashboardReportHub,
         "/admin/userManagement": AdminDashboardUserManagement,
         "/admin/userManagement/details": AdminDashboardUserManagerDetails,
+        "/admin/deployments": AdminDashboardDeployments,
+        "/admin/deployment/details": AdminDashboardDeploymentDetails,
         "/help": HelpCenter,
         "*": NotFound
     };
@@ -57,5 +63,7 @@
         }
     });
 </script>
+
+<DowntimeModal />
 
 <Router {routes} />
