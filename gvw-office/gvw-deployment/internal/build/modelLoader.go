@@ -141,45 +141,45 @@ func (m *ModelLoader) parseLines(lines []string) map[string]any {
 }
 
 func stripLineComment(line string) string {
-	inString := false
-	inChar := false
+	var quote byte // 0 outside literals, otherwise the opening quote (' or ")
 	escaped := false
 
 	for i := 0; i < len(line); i++ {
 		c := line[i]
-		if inString || inChar {
-			if escaped {
-				escaped = false
-				continue
-			}
 
-			if c == '\\' {
-				escaped = true
-			} else if inString && c == '"' {
-				inString = false
-			} else if inChar && c == '\'' {
-				inChar = false
-			}
-
+		if quote != 0 {
+			quote, escaped = advanceInLiteral(c, quote, escaped)
 			continue
 		}
 
-		if c == '"' {
-			inString = true
-			continue
-		}
-
-		if c == '\'' {
-			inChar = true
-			continue
-		}
-
-		if c == '/' && i+1 < len(line) && line[i+1] == '/' {
+		switch {
+		case c == '"' || c == '\'':
+			quote = c
+		case isLineCommentStart(line, i):
 			return strings.TrimSpace(line[:i])
 		}
 	}
 
 	return line
+}
+
+// advanceInLiteral returns the new (quote, escaped) state after reading c inside
+// a string or char literal.
+func advanceInLiteral(c, quote byte, escaped bool) (byte, bool) {
+	switch {
+	case escaped:
+		return quote, false
+	case c == '\\':
+		return quote, true
+	case c == quote:
+		return 0, false
+	default:
+		return quote, false
+	}
+}
+
+func isLineCommentStart(line string, i int) bool {
+	return line[i] == '/' && i+1 < len(line) && line[i+1] == '/'
 }
 
 func (m *ModelLoader) shouldSkipLine(line string) bool {
