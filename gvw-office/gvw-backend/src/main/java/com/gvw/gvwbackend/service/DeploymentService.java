@@ -292,7 +292,7 @@ public class DeploymentService {
             .field(request.field())
             .value(request.value())
             .conditional(request.conditional())
-                .defaultValue(request.defaultValue())
+            .defaultValue(request.defaultValue())
             .build();
 
     MigrationValidator.ValidationResult validationResult =
@@ -499,15 +499,14 @@ public class DeploymentService {
   public void startDeployment(String deploymentId) {
     if (deploymentId == null || deploymentId.isBlank()) {
       throw new BadRequestException(
-              String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.UTILITY, 400)));
     }
 
     Deployment deployment = findDeploymentById(deploymentId);
 
     if (deployment.getStatus() == DeploymentStatus.RUNNING) {
       throw new ForbiddenException(
-              String.valueOf(
-                      ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403)));
+          String.valueOf(ErrorDomain.DEPLOYMENT.createCode(ErrorAction.CREATE, 403)));
     }
 
     // Update deployment status to running
@@ -595,7 +594,8 @@ public class DeploymentService {
     applyStatusUpdate(deployment, requestedStatus, request.reason());
 
     // Update appVersion if it was a deployment successful
-    if (request.reason() == DEPLOYMENT_SUCCESSFUL_CODE && requestedStatus == DeploymentStatus.SUCCESSFUL) {
+    if (request.reason() == DEPLOYMENT_SUCCESSFUL_CODE
+        && requestedStatus == DeploymentStatus.SUCCESSFUL) {
       appSettingsService.updateApplicationVersion(deployment.getAppVersion());
     }
 

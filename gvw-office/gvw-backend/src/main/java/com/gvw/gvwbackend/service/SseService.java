@@ -21,6 +21,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class SseService {
   /** Thread-safe collection of currently connected SSE clients. */
   private final List<SseEmitter> emitters = new CopyOnWriteArrayList<>();
+
   private final Object emitterLock = new Object();
 
   private static final Logger log = LoggerFactory.getLogger(SseService.class);
