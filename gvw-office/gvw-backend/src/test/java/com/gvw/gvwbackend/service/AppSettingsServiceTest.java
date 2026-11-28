@@ -250,4 +250,45 @@ class AppSettingsServiceTest {
         NotFoundException.class,
         () -> appSettingsService.updateHelpCenterCategoryArticleCount("non-existent", 10));
   }
+
+  @Test
+  void updateApplicationVersion_Success() {
+    when(dbService.findById("app_settings", "general", AppSettings.class)).thenReturn(appSettings);
+    when(dbService.update("app_settings", "general", appSettings)).thenReturn("2-def");
+
+    appSettingsService.updateApplicationVersion("1.2.3");
+
+    assertEquals("1.2.3", appSettings.getAppVersion());
+    verify(dbService).update("app_settings", "general", appSettings);
+    verify(sseService).sendRefresh("SETTINGS");
+  }
+
+  @Test
+  void updateApplicationVersion_BlankVersion_DoesNothing() {
+    appSettingsService.updateApplicationVersion(null);
+    appSettingsService.updateApplicationVersion("   ");
+
+    verifyNoInteractions(dbService, sseService);
+  }
+
+  @Test
+  void updateApplicationVersion_DbFailure_DoesNotThrow() {
+    when(dbService.findById("app_settings", "general", AppSettings.class)).thenReturn(appSettings);
+    when(dbService.update("app_settings", "general", appSettings))
+        .thenThrow(new RuntimeException("db down"));
+
+    assertDoesNotThrow(() -> appSettingsService.updateApplicationVersion("1.2.3"));
+
+    verify(sseService, never()).sendRefresh("SETTINGS");
+  }
+
+  @Test
+  void updateApplicationVersion_SettingsMissing_DoesNotThrow() {
+    when(dbService.findById("app_settings", "general", AppSettings.class)).thenReturn(null);
+
+    assertDoesNotThrow(() -> appSettingsService.updateApplicationVersion("1.2.3"));
+
+    verify(dbService, never()).update(any(), any(), any());
+    verify(sseService, never()).sendRefresh("SETTINGS");
+  }
 }

@@ -68,6 +68,31 @@ public class AppSettingsService {
   }
 
   /**
+   * Updates the cached application version stored in the global settings document.
+   *
+   * <p>This is a best-effort update used after successful deployments. Blank versions are ignored
+   * and failures are logged without propagating so they cannot fail the deployment flow.
+   *
+   * @param version application version to store
+   */
+  public void updateApplicationVersion(String version) {
+    if (version == null || version.isBlank()) {
+      return;
+    }
+
+    try {
+      AppSettings settings = appSettings(ErrorAction.UPDATE, ErrorResource.NONE);
+
+      settings.setAppVersion(version);
+      dbService.update("app_settings", settings.getId(), settings);
+
+      sseService.sendRefresh("SETTINGS");
+    } catch (Exception e) {
+      log.warn("Failed to update app version {}", version, e);
+    }
+  }
+
+  /**
    * Updates the maximum allowed number of members.
    *
    * <p>The CouchDB revision supplied by the client is used to prevent accidental overwrites of
