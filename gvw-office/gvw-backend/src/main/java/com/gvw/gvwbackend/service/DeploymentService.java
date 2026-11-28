@@ -594,6 +594,11 @@ public class DeploymentService {
 
     applyStatusUpdate(deployment, requestedStatus, request.reason());
 
+    // Update appVersion if it was a deployment successful
+    if (request.reason() == DEPLOYMENT_SUCCESSFUL_CODE && requestedStatus == DeploymentStatus.SUCCESSFUL) {
+      appSettingsService.updateApplicationVersion(deployment.getAppVersion());
+    }
+
     // The maintenance state is always reset after a deployment update
     maintenanceState.setActive(false);
 
